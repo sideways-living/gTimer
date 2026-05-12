@@ -152,88 +152,161 @@ struct TimerView: View {
   // MARK: - Action buttons
 
   private var actionButtons: some View {
-    VStack(spacing: 12) {
-      // Primary log button
-      Button { attemptLog(amount: settings.standardDose) } label: {
-        HStack(spacing: 8) {
-          Image(systemName: "plus.circle.fill").font(.system(size: 18))
-          Text("I took \(settings.standardDose.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
-            .font(.system(size: 18, weight: .semibold))
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 17)
-        .background(AppTheme.accentBlue)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+    VStack(spacing: 10) {
+      HStack(alignment: .top, spacing: 10) {
+        primaryDoseButton
+        quickAmountsGrid
       }
       .padding(.horizontal, 20)
 
-      // Quick amounts — 4-column
-      HStack(spacing: 8) {
-        ForEach(settings.quickAmounts.prefix(4), id: \.self) { amt in
-          Button { attemptLog(amount: amt) } label: {
-            Text("\(amt.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
-              .font(.system(size: 13, weight: .semibold))
-              .foregroundStyle(AppTheme.accentBlue)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, 9)
-              .background(AppTheme.accentBlue.opacity(0.13))
-              .clipShape(RoundedRectangle(cornerRadius: 10))
-          }
-        }
-      }
-      .padding(.horizontal, 20)
-
-      // Custom + Missed row
       HStack(spacing: 10) {
-        Button { showCustomSheet = true } label: {
-          HStack(spacing: 5) {
-            Image(systemName: "pencil")
-            Text("Custom")
-          }
-          .font(.system(size: 14, weight: .medium))
-          .foregroundStyle(AppTheme.textSecondary)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 11)
-          .background(AppTheme.backgroundCard)
-          .clipShape(RoundedRectangle(cornerRadius: 11))
-          .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.border, lineWidth: 0.5))
-        }
+        customDoseButton
+        missedDoseButton
+      }
+      .padding(.horizontal, 20)
+    }
+  }
 
-        if settings.proBetaAccepted {
-          Button { showMissedSheet = true } label: {
-            HStack(spacing: 5) {
-              Image(systemName: "xmark.circle")
-              Text("Missed dose")
-            }
-            .font(.system(size: 14, weight: .medium))
-            .foregroundStyle(AppTheme.proAmber)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
-            .background(AppTheme.proAmber.opacity(0.10))
-            .clipShape(RoundedRectangle(cornerRadius: 11))
-            .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.proAmber.opacity(0.25), lineWidth: 0.5))
+  // Large primary button — stretches to match quick grid height
+  private var primaryDoseButton: some View {
+    Button { attemptLog(amount: settings.standardDose) } label: {
+      ZStack(alignment: .leading) {
+        RoundedRectangle(cornerRadius: 24)
+          .fill(
+            LinearGradient(
+              colors: [AppTheme.accentBlue, AppTheme.accentBlueD],
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
+            )
+          )
+        HStack(alignment: .center, spacing: 0) {
+          Image(systemName: "plus")
+            .font(.system(size: 30, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.95))
+            .frame(width: 44)
+          VStack(alignment: .leading, spacing: 1) {
+            Text("I took")
+              .font(.system(size: 13, weight: .medium))
+              .foregroundStyle(.white.opacity(0.80))
+            Text("\(settings.standardDose.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
+              .font(.system(size: 22, weight: .bold))
+              .foregroundStyle(.white)
+              .minimumScaleFactor(0.7)
+              .lineLimit(1)
           }
-        } else {
-          Button {
-            paywallFeature = .missedDose
-            showPaywall = true
-          } label: {
-            HStack(spacing: 5) {
-              Image(systemName: "lock.fill").font(.system(size: 12))
-              Text("Missed dose")
-                .font(.system(size: 14, weight: .medium))
+          Spacer(minLength: 8)
+        }
+        .padding(.horizontal, 14)
+      }
+      .frame(maxHeight: .infinity)
+    }
+    .accessibilityLabel("Log \(settings.standardDose.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
+  }
+
+  // 2×2 grid of quick-dose buttons
+  private var quickAmountsGrid: some View {
+    let amounts = Array(settings.quickAmounts.prefix(4))
+    return VStack(spacing: 8) {
+      ForEach(0..<2, id: \.self) { row in
+        HStack(spacing: 8) {
+          ForEach(0..<2, id: \.self) { col in
+            let idx = row * 2 + col
+            if idx < amounts.count {
+              let amt = amounts[idx]
+              let isDefault = abs(amt - settings.standardDose) < 0.001
+              Button { attemptLog(amount: amt) } label: {
+                Text("\(amt.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
+                  .font(.system(size: 15, weight: .bold))
+                  .foregroundStyle(isDefault ? .white : Color(white: 0.82))
+                  .minimumScaleFactor(0.75)
+                  .lineLimit(1)
+                  .frame(maxWidth: .infinity)
+                  .frame(height: 52)
+                  .background(
+                    RoundedRectangle(cornerRadius: 20)
+                      .fill(isDefault
+                        ? AppTheme.accentBlue.opacity(0.25)
+                        : AppTheme.backgroundElevated)
+                  )
+                  .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                      .strokeBorder(
+                        isDefault ? AppTheme.accentBlue : AppTheme.border,
+                        lineWidth: isDefault ? 1.5 : 0.5
+                      )
+                  )
+              }
+              .accessibilityLabel("Log \(amt.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
             }
-            .foregroundStyle(AppTheme.textMuted)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
-            .background(AppTheme.backgroundCard.opacity(0.6))
-            .clipShape(RoundedRectangle(cornerRadius: 11))
-            .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.border.opacity(0.4), lineWidth: 0.5))
           }
         }
       }
-      .padding(.horizontal, 20)
+    }
+  }
+
+  private var customDoseButton: some View {
+    Button { showCustomSheet = true } label: {
+      HStack(spacing: 6) {
+        Image(systemName: "pencil").font(.system(size: 13))
+        Text("I took a different amount")
+          .font(.system(size: 13, weight: .medium))
+          .minimumScaleFactor(0.75)
+          .lineLimit(1)
+      }
+      .foregroundStyle(AppTheme.textSecondary)
+      .frame(maxWidth: .infinity)
+      .frame(height: 48)
+      .background(AppTheme.backgroundElevated)
+      .clipShape(RoundedRectangle(cornerRadius: 14))
+      .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
+    }
+    .accessibilityLabel("Log custom amount")
+  }
+
+  private var missedDoseButton: some View {
+    ZStack(alignment: .topTrailing) {
+      Button {
+        if settings.proBetaAccepted {
+          showMissedSheet = true
+        } else {
+          paywallFeature = .missedDose
+          showPaywall = true
+        }
+      } label: {
+        HStack(spacing: 6) {
+          Image(systemName: "xmark.circle").font(.system(size: 13))
+          Text("Missed dose")
+            .font(.system(size: 13, weight: .medium))
+            .minimumScaleFactor(0.75)
+            .lineLimit(1)
+        }
+        .foregroundStyle(settings.proBetaAccepted ? AppTheme.proAmber : AppTheme.textMuted)
+        .frame(maxWidth: .infinity)
+        .frame(height: 48)
+        .background(settings.proBetaAccepted
+          ? AppTheme.proAmber.opacity(0.10)
+          : AppTheme.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+          RoundedRectangle(cornerRadius: 14)
+            .stroke(settings.proBetaAccepted
+              ? AppTheme.proAmber.opacity(0.3)
+              : AppTheme.border,
+              lineWidth: 0.5)
+        )
+      }
+      .accessibilityLabel("Log missed dose")
+
+      if !settings.proBetaAccepted {
+        Text("PRO")
+          .font(.system(size: 8, weight: .bold))
+          .foregroundStyle(.black)
+          .padding(.horizontal, 5)
+          .padding(.vertical, 2)
+          .background(AppTheme.proAmber)
+          .clipShape(Capsule())
+          .offset(x: -6, y: -6)
+      }
     }
   }
 
