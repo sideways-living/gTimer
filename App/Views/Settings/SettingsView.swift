@@ -16,6 +16,8 @@ struct SettingsView: View {
   @State private var quickAmountsError: String? = nil
   @State private var intervalError: String? = nil
   @State private var hasLoaded = false
+  @State private var showPaywall = false
+  @State private var paywallFeature: ProFeature = .doseLocations
 
   private let intervalPresets = [60, 90, 120]
   private var hasChanges: Bool { saveState == .unsaved }
@@ -30,6 +32,7 @@ struct SettingsView: View {
           displaySection
           notificationsSection
           deviceSection
+          locationSection
           if settings.proBetaAccepted { profileSection }
         }
         .padding(.horizontal, 16)
@@ -47,6 +50,7 @@ struct SettingsView: View {
       }
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+    .sheet(isPresented: $showPaywall) { PaywallSheet(feature: paywallFeature) }
     .onAppear { reloadFromSettings() }
     .onChange(of: standardDoseText) { markUnsaved() }
     .onChange(of: deviceNameText) { markUnsaved() }
@@ -278,6 +282,92 @@ struct SettingsView: View {
           Spacer()
         }
         .padding(.vertical, 6)
+      }
+    }
+  }
+
+  private var locationSection: some View {
+    settingsCard(title: "Dose Locations") {
+      if settings.proBetaAccepted {
+        VStack(spacing: 0) {
+          row(label: "Attach location to new doses") {
+            @Bindable var s = settings
+            Toggle("Attach location to new doses", isOn: $s.attachLocationToDoses)
+              .labelsHidden()
+              .tint(AppTheme.accentBlue)
+              .accessibilityLabel("Attach location to new doses")
+              .onChange(of: settings.attachLocationToDoses) {
+                markUnsaved()
+                if settings.attachLocationToDoses {
+                  LocationManager.shared.requestWhenInUsePermission()
+                }
+              }
+          }
+          if settings.attachLocationToDoses {
+            cardDivider
+            row(label: "Approximate location") {
+              @Bindable var s = settings
+              Toggle("Approximate location", isOn: $s.locationApproximate)
+                .labelsHidden()
+                .tint(AppTheme.accentBlue)
+                .accessibilityLabel("Approximate location")
+                .onChange(of: settings.locationApproximate) { markUnsaved() }
+            }
+            cardDivider
+            Button {
+              if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+              }
+            } label: {
+              HStack {
+                Text("Manage location permission")
+                  .font(.system(size: 15))
+                  .foregroundStyle(AppTheme.accentBlue)
+                Spacer()
+                Image(systemName: "arrow.up.right.square")
+                  .font(.system(size: 13))
+                  .foregroundStyle(AppTheme.accentBlue.opacity(0.6))
+              }
+              .padding(.vertical, 2)
+            }
+            .buttonStyle(.plain)
+            cardDivider
+            Text("Location is only used to record where you took a dose. It is never shared or uploaded.")
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.textMuted)
+              .padding(.vertical, 4)
+          }
+        }
+      } else {
+        Button {
+          paywallFeature = .doseLocations
+          showPaywall = true
+        } label: {
+          HStack(spacing: 10) {
+            Image(systemName: "location.fill")
+              .font(.system(size: 16))
+              .foregroundStyle(AppTheme.accentBlue)
+            VStack(alignment: .leading, spacing: 2) {
+              Text("Track dose locations")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(AppTheme.textPrimary)
+              Text("See where you took each dose on a map.")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textMuted)
+            }
+            Spacer()
+            HStack(spacing: 4) {
+              Image(systemName: "lock.fill").font(.system(size: 10))
+              Text("Pro")
+                .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(AppTheme.proAmber)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(AppTheme.proAmber.opacity(0.12))
+            .clipShape(Capsule())
+          }
+        }
+        .buttonStyle(.plain)
       }
     }
   }

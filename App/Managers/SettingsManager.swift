@@ -60,6 +60,12 @@ final class SettingsManager {
   var profilePictureData: Data? {
     didSet { UserDefaults.standard.set(profilePictureData, forKey: "profilePictureData") }
   }
+  var attachLocationToDoses: Bool {
+    didSet { UserDefaults.standard.set(attachLocationToDoses, forKey: "attachLocationToDoses") }
+  }
+  var locationApproximate: Bool {
+    didSet { UserDefaults.standard.set(locationApproximate, forKey: "locationApproximate") }
+  }
 
   init() {
     let ud = UserDefaults.standard
@@ -75,6 +81,8 @@ final class SettingsManager {
     vanityName        = ud.string(forKey: "vanityName") ?? ""
     proBetaAccepted   = ud.bool(forKey: "proBetaAccepted")
     profilePictureData = ud.data(forKey: "profilePictureData")
+    attachLocationToDoses = ud.bool(forKey: "attachLocationToDoses")
+    locationApproximate   = ud.object(forKey: "locationApproximate") as? Bool ?? true
 
     if let data = ud.data(forKey: "quickAmounts"),
        let decoded = try? JSONDecoder().decode([Double].self, from: data) {

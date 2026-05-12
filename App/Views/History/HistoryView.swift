@@ -9,11 +9,37 @@ struct HistoryView: View {
 
   @State private var showDeleteAll = false
   @State private var editingDose: DoseRecord?
+  @State private var showMapView = false
+  @State private var showPaywall = false
+  @State private var paywallFeature: ProFeature = .fullHistory
+  @State private var showExportLocationWarning = false
+  @State private var showExportShare = false
 
   private var visibleDoses: [DoseRecord] {
     if settings.proBetaAccepted { return allDoses }
     let cutoff = Date().addingTimeInterval(-24 * 3600)
     return allDoses.filter { $0.time >= cutoff }
+  }
+
+  private var locatedDoses: [DoseRecord] { allDoses.filter { $0.hasLocation } }
+  private var locatedCount: Int { locatedDoses.count }
+
+  private var mostCommonArea: String? {
+    let names = locatedDoses.compactMap { $0.locationName?.components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) }
+    guard !names.isEmpty else { return nil }
+    let freq = Dictionary(names.map { ($0, 1) }, uniquingKeysWith: +)
+    return freq.max(by: { $0.value < $1.value })?.key
+  }
+
+  private var earlyRedoseCount: Int {
+    let intervalSecs = Double(settings.safeIntervalMinutes) * 60
+    var count = 0
+    for (i, dose) in allDoses.enumerated() {
+      guard dose.hasLocation, i + 1 < allDoses.count else { continue }
+      let prev = allDoses[i + 1]
+      if dose.time.timeIntervalSince(prev.time) < intervalSecs { count += 1 }
+    }
+    return count
   }
 
   var body: some View {
@@ -51,7 +77,18 @@ struct HistoryView: View {
       } message: {
         Text("This cannot be undone.")
       }
+      .alert("Export includes location data", isPresented: $showExportLocationWarning) {
+        Button("Export") { showExportShare = true }
+        Button("Cancel", role: .cancel) {}
+      } message: {
+        Text("Your export will include GPS coordinates and location names for \(locatedCount) dose\(locatedCount == 1 ? "" : "s"). Make sure you trust the recipient.")
+      }
+      .sheet(isPresented: $showExportShare) {
+        ShareSheet(items: [csvContent()])
+      }
       .sheet(item: $editingDose) { EditDoseSheet(dose: $0) }
+      .sheet(isPresented: $showMapView) { DoseMapView() }
+      .sheet(isPresented: $showPaywall) { PaywallSheet(feature: paywallFeature) }
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
   }
@@ -64,6 +101,12 @@ struct HistoryView: View {
         if !settings.proBetaAccepted {
           proNudge
         }
+
+        if settings.proBetaAccepted && locatedCount > 0 {
+          mapButton
+          locationInsightsCard
+        }
+
         if visibleDoses.isEmpty {
           Text("Older records are hidden in free mode.")
             .font(.system(size: 14))
@@ -71,7 +114,11 @@ struct HistoryView: View {
             .padding(.top, 32)
         } else {
           ForEach(visibleDoses) { dose in
-            DoseRowView(dose: dose, isPro: settings.proBetaAccepted) {
+            DoseRowView(
+              dose: dose,
+              isPro: settings.proBetaAccepted,
+              locationApproximate: settings.locationApproximate
+            ) {
               if settings.proBetaAccepted { editingDose = dose }
             } onDelete: {
               DoseStore.delete(dose, context: context)
@@ -84,6 +131,85 @@ struct HistoryView: View {
     }
     .tabBarScrollClearance()
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+  }
+
+  // MARK: - Map button
+
+  private var mapButton: some View {
+    Button {
+      if settings.proBetaAccepted {
+        showMapView = true
+      } else {
+        paywallFeature = .doseMap
+        showPaywall = true
+      }
+    } label: {
+      HStack(spacing: 8) {
+        Image(systemName: "map.fill")
+          .font(.system(size: 14))
+          .foregroundStyle(AppTheme.accentBlue)
+        Text("View dose map · \(locatedCount) location\(locatedCount == 1 ? "" : "s")")
+          .font(.system(size: 14, weight: .medium))
+          .foregroundStyle(AppTheme.accentBlue)
+        Spacer()
+        Image(systemName: "chevron.right")
+          .font(.system(size: 11))
+          .foregroundStyle(AppTheme.accentBlue.opacity(0.5))
+      }
+      .padding(12)
+      .background(AppTheme.accentBlue.opacity(0.08))
+      .clipShape(RoundedRectangle(cornerRadius: 10))
+      .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.accentBlue.opacity(0.2), lineWidth: 0.5))
+    }
+    .buttonStyle(.plain)
+  }
+
+  // MARK: - Location insights card
+
+  private var locationInsightsCard: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack {
+        Text("LOCATION INSIGHTS")
+          .font(.system(size: 11, weight: .bold))
+          .foregroundStyle(AppTheme.textMuted)
+          .kerning(0.5)
+        Spacer()
+      }
+
+      HStack(spacing: 0) {
+        insightCell(value: "\(locatedCount)", label: "Tracked doses")
+        Divider().frame(height: 28).background(AppTheme.border)
+        if let area = mostCommonArea {
+          insightCell(value: area, label: "Most common area")
+          Divider().frame(height: 28).background(AppTheme.border)
+        }
+        insightCell(
+          value: earlyRedoseCount == 0 ? "None" : "\(earlyRedoseCount)",
+          label: "Early redoses",
+          valueColor: earlyRedoseCount > 0 ? AppTheme.statusAmber : AppTheme.statusGreen
+        )
+      }
+    }
+    .padding(14)
+    .background(AppTheme.backgroundCard)
+    .clipShape(RoundedRectangle(cornerRadius: 12))
+    .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 0.5))
+  }
+
+  private func insightCell(value: String, label: String, valueColor: Color = AppTheme.textPrimary) -> some View {
+    VStack(spacing: 2) {
+      Text(value)
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(valueColor)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+      Text(label)
+        .font(.system(size: 11))
+        .foregroundStyle(AppTheme.textMuted)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+    }
+    .frame(maxWidth: .infinity)
   }
 
   // MARK: - Empty state
@@ -110,10 +236,13 @@ struct HistoryView: View {
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
   }
 
-  // MARK: - Pro nudge (tappable)
+  // MARK: - Pro nudge
 
   private var proNudge: some View {
-    Button { nav.selectedTab = 4 } label: {
+    Button {
+      paywallFeature = .fullHistory
+      showPaywall = true
+    } label: {
       HStack(spacing: 8) {
         Image(systemName: "lock.fill")
           .foregroundStyle(AppTheme.proAmber)
@@ -140,27 +269,37 @@ struct HistoryView: View {
   // MARK: - CSV Export
 
   private var exportButton: some View {
-    ShareLink(
-      item: csvContent(),
-      subject: Text("G Timer History"),
-      message: Text("Dose history export")
-    ) {
+    Button {
+      if locatedCount > 0 {
+        showExportLocationWarning = true
+      } else {
+        showExportShare = true
+      }
+    } label: {
       Image(systemName: "square.and.arrow.up").foregroundStyle(AppTheme.accentBlue)
     }
     .accessibilityLabel("Export CSV")
   }
 
   private func csvContent() -> String {
-    var lines = ["Date,Time,Amount,Unit,Missed,Edited,Notes,Device,Location"]
+    var lines = ["Date,Time,Amount,Unit,Missed,Edited,Notes,Device,Latitude,Longitude,LocationName,AccuracyMeters,LocationSource"]
     let fmt = DateFormatter(); fmt.dateStyle = .short
     let tfmt = DateFormatter(); tfmt.timeStyle = .short
     for d in allDoses {
       let row = [
-        fmt.string(from: d.time), tfmt.string(from: d.time),
-        String(d.amount), d.unit,
-        d.missed ? "Yes" : "No", d.edited ? "Yes" : "No",
+        fmt.string(from: d.time),
+        tfmt.string(from: d.time),
+        String(d.amount),
+        d.unit,
+        d.missed ? "Yes" : "No",
+        d.edited ? "Yes" : "No",
         "\"\(d.notes.replacingOccurrences(of: "\"", with: "\"\""))\"",
-        d.deviceName, d.locationName ?? ""
+        d.deviceName,
+        d.latitude.map { String(format: "%.6f", $0) } ?? "",
+        d.longitude.map { String(format: "%.6f", $0) } ?? "",
+        "\"\((d.locationName ?? "").replacingOccurrences(of: "\"", with: "\"\""))\"",
+        d.locationAccuracyMeters.map { String(Int($0)) } ?? "",
+        d.resolvedLocationSource
       ].joined(separator: ",")
       lines.append(row)
     }

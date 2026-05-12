@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import CoreLocation
 import WidgetKit
 
 final class DoseStore {
@@ -9,13 +10,18 @@ final class DoseStore {
     time: Date = Date(),
     notes: String = "",
     missed: Bool = false,
-    latitude: Double? = nil,
-    longitude: Double? = nil,
+    capturedLocation: CLLocation? = nil,
     locationName: String? = nil,
+    locationSource: String = "none",
     deviceName: String,
     context: ModelContext,
     settings: SettingsManager
   ) {
+    let lat = capturedLocation?.coordinate.latitude
+    let lon = capturedLocation?.coordinate.longitude
+    let accuracy = capturedLocation?.horizontalAccuracy
+    let capturedAt = capturedLocation != nil ? Date() : nil
+
     let record = DoseRecord(
       amount: amount,
       unit: unit,
@@ -23,9 +29,12 @@ final class DoseStore {
       deviceName: deviceName,
       notes: notes,
       missed: missed,
-      latitude: latitude,
-      longitude: longitude,
-      locationName: locationName
+      latitude: lat,
+      longitude: lon,
+      locationName: locationName,
+      locationAccuracyMeters: accuracy,
+      locationCapturedAt: capturedAt,
+      locationSource: capturedLocation != nil ? locationSource : "none"
     )
     context.insert(record)
     try? context.save()

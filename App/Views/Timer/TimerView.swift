@@ -10,7 +10,8 @@ struct TimerView: View {
   @State private var now = Date()
   @State private var showCustomSheet = false
   @State private var showMissedSheet = false
-  @State private var showProRequired = false
+  @State private var showPaywall = false
+  @State private var paywallFeature: ProFeature = .missedDose
   @State private var showWarning = false
   @State private var pendingAmount: Double = 0
   @State private var pendingNotes: String = ""
@@ -92,7 +93,13 @@ struct TimerView: View {
       .toolbarColorScheme(.dark, for: .navigationBar)
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
-    .onAppear { startTicker() }
+    .onAppear {
+      startTicker()
+      // Warm up a location fix if Pro location recording is enabled
+      if settings.proBetaAccepted && settings.attachLocationToDoses {
+        LocationManager.shared.requestLocationInBackground()
+      }
+    }
     .onDisappear { ticker?.invalidate() }
     .sheet(isPresented: $showCustomSheet) {
       CustomDoseSheet { amount, notes in attemptLog(amount: amount, notes: notes) }
@@ -100,8 +107,8 @@ struct TimerView: View {
     .sheet(isPresented: $showMissedSheet) {
       MissedDoseSheet()
     }
-    .sheet(isPresented: $showProRequired) {
-      ProRequiredSheet { nav.selectedTab = 4 }
+    .sheet(isPresented: $showPaywall) {
+      PaywallSheet(feature: paywallFeature)
     }
     .alert("Log Early?", isPresented: $showWarning) {
       Button("Cancel", role: .cancel) {}
@@ -208,8 +215,10 @@ struct TimerView: View {
             .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.proAmber.opacity(0.25), lineWidth: 0.5))
           }
         } else {
-          // Locked: tapping opens Pro-required sheet
-          Button { showProRequired = true } label: {
+          Button {
+            paywallFeature = .missedDose
+            showPaywall = true
+          } label: {
             HStack(spacing: 5) {
               Image(systemName: "lock.fill").font(.system(size: 12))
               Text("Missed dose")
@@ -263,6 +272,18 @@ struct TimerView: View {
           Text(dose.time.formatted(date: .omitted, time: .shortened) + " · " + relativeDoseAge)
             .font(.system(size: 13))
             .foregroundStyle(AppTheme.textSecondary)
+          // Location line (Pro)
+          if let locLabel = dose.displayLocation(approximate: settings.locationApproximate) {
+            HStack(spacing: 4) {
+              Image(systemName: "location.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(AppTheme.accentBlue)
+              Text(locLabel)
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textSecondary)
+                .lineLimit(1)
+            }
+          }
         }
         Spacer()
       }
@@ -286,6 +307,34 @@ struct TimerView: View {
           .font(.system(size: 13))
           .foregroundStyle(AppTheme.textSecondary)
           .lineLimit(2)
+      }
+
+      // Throttled location nudge for free users
+      if !settings.proBetaAccepted &&
+         !PaywallThrottle.shared.wasDismissed(.doseLocations) {
+        Button {
+          paywallFeature = .doseLocations
+          showPaywall = true
+        } label: {
+          HStack(spacing: 6) {
+            Image(systemName: "location.fill")
+              .font(.system(size: 11))
+              .foregroundStyle(AppTheme.accentBlue)
+            Text("Add location context with Pro")
+              .font(.system(size: 12, weight: .medium))
+              .foregroundStyle(AppTheme.accentBlue)
+            Spacer()
+            Image(systemName: "chevron.right")
+              .font(.system(size: 10))
+              .foregroundStyle(AppTheme.accentBlue.opacity(0.5))
+          }
+          .padding(.horizontal, 10)
+          .padding(.vertical, 7)
+          .background(AppTheme.accentBlue.opacity(0.07))
+          .clipShape(RoundedRectangle(cornerRadius: 8))
+          .overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.accentBlue.opacity(0.2), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
       }
     }
     .padding(16)
@@ -343,67 +392,32 @@ struct TimerView: View {
 
   private func confirmLog(amount: Double, notes: String = "") {
     let loc = LocationManager.shared
-    DoseStore.logDose(
-      amount: amount,
-      unit: settings.unit,
-      notes: notes,
-      latitude: loc.currentLocation?.coordinate.latitude,
-      longitude: loc.currentLocation?.coordinate.longitude,
-      locationName: loc.locationName,
-      deviceName: settings.deviceName,
-      context: context,
-      settings: settings
-    )
-  }
-}
+    let captureLocation = settings.proBetaAccepted && settings.attachLocationToDoses
 
-// MARK: - Pro-required sheet
-
-private struct ProRequiredSheet: View {
-  @Environment(\.dismiss) private var dismiss
-  var onGoToPro: () -> Void
-
-  var body: some View {
-    VStack(spacing: 20) {
-      Image(systemName: "star.fill")
-        .font(.system(size: 44))
-        .foregroundStyle(AppTheme.proAmber)
-        .padding(.top, 32)
-      Text("Pro Feature")
-        .font(.system(size: 22, weight: .bold))
-        .foregroundStyle(AppTheme.textPrimary)
-      Text("Logging missed doses requires G Timer Pro beta access.")
-        .font(.system(size: 15))
-        .foregroundStyle(AppTheme.textSecondary)
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 32)
-
-      Button {
-        dismiss()
-        onGoToPro()
-      } label: {
-        Text("Activate Pro — it's free")
-          .font(.system(size: 17, weight: .semibold))
-          .foregroundStyle(.white)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 15)
-          .background(
-            LinearGradient(colors: [AppTheme.proAmber, AppTheme.proOrange],
-                           startPoint: .leading, endPoint: .trailing)
-          )
-          .clipShape(RoundedRectangle(cornerRadius: 14))
+    if captureLocation {
+      Task { @MainActor in
+        let captured = await loc.captureForDose()
+        DoseStore.logDose(
+          amount: amount,
+          unit: settings.unit,
+          notes: notes,
+          capturedLocation: captured,
+          locationName: loc.locationName,
+          locationSource: "automatic",
+          deviceName: settings.deviceName,
+          context: context,
+          settings: settings
+        )
       }
-      .padding(.horizontal, 24)
-
-      Button("Maybe later") { dismiss() }
-        .font(.system(size: 15))
-        .foregroundStyle(AppTheme.textMuted)
-        .padding(.bottom, 32)
+    } else {
+      DoseStore.logDose(
+        amount: amount,
+        unit: settings.unit,
+        notes: notes,
+        deviceName: settings.deviceName,
+        context: context,
+        settings: settings
+      )
     }
-    .frame(maxWidth: .infinity)
-    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
-    .presentationDetents([.medium])
-    .presentationBackground(AppTheme.backgroundPrimary)
-    .preferredColorScheme(.dark)
   }
 }

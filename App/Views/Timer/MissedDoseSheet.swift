@@ -1,14 +1,21 @@
 import SwiftUI
+import CoreLocation
 
 struct MissedDoseSheet: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(\.modelContext) private var context
   @Environment(\.dismiss) private var dismiss
 
-  @State private var amount: Double = 1.5
   @State private var amountText = "1.5"
   @State private var selectedDate = Date()
   @State private var notes = ""
+  @State private var attachLocation = false
+  @State private var isLogging = false
+
+  private var locationAvailable: Bool {
+    settings.attachLocationToDoses &&
+    LocationManager.shared.authorizationStatus == .authorizedWhenInUse
+  }
 
   var body: some View {
     NavigationStack {
@@ -57,21 +64,68 @@ struct MissedDoseSheet: View {
               .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border))
           }
 
+          // Location attachment (Pro only, shown when location permission exists)
+          if settings.attachLocationToDoses {
+            HStack {
+              VStack(alignment: .leading, spacing: 2) {
+                Text("Attach current location")
+                  .font(.system(size: 15))
+                  .foregroundStyle(AppTheme.textPrimary)
+                Text("Logs your current position, not where you were then.")
+                  .font(.system(size: 12))
+                  .foregroundStyle(AppTheme.textMuted)
+              }
+              Spacer()
+              Toggle("Attach current location", isOn: $attachLocation)
+                .labelsHidden()
+                .tint(AppTheme.accentBlue)
+                .accessibilityLabel("Attach current location")
+            }
+            .padding(14)
+            .background(AppTheme.backgroundCard)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border))
+          }
+
           Spacer()
 
           Button {
+            guard !isLogging else { return }
+            isLogging = true
             let a = Double(amountText) ?? settings.standardDose
-            DoseStore.logDose(
-              amount: a,
-              unit: settings.unit,
-              time: selectedDate,
-              notes: notes,
-              missed: true,
-              deviceName: settings.deviceName,
-              context: context,
-              settings: settings
-            )
-            dismiss()
+            let loc = LocationManager.shared
+
+            if attachLocation && locationAvailable {
+              Task { @MainActor in
+                let captured = await loc.captureForDose()
+                DoseStore.logDose(
+                  amount: a,
+                  unit: settings.unit,
+                  time: selectedDate,
+                  notes: notes,
+                  missed: true,
+                  capturedLocation: captured,
+                  locationName: loc.locationName,
+                  locationSource: "manual",
+                  deviceName: settings.deviceName,
+                  context: context,
+                  settings: settings
+                )
+                dismiss()
+              }
+            } else {
+              DoseStore.logDose(
+                amount: a,
+                unit: settings.unit,
+                time: selectedDate,
+                notes: notes,
+                missed: true,
+                deviceName: settings.deviceName,
+                context: context,
+                settings: settings
+              )
+              dismiss()
+            }
           } label: {
             Text("Log Missed Dose")
               .font(.system(size: 17, weight: .semibold))
@@ -81,6 +135,7 @@ struct MissedDoseSheet: View {
               .background(AppTheme.proAmber)
               .clipShape(RoundedRectangle(cornerRadius: 14))
           }
+          .disabled(isLogging)
         }
         .padding(20)
       }
