@@ -14,6 +14,7 @@ struct SettingsView: View {
   @State private var quickAmountsText = ""
   @State private var quickAmountsError: String? = nil
   @State private var intervalError: String? = nil
+  @State private var hasLoaded = false
 
   private let intervalPresets = [60, 90, 120]
   private var hasChanges: Bool { saveState == .unsaved }
@@ -338,6 +339,7 @@ struct SettingsView: View {
   // MARK: - Save / validate
 
   private func markUnsaved() {
+    guard hasLoaded else { return }
     if saveState != .unsaved { saveState = .unsaved }
   }
 
@@ -375,6 +377,7 @@ struct SettingsView: View {
   }
 
   private func reloadFromSettings() {
+    hasLoaded = false
     standardDoseText = settings.standardDose.formatted(.number.precision(.fractionLength(1)))
     deviceNameText = settings.deviceName
     vanityNameText = settings.vanityName
@@ -385,6 +388,7 @@ struct SettingsView: View {
     saveState = .idle
     quickAmountsError = nil
     intervalError = nil
+    Task { @MainActor in hasLoaded = true }
   }
 
   private func loadPhoto() {

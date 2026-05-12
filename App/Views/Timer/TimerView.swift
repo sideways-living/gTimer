@@ -13,6 +13,7 @@ struct TimerView: View {
   @State private var showProRequired = false
   @State private var showWarning = false
   @State private var pendingAmount: Double = 0
+  @State private var pendingNotes: String = ""
   @State private var ticker: Timer?
 
   private var lastDose: DoseRecord? { doses.first }
@@ -94,7 +95,7 @@ struct TimerView: View {
     .onAppear { startTicker() }
     .onDisappear { ticker?.invalidate() }
     .sheet(isPresented: $showCustomSheet) {
-      CustomDoseSheet { attemptLog(amount: $0) }
+      CustomDoseSheet { amount, notes in attemptLog(amount: amount, notes: notes) }
     }
     .sheet(isPresented: $showMissedSheet) {
       MissedDoseSheet()
@@ -104,7 +105,7 @@ struct TimerView: View {
     }
     .alert("Log Early?", isPresented: $showWarning) {
       Button("Cancel", role: .cancel) {}
-      Button("Log Anyway", role: .destructive) { confirmLog(amount: pendingAmount) }
+      Button("Log Anyway", role: .destructive) { confirmLog(amount: pendingAmount, notes: pendingNotes) }
     } message: {
       Text("The safe interval hasn't passed yet. Logging early can increase risk.")
     }
@@ -330,20 +331,28 @@ struct TimerView: View {
     ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in now = Date() }
   }
 
-  private func attemptLog(amount: Double) {
-    if isActive && !isSafe { pendingAmount = amount; showWarning = true }
-    else { confirmLog(amount: amount) }
+  private func attemptLog(amount: Double, notes: String = "") {
+    if isActive && !isSafe {
+      pendingAmount = amount
+      pendingNotes = notes
+      showWarning = true
+    } else {
+      confirmLog(amount: amount, notes: notes)
+    }
   }
 
-  private func confirmLog(amount: Double) {
+  private func confirmLog(amount: Double, notes: String = "") {
     let loc = LocationManager.shared
     DoseStore.logDose(
-      amount: amount, unit: settings.unit,
+      amount: amount,
+      unit: settings.unit,
+      notes: notes,
       latitude: loc.currentLocation?.coordinate.latitude,
       longitude: loc.currentLocation?.coordinate.longitude,
       locationName: loc.locationName,
       deviceName: settings.deviceName,
-      context: context, settings: settings
+      context: context,
+      settings: settings
     )
   }
 }
