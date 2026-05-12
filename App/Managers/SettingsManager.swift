@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import WidgetKit
 
 @Observable
 final class SettingsManager {
@@ -14,7 +15,8 @@ final class SettingsManager {
   var safeIntervalMinutes: Int {
     didSet {
       UserDefaults.standard.set(safeIntervalMinutes, forKey: "safeIntervalMinutes")
-      updateShared()
+      updateSharedInterval()
+      WidgetCenter.shared.reloadAllTimelines()
     }
   }
   var substance: String {
@@ -31,7 +33,11 @@ final class SettingsManager {
     didSet { UserDefaults.standard.set(notificationsEnabled, forKey: "notificationsEnabled") }
   }
   var countdownMode: Bool {
-    didSet { UserDefaults.standard.set(countdownMode, forKey: "countdownMode") }
+    didSet {
+      UserDefaults.standard.set(countdownMode, forKey: "countdownMode")
+      updateSharedInterval()
+      WidgetCenter.shared.reloadAllTimelines()
+    }
   }
   var timeFormat: String {
     didSet { UserDefaults.standard.set(timeFormat, forKey: "timeFormat") }
@@ -46,7 +52,10 @@ final class SettingsManager {
     didSet { UserDefaults.standard.set(vanityName, forKey: "vanityName") }
   }
   var proBetaAccepted: Bool {
-    didSet { UserDefaults.standard.set(proBetaAccepted, forKey: "proBetaAccepted") }
+    didSet {
+      UserDefaults.standard.set(proBetaAccepted, forKey: "proBetaAccepted")
+      WidgetCenter.shared.reloadAllTimelines()
+    }
   }
   var profilePictureData: Data? {
     didSet { UserDefaults.standard.set(profilePictureData, forKey: "profilePictureData") }
@@ -75,7 +84,15 @@ final class SettingsManager {
     }
   }
 
-  private func updateShared() {
-    // Shared defaults updated by DoseStore when dose is logged
+  // Patches only the interval/countdownMode fields in shared defaults,
+  // preserving whatever dose data DoseStore last wrote.
+  private func updateSharedInterval() {
+    guard let raw = AppGroup.sharedDefaults?.data(forKey: AppGroup.lastDoseKey),
+          var data = try? JSONDecoder().decode(SharedDoseData.self, from: raw) else { return }
+    data.safeIntervalMinutes = safeIntervalMinutes
+    data.countdownMode = countdownMode
+    if let encoded = try? JSONEncoder().encode(data) {
+      AppGroup.sharedDefaults?.set(encoded, forKey: AppGroup.lastDoseKey)
+    }
   }
 }

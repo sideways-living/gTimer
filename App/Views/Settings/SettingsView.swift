@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import WidgetKit
 
 enum SaveState { case idle, unsaved, saved }
 
@@ -369,6 +370,7 @@ struct SettingsView: View {
     quickAmountsError = nil
     intervalError = nil
     saveState = .saved
+    WidgetCenter.shared.reloadAllTimelines()
 
     // Reset to idle after a moment
     DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {

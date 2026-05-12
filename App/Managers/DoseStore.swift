@@ -59,7 +59,8 @@ final class DoseStore {
       lastDoseTime: time,
       lastDoseAmount: amount,
       lastDoseUnit: unit,
-      safeIntervalMinutes: settings?.safeIntervalMinutes
+      safeIntervalMinutes: settings?.safeIntervalMinutes,
+      countdownMode: settings?.countdownMode
     )
     if let encoded = try? JSONEncoder().encode(data) {
       AppGroup.sharedDefaults?.set(encoded, forKey: AppGroup.lastDoseKey)

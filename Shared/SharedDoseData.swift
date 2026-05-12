@@ -5,4 +5,5 @@ struct SharedDoseData: Codable {
   var lastDoseAmount: Double?
   var lastDoseUnit: String?
   var safeIntervalMinutes: Int?
+  var countdownMode: Bool?
 }

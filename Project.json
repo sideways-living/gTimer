@@ -46,6 +46,12 @@
           "UISupportedInterfaceOrientations": [
             "UIInterfaceOrientationPortrait",
             "UIInterfaceOrientationPortraitUpsideDown"
+          ],
+          "CFBundleURLTypes": [
+            {
+              "CFBundleURLSchemes": ["gtimer"],
+              "CFBundleURLName": "app.gtimer"
+            }
           ]
         }
       },
