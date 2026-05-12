@@ -9,6 +9,7 @@ struct DoseRowView: View {
 
   @State private var showDeleteConfirm = false
   @State private var showMapSheet = false
+  @State private var showLocationPaywall = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -66,10 +67,10 @@ struct DoseRowView: View {
       .padding(.top, 10)
       .padding(.bottom, dose.hasLocation ? 6 : 10)
 
-      // Location row — tappable if Pro
+      // Location row — opens map sheet (Pro) or paywall (non-Pro)
       if let locLabel = dose.displayLocation(approximate: locationApproximate) {
         Button {
-          if isPro { showMapSheet = true }
+          if isPro { showMapSheet = true } else { showLocationPaywall = true }
         } label: {
           HStack(spacing: 5) {
             Image(systemName: "location.fill")
@@ -79,19 +80,16 @@ struct DoseRowView: View {
               .font(.system(size: 12))
               .foregroundStyle(isPro ? AppTheme.textSecondary : AppTheme.textMuted)
               .lineLimit(1)
-            if isPro {
-              Image(systemName: "chevron.right")
-                .font(.system(size: 9))
-                .foregroundStyle(AppTheme.textMuted.opacity(0.5))
-            }
+            Image(systemName: "chevron.right")
+              .font(.system(size: 9))
+              .foregroundStyle(AppTheme.textMuted.opacity(0.5))
             Spacer()
           }
           .padding(.horizontal, 14)
           .padding(.bottom, 10)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isPro ? "View location on map: \(locLabel)" : locLabel)
-        .disabled(!isPro)
+        .accessibilityLabel(isPro ? "View location on map: \(locLabel)" : "Unlock location map — Pro feature")
       }
     }
     .background(AppTheme.backgroundCard)
@@ -104,6 +102,9 @@ struct DoseRowView: View {
     }
     .sheet(isPresented: $showMapSheet) {
       DoseDetailMapSheet(dose: dose)
+    }
+    .sheet(isPresented: $showLocationPaywall) {
+      PaywallSheet(feature: .doseLocations)
     }
   }
 

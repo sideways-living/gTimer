@@ -36,6 +36,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
   // Returns a location for dose logging.
   // Returns the current fix immediately if it is fresh (< 5 min),
   // otherwise requests one-shot and waits up to `timeout` seconds.
+  // Safe to call concurrently — a second call cancels the first pending wait.
   func captureForDose(timeout: TimeInterval = 5.0) async -> CLLocation? {
     guard authorizationStatus == .authorizedWhenInUse ||
           authorizationStatus == .authorizedAlways else { return nil }
@@ -44,6 +45,10 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
       return loc
     }
 
+    // If a continuation is already pending, resolve it immediately so it is
+    // never abandoned, then proceed with a new one.
+    resumeContinuation(with: currentLocation)
+
     return await withCheckedContinuation { continuation in
       continuationResumed = false
       pendingContinuation = continuation
@@ -51,7 +56,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
       Task {
         try? await Task.sleep(for: .seconds(timeout))
-        resumeContinuation(with: self.currentLocation)
+        self.resumeContinuation(with: self.currentLocation)
       }
     }
   }

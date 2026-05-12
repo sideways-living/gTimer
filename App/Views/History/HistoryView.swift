@@ -56,7 +56,7 @@ struct HistoryView: View {
       .toolbarColorScheme(.dark, for: .navigationBar)
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
-          if settings.proBetaAccepted && !allDoses.isEmpty {
+          if !allDoses.isEmpty {
             exportButton
           }
           if !allDoses.isEmpty {
@@ -102,8 +102,10 @@ struct HistoryView: View {
           proNudge
         }
 
+        // Map button: visible to all users; Pro+locations → full map,
+        // Pro+no-locations → empty map, free → paywall.
+        mapButton
         if settings.proBetaAccepted && locatedCount > 0 {
-          mapButton
           locationInsightsCard
         }
 
@@ -136,8 +138,10 @@ struct HistoryView: View {
   // MARK: - Map button
 
   private var mapButton: some View {
-    Button {
-      if settings.proBetaAccepted {
+    let isPro = settings.proBetaAccepted
+    let active = isPro  // blue style when Pro (whether or not locations exist yet)
+    return Button {
+      if isPro {
         showMapView = true
       } else {
         paywallFeature = .doseMap
@@ -145,21 +149,33 @@ struct HistoryView: View {
       }
     } label: {
       HStack(spacing: 8) {
-        Image(systemName: "map.fill")
-          .font(.system(size: 14))
-          .foregroundStyle(AppTheme.accentBlue)
-        Text("View dose map · \(locatedCount) location\(locatedCount == 1 ? "" : "s")")
-          .font(.system(size: 14, weight: .medium))
-          .foregroundStyle(AppTheme.accentBlue)
+        Image(systemName: isPro ? "map.fill" : "lock.fill")
+          .font(.system(size: 13))
+          .foregroundStyle(active ? AppTheme.accentBlue : AppTheme.textMuted)
+        if isPro && locatedCount > 0 {
+          Text("View dose map · \(locatedCount) location\(locatedCount == 1 ? "" : "s")")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(AppTheme.accentBlue)
+        } else if isPro {
+          Text("View dose map")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(AppTheme.textSecondary)
+        } else {
+          Text("Dose map — Pro feature")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(AppTheme.textMuted)
+        }
         Spacer()
         Image(systemName: "chevron.right")
           .font(.system(size: 11))
-          .foregroundStyle(AppTheme.accentBlue.opacity(0.5))
+          .foregroundStyle(active ? AppTheme.accentBlue.opacity(0.5) : AppTheme.textMuted.opacity(0.5))
       }
       .padding(12)
-      .background(AppTheme.accentBlue.opacity(0.08))
+      .background(active ? AppTheme.accentBlue.opacity(0.08) : AppTheme.backgroundCard)
       .clipShape(RoundedRectangle(cornerRadius: 10))
-      .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.accentBlue.opacity(0.2), lineWidth: 0.5))
+      .overlay(RoundedRectangle(cornerRadius: 10).stroke(
+        active ? AppTheme.accentBlue.opacity(0.2) : AppTheme.border,
+        lineWidth: 0.5))
     }
     .buttonStyle(.plain)
   }
@@ -270,15 +286,21 @@ struct HistoryView: View {
 
   private var exportButton: some View {
     Button {
+      guard settings.proBetaAccepted else {
+        paywallFeature = .exportHistory
+        showPaywall = true
+        return
+      }
       if locatedCount > 0 {
         showExportLocationWarning = true
       } else {
         showExportShare = true
       }
     } label: {
-      Image(systemName: "square.and.arrow.up").foregroundStyle(AppTheme.accentBlue)
+      Image(systemName: "square.and.arrow.up")
+        .foregroundStyle(settings.proBetaAccepted ? AppTheme.accentBlue : AppTheme.textMuted)
     }
-    .accessibilityLabel("Export CSV")
+    .accessibilityLabel(settings.proBetaAccepted ? "Export CSV" : "Export CSV — Pro feature")
   }
 
   private func csvContent() -> String {

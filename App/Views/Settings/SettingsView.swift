@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import WidgetKit
+import CoreLocation
 
 enum SaveState { case idle, unsaved, saved }
 
@@ -304,6 +305,27 @@ struct SettingsView: View {
               }
           }
           if settings.attachLocationToDoses {
+            // Permission-denied warning
+            let status = LocationManager.shared.authorizationStatus
+            if status == .denied || status == .restricted {
+              cardDivider
+              HStack(spacing: 8) {
+                Image(systemName: "location.slash.fill")
+                  .font(.system(size: 12))
+                  .foregroundStyle(AppTheme.statusAmber)
+                VStack(alignment: .leading, spacing: 2) {
+                  Text("Location access denied")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(AppTheme.statusAmber)
+                  Text("Doses will still log normally. To record locations, enable permission in Settings.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(AppTheme.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+              }
+              .padding(.vertical, 6)
+            }
             cardDivider
             row(label: "Approximate location") {
               @Bindable var s = settings
@@ -332,7 +354,7 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             cardDivider
-            Text("Location is only used to record where you took a dose. It is never shared or uploaded.")
+            Text("Location data is stored locally on this device only. It is never shared or uploaded.")
               .font(.system(size: 12))
               .foregroundStyle(AppTheme.textMuted)
               .padding(.vertical, 4)
