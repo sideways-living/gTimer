@@ -33,7 +33,7 @@ struct SettingsView: View {
         .padding(.horizontal, 16)
         .padding(.top, 16)
       }
-      .contentMargins(.bottom, 24, for: .scrollContent)
+      .tabBarScrollClearance()
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Settings")
       .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)

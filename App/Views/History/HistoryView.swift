@@ -82,7 +82,7 @@ struct HistoryView: View {
       .padding(.horizontal, 16)
       .padding(.top, 12)
     }
-    .contentMargins(.bottom, 24, for: .scrollContent)
+    .tabBarScrollClearance()
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
   }
 
@@ -106,7 +106,7 @@ struct HistoryView: View {
       }
       .frame(maxWidth: .infinity)
     }
-    .contentMargins(.bottom, 24, for: .scrollContent)
+    .tabBarScrollClearance()
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
   }
 

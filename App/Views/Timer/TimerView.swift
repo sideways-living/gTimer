@@ -72,7 +72,7 @@ struct TimerView: View {
         }
         .padding(.horizontal, 0)
       }
-      .contentMargins(.bottom, 24, for: .scrollContent)
+      .tabBarScrollClearance()
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("")
       .toolbar {

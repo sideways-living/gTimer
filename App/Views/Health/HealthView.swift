@@ -108,7 +108,7 @@ struct HealthView: View {
         .padding(.horizontal, 16)
         .padding(.top, 12)
       }
-      .contentMargins(.bottom, 24, for: .scrollContent)
+      .tabBarScrollClearance()
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Health & Safety")
       .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)

@@ -22,7 +22,7 @@ struct ProView: View {
           signupView
         }
       }
-      .contentMargins(.bottom, 24, for: .scrollContent)
+      .tabBarScrollClearance()
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Pro")
       .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
