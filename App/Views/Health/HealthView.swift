@@ -25,9 +25,30 @@ struct HealthView: View {
               Text("Redosing too soon dramatically increases the risk of overdose. The recommended minimum interval between doses is **90 minutes** — however individual factors (body weight, tolerance, purity) mean longer is safer.")
                 .font(.system(size: 14))
                 .foregroundStyle(AppTheme.textSecondary)
-              infoRow("Never", "redose if you can't remember your last dose clearly.")
-              infoRow("Never", "combine with alcohol or other CNS depressants.")
-              infoRow("If in doubt,", "don't take more.")
+              infoRow("Never", rest: "redose if you can't remember your last dose clearly.")
+              infoRow("Never", rest: "combine with alcohol or other CNS depressants.")
+              infoRow("If in doubt,", rest: "don't take more.")
+            }
+          }
+
+          section(title: "Call Emergency Services If…", icon: "phone.fill", color: AppTheme.statusRed) {
+            VStack(alignment: .leading, spacing: 8) {
+              urgentTrigger("Person cannot be woken or is unconscious")
+              urgentTrigger("Breathing is slow, shallow, or irregular")
+              urgentTrigger("Lips or fingertips are turning blue (cyanosis)")
+              urgentTrigger("GHB/GBL was mixed with alcohol, benzodiazepines, or opioids")
+              urgentTrigger("Vomiting while not fully conscious")
+              urgentTrigger("Seizure or muscle twitching")
+              urgentTrigger("You are unsure — always call if in doubt")
+
+              Text("Call 999 (UK) · 112 (EU) · 911 (US)")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(AppTheme.statusRed)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.top, 6)
             }
           }
 
@@ -42,34 +63,13 @@ struct HealthView: View {
             ])
           }
 
-          section(title: "🚨 Call Emergency Services If…", icon: "phone.fill", color: AppTheme.statusRed) {
-            VStack(alignment: .leading, spacing: 8) {
-              urgentTrigger("Person is unconscious or cannot be woken")
-              urgentTrigger("Breathing is slow, shallow, or irregular")
-              urgentTrigger("Lips or fingertips are turning blue (cyanosis)")
-              urgentTrigger("GHB/GBL was mixed with alcohol, benzodiazepines, or opioids")
-              urgentTrigger("Vomiting while not fully conscious")
-              urgentTrigger("You are unsure — always err on the side of calling")
-
-              Text("Call 999 (UK) · 112 (EU) · 911 (US)")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(AppTheme.statusRed)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .padding(.top, 4)
-            }
-          }
-
-          section(title: "Emergency Response", icon: "cross.fill", color: AppTheme.statusRed) {
+          section(title: "Emergency Response Steps", icon: "cross.fill", color: AppTheme.statusRed) {
             VStack(alignment: .leading, spacing: 10) {
               emergencyStep("1", "Call emergency services immediately (999/112/911).")
               emergencyStep("2", "Place the person in the recovery position (on their side).")
-              emergencyStep("3", "Stay with them. Monitor breathing continuously.")
-              emergencyStep("4", "Tell paramedics what was taken and when — this is not optional.")
+              emergencyStep("3", "Stay with them and monitor breathing continuously.")
+              emergencyStep("4", "Tell paramedics exactly what was taken and when.")
               emergencyStep("5", "Do NOT leave them to 'sleep it off' unsupervised.")
-
               Text("There is no antidote to GHB/GBL overdose. Supportive medical care is the only treatment.")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(AppTheme.statusRed)
@@ -99,25 +99,25 @@ struct HealthView: View {
               resourceRow("Narcotics Anonymous UK", "0300 999 1212")
               resourceRow("DAN 24/7 (Wales)", "0808 808 2234")
               resourceRow("SAMHSA (US)", "1-800-662-4357")
-              resourceRow("Emergency (UK)", "999")
-              resourceRow("Emergency (EU)", "112")
-              resourceRow("Emergency (US)", "911")
+              resourceRow("Emergency (UK/EU/US)", "999 / 112 / 911")
             }
           }
 
           disclaimer
-            .padding(.bottom, 20)
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
-        .padding(.bottom, 100)
       }
-      .background(AppTheme.backgroundPrimary)
+      .contentMargins(.bottom, 24, for: .scrollContent)
+      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Health & Safety")
+      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
       .toolbarColorScheme(.dark, for: .navigationBar)
     }
-    .preferredColorScheme(.dark)
+    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
   }
+
+  // MARK: - Components
 
   private var disclaimer: some View {
     HStack(alignment: .top, spacing: 10) {
@@ -137,12 +137,8 @@ struct HealthView: View {
   private func section<Content: View>(title: String, icon: String, color: Color, @ViewBuilder content: () -> Content) -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 8) {
-        Image(systemName: icon)
-          .foregroundStyle(color)
-          .font(.system(size: 15))
-        Text(title)
-          .font(.system(size: 16, weight: .bold))
-          .foregroundStyle(AppTheme.textPrimary)
+        Image(systemName: icon).foregroundStyle(color).font(.system(size: 15))
+        Text(title).font(.system(size: 16, weight: .bold)).foregroundStyle(AppTheme.textPrimary)
       }
       content()
     }
@@ -156,56 +152,42 @@ struct HealthView: View {
     VStack(alignment: .leading, spacing: 7) {
       ForEach(items, id: \.self) { item in
         HStack(alignment: .top, spacing: 8) {
-          Text("•")
-            .foregroundStyle(AppTheme.textMuted)
-            .font(.system(size: 14))
-          Text(item)
-            .font(.system(size: 14))
-            .foregroundStyle(AppTheme.textSecondary)
+          Text("•").foregroundStyle(AppTheme.textMuted).font(.system(size: 14))
+          Text(item).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary)
         }
       }
     }
   }
 
-  private func infoRow(_ bold: String, _ rest: String) -> some View {
-    Text("\(bold) ") + Text(rest).foregroundColor(AppTheme.textSecondary)
+  private func infoRow(_ bold: String, rest: String) -> some View {
+    HStack(alignment: .top, spacing: 4) {
+      Text(bold).font(.system(size: 14, weight: .semibold)).foregroundStyle(AppTheme.textPrimary)
+      Text(rest).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary)
+    }
   }
 
   private func urgentTrigger(_ text: String) -> some View {
     HStack(alignment: .top, spacing: 8) {
       Image(systemName: "exclamationmark.circle.fill")
-        .foregroundStyle(AppTheme.statusRed)
-        .font(.system(size: 13))
-        .padding(.top, 1)
-      Text(text)
-        .font(.system(size: 14, weight: .medium))
-        .foregroundStyle(AppTheme.textPrimary)
+        .foregroundStyle(AppTheme.statusRed).font(.system(size: 13)).padding(.top, 1)
+      Text(text).font(.system(size: 14, weight: .medium)).foregroundStyle(AppTheme.textPrimary)
     }
   }
 
   private func emergencyStep(_ num: String, _ text: String) -> some View {
     HStack(alignment: .top, spacing: 10) {
       Text(num)
-        .font(.system(size: 13, weight: .bold))
-        .foregroundStyle(.white)
-        .frame(width: 22, height: 22)
-        .background(AppTheme.statusRed)
-        .clipShape(Circle())
-      Text(text)
-        .font(.system(size: 14))
-        .foregroundStyle(AppTheme.textSecondary)
+        .font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
+        .frame(width: 22, height: 22).background(AppTheme.statusRed).clipShape(Circle())
+      Text(text).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary)
     }
   }
 
   private func resourceRow(_ name: String, _ number: String) -> some View {
     HStack {
-      Text(name)
-        .font(.system(size: 14))
-        .foregroundStyle(AppTheme.textSecondary)
+      Text(name).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary)
       Spacer()
-      Text(number)
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundStyle(AppTheme.accentBlue)
+      Text(number).font(.system(size: 14, weight: .semibold)).foregroundStyle(AppTheme.accentBlue)
     }
   }
 }

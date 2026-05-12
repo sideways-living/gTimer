@@ -1,66 +1,80 @@
 import SwiftUI
 import PhotosUI
 
+enum SaveState { case idle, unsaved, saved }
+
 struct SettingsView: View {
   @Environment(SettingsManager.self) private var settings
-  @State private var showUnsavedAlert = false
+  @State private var saveState: SaveState = .idle
   @State private var customIntervalText = ""
   @State private var standardDoseText = ""
   @State private var deviceNameText = ""
   @State private var vanityNameText = ""
-  @State private var hasChanges = false
   @State private var photoPickerItem: PhotosPickerItem?
   @State private var quickAmountsText = ""
-  @State private var quickAmountsError = false
+  @State private var quickAmountsError: String? = nil
+  @State private var intervalError: String? = nil
 
   private let intervalPresets = [60, 90, 120]
-
-  private var saveButtonColor: Color {
-    hasChanges ? AppTheme.accentBlue : AppTheme.textMuted
-  }
+  private var hasChanges: Bool { saveState == .unsaved }
 
   var body: some View {
     NavigationStack {
-      ZStack {
-        AppTheme.backgroundPrimary.ignoresSafeArea()
-        ScrollView {
-          VStack(spacing: 16) {
-            doseSection
-            intervalSection
-            quickAmountsSection
-            displaySection
-            notificationsSection
-            deviceSection
-            if settings.proBetaAccepted { profileSection }
-          }
-          .padding(.horizontal, 16)
-          .padding(.vertical, 16)
-          .padding(.bottom, 90)
+      ScrollView {
+        VStack(spacing: 16) {
+          doseSection
+          intervalSection
+          quickAmountsSection
+          displaySection
+          notificationsSection
+          deviceSection
+          if settings.proBetaAccepted { profileSection }
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
       }
+      .contentMargins(.bottom, 24, for: .scrollContent)
+      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Settings")
+      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
       .toolbarColorScheme(.dark, for: .navigationBar)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
-          Button("Save") { saveAll() }
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(saveButtonColor)
-            .disabled(!hasChanges)
+          saveButton
         }
       }
-      .alert("Unsaved Changes", isPresented: $showUnsavedAlert) {
-        Button("Discard", role: .destructive) { reloadFromSettings() }
-        Button("Keep Editing", role: .cancel) {}
-      }
     }
-    .preferredColorScheme(.dark)
+    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
     .onAppear { reloadFromSettings() }
-    .onChange(of: standardDoseText) { hasChanges = true }
-    .onChange(of: deviceNameText) { hasChanges = true }
-    .onChange(of: vanityNameText) { hasChanges = true }
-    .onChange(of: quickAmountsText) { hasChanges = true; quickAmountsError = false }
-    .onChange(of: customIntervalText) { hasChanges = true }
+    .onChange(of: standardDoseText) { markUnsaved() }
+    .onChange(of: deviceNameText) { markUnsaved() }
+    .onChange(of: vanityNameText) { markUnsaved() }
+    .onChange(of: quickAmountsText) { markUnsaved(); quickAmountsError = nil }
+    .onChange(of: customIntervalText) { markUnsaved(); intervalError = nil }
     .onChange(of: photoPickerItem) { loadPhoto() }
+  }
+
+  // MARK: - Save button (3 states)
+
+  @ViewBuilder
+  private var saveButton: some View {
+    switch saveState {
+    case .idle:
+      Text("Save")
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(AppTheme.textMuted)
+    case .unsaved:
+      Button("Save") { saveAll() }
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(AppTheme.accentBlue)
+    case .saved:
+      HStack(spacing: 4) {
+        Image(systemName: "checkmark").font(.system(size: 13, weight: .bold))
+        Text("Saved")
+      }
+      .font(.system(size: 14, weight: .semibold))
+      .foregroundStyle(AppTheme.statusGreen)
+    }
   }
 
   // MARK: - Sections
@@ -81,7 +95,7 @@ struct SettingsView: View {
               .font(.system(size: 15))
           }
         }
-        divider
+        cardDivider
         row(label: "Unit") {
           @Bindable var s = settings
           Picker("Unit", selection: $s.unit) {
@@ -91,9 +105,9 @@ struct SettingsView: View {
           }
           .pickerStyle(.menu)
           .tint(AppTheme.accentBlue)
-          .onChange(of: settings.unit) { hasChanges = true }
+          .onChange(of: settings.unit) { markUnsaved() }
         }
-        divider
+        cardDivider
         row(label: "Substance") {
           @Bindable var s = settings
           Picker("Substance", selection: $s.substance) {
@@ -102,7 +116,7 @@ struct SettingsView: View {
           }
           .pickerStyle(.menu)
           .tint(AppTheme.accentBlue)
-          .onChange(of: settings.substance) { hasChanges = true }
+          .onChange(of: settings.substance) { markUnsaved() }
         }
       }
     }
@@ -117,7 +131,8 @@ struct SettingsView: View {
             Button {
               settings.safeIntervalMinutes = preset
               customIntervalText = ""
-              hasChanges = true
+              intervalError = nil
+              markUnsaved()
             } label: {
               Text("\(preset)m")
                 .font(.system(size: 14, weight: .semibold))
@@ -130,21 +145,33 @@ struct SettingsView: View {
           }
         }
 
-        HStack {
-          Text("Custom (minutes)")
-            .font(.system(size: 14))
-            .foregroundStyle(AppTheme.textSecondary)
-          Spacer()
-          TextField("e.g. 105", text: $customIntervalText)
-            .keyboardType(.numberPad)
-            .multilineTextAlignment(.trailing)
-            .font(.system(size: 16))
-            .foregroundStyle(AppTheme.textPrimary)
-            .frame(width: 80)
+        VStack(alignment: .leading, spacing: 6) {
+          HStack {
+            Text("Custom (minutes)")
+              .font(.system(size: 14))
+              .foregroundStyle(AppTheme.textSecondary)
+            Spacer()
+            TextField("e.g. 105", text: $customIntervalText)
+              .keyboardType(.numberPad)
+              .multilineTextAlignment(.trailing)
+              .font(.system(size: 16))
+              .foregroundStyle(AppTheme.textPrimary)
+              .frame(width: 80)
+          }
+          .padding(12)
+          .background(AppTheme.backgroundElevated)
+          .clipShape(RoundedRectangle(cornerRadius: 9))
+          .overlay(
+            RoundedRectangle(cornerRadius: 9)
+              .stroke(intervalError != nil ? AppTheme.statusRed : Color.clear, lineWidth: 1)
+          )
+
+          if let err = intervalError {
+            Text(err)
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.statusRed)
+          }
         }
-        .padding(12)
-        .background(AppTheme.backgroundElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 9))
       }
     }
   }
@@ -161,17 +188,14 @@ struct SettingsView: View {
           .clipShape(RoundedRectangle(cornerRadius: 9))
           .overlay(
             RoundedRectangle(cornerRadius: 9)
-              .stroke(quickAmountsError ? AppTheme.statusRed : Color.clear, lineWidth: 1)
+              .stroke(quickAmountsError != nil ? AppTheme.statusRed : Color.clear, lineWidth: 1)
           )
 
-        if quickAmountsError {
-          Text("All values must be positive numbers, separated by commas.")
-            .font(.system(size: 12))
-            .foregroundStyle(AppTheme.statusRed)
+        if let err = quickAmountsError {
+          Text(err).font(.system(size: 12)).foregroundStyle(AppTheme.statusRed)
         } else {
-          Text("Comma-separated amounts — e.g. 0.5, 1.0, 1.5, 2.0")
-            .font(.system(size: 12))
-            .foregroundStyle(AppTheme.textMuted)
+          Text("Four comma-separated amounts — e.g. 0.5, 1.0, 1.5, 2.0")
+            .font(.system(size: 12)).foregroundStyle(AppTheme.textMuted)
         }
       }
     }
@@ -188,9 +212,9 @@ struct SettingsView: View {
           }
           .pickerStyle(.menu)
           .tint(AppTheme.accentBlue)
-          .onChange(of: settings.countdownMode) { hasChanges = true }
+          .onChange(of: settings.countdownMode) { markUnsaved() }
         }
-        divider
+        cardDivider
         row(label: "Time format") {
           @Bindable var s = settings
           Picker("Format", selection: $s.timeFormat) {
@@ -199,7 +223,7 @@ struct SettingsView: View {
           }
           .pickerStyle(.menu)
           .tint(AppTheme.accentBlue)
-          .onChange(of: settings.timeFormat) { hasChanges = true }
+          .onChange(of: settings.timeFormat) { markUnsaved() }
         }
       }
     }
@@ -213,7 +237,7 @@ struct SettingsView: View {
           Toggle("", isOn: $s.notificationsEnabled)
             .tint(AppTheme.accentBlue)
             .onChange(of: settings.notificationsEnabled) {
-              hasChanges = true
+              markUnsaved()
               if settings.notificationsEnabled {
                 Task { await NotificationManager.shared.requestPermission() }
               }
@@ -247,19 +271,13 @@ struct SettingsView: View {
         HStack(spacing: 14) {
           if let data = settings.profilePictureData, let img = UIImage(data: data) {
             Image(uiImage: img)
-              .resizable()
-              .scaledToFill()
-              .frame(width: 52, height: 52)
-              .clipShape(Circle())
+              .resizable().scaledToFill()
+              .frame(width: 52, height: 52).clipShape(Circle())
               .overlay(Circle().stroke(AppTheme.proAmber, lineWidth: 2))
           } else {
             ZStack {
-              Circle()
-                .fill(AppTheme.backgroundElevated)
-                .frame(width: 52, height: 52)
-              Image(systemName: "person.fill")
-                .foregroundStyle(AppTheme.textMuted)
-                .font(.system(size: 22))
+              Circle().fill(AppTheme.backgroundElevated).frame(width: 52, height: 52)
+              Image(systemName: "person.fill").foregroundStyle(AppTheme.textMuted).font(.system(size: 22))
             }
           }
           VStack(alignment: .leading, spacing: 4) {
@@ -269,15 +287,13 @@ struct SettingsView: View {
                 .foregroundStyle(AppTheme.proAmber)
             }
             .accessibilityLabel("Change profile photo")
-            Text("JPG or PNG, shown in the Pro tab")
+            Text("Shown in the Pro tab")
               .font(.system(size: 11))
               .foregroundStyle(AppTheme.textMuted)
           }
           Spacer()
         }
-
-        divider
-
+        cardDivider
         row(label: "Display name") {
           TextField("Your name", text: $vanityNameText)
             .multilineTextAlignment(.trailing)
@@ -289,12 +305,10 @@ struct SettingsView: View {
     }
   }
 
-  // MARK: - Helpers
+  // MARK: - Shared helpers
 
-  private var divider: some View {
-    Divider()
-      .background(AppTheme.border)
-      .padding(.vertical, 4)
+  private var cardDivider: some View {
+    Divider().background(AppTheme.border).padding(.vertical, 4)
   }
 
   private func settingsCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -314,45 +328,50 @@ struct SettingsView: View {
 
   private func row<Content: View>(label: String, @ViewBuilder trailing: () -> Content) -> some View {
     HStack {
-      Text(label)
-        .font(.system(size: 15))
-        .foregroundStyle(AppTheme.textPrimary)
+      Text(label).font(.system(size: 15)).foregroundStyle(AppTheme.textPrimary)
       Spacer()
       trailing()
     }
     .padding(.vertical, 2)
   }
 
-  // MARK: - Save / discard
+  // MARK: - Save / validate
+
+  private func markUnsaved() {
+    if saveState != .unsaved { saveState = .unsaved }
+  }
 
   private func saveAll() {
-    // Validate quick amounts
-    let parsed = quickAmountsText
-      .split(separator: ",")
-      .compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-      .filter { $0 > 0 }
-
-    let inputCount = quickAmountsText
-      .split(separator: ",")
-      .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-      .count
-
-    if inputCount > 0 && parsed.count != inputCount {
-      quickAmountsError = true
+    // Validate quick amounts: exactly 4 positive numbers
+    let parts = quickAmountsText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    let parsed = parts.compactMap { Double($0) }.filter { $0 > 0 }
+    if parts.count != 4 || parsed.count != 4 {
+      quickAmountsError = "Enter exactly four positive numbers, e.g. 0.5, 1.0, 1.5, 2.0"
       return
+    }
+
+    // Validate custom interval
+    if !customIntervalText.isEmpty {
+      guard let minutes = Int(customIntervalText), minutes >= 15 else {
+        intervalError = "Minimum interval is 15 minutes."
+        return
+      }
+      settings.safeIntervalMinutes = minutes
     }
 
     if let d = Double(standardDoseText), d > 0 { settings.standardDose = d }
     settings.deviceName = deviceNameText
     settings.vanityName = vanityNameText
+    settings.quickAmounts = parsed
 
-    if let minutes = Int(customIntervalText), minutes > 0 {
-      settings.safeIntervalMinutes = minutes
+    quickAmountsError = nil
+    intervalError = nil
+    saveState = .saved
+
+    // Reset to idle after a moment
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+      if saveState == .saved { saveState = .idle }
     }
-    if !parsed.isEmpty { settings.quickAmounts = parsed }
-
-    hasChanges = false
-    quickAmountsError = false
   }
 
   private func reloadFromSettings() {
@@ -363,8 +382,9 @@ struct SettingsView: View {
       .map { $0.formatted(.number.precision(.fractionLength(1))) }
       .joined(separator: ", ")
     customIntervalText = ""
-    hasChanges = false
-    quickAmountsError = false
+    saveState = .idle
+    quickAmountsError = nil
+    intervalError = nil
   }
 
   private func loadPhoto() {
@@ -372,7 +392,7 @@ struct SettingsView: View {
     Task {
       if let data = try? await item.loadTransferable(type: Data.self) {
         settings.profilePictureData = data
-        hasChanges = true
+        markUnsaved()
       }
     }
   }

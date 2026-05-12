@@ -3,12 +3,14 @@ import SwiftData
 
 struct TimerView: View {
   @Environment(SettingsManager.self) private var settings
+  @Environment(AppNavigation.self) private var nav
   @Environment(\.modelContext) private var context
   @Query(sort: \DoseRecord.time, order: .reverse) private var doses: [DoseRecord]
 
   @State private var now = Date()
   @State private var showCustomSheet = false
   @State private var showMissedSheet = false
+  @State private var showProRequired = false
   @State private var showWarning = false
   @State private var pendingAmount: Double = 0
   @State private var ticker: Timer?
@@ -19,12 +21,10 @@ struct TimerView: View {
     guard let d = lastDose else { return false }
     return now.timeIntervalSince(d.time) < 6 * 3600
   }
-
   private var elapsed: TimeInterval {
     guard let d = lastDose else { return 0 }
     return now.timeIntervalSince(d.time)
   }
-
   private var intervalSeconds: TimeInterval { Double(settings.safeIntervalMinutes) * 60 }
   private var isSafe: Bool { elapsed >= intervalSeconds }
   private var progress: Double { isActive ? min(elapsed / intervalSeconds, 1.0) : 0 }
@@ -58,23 +58,22 @@ struct TimerView: View {
 
   var body: some View {
     NavigationStack {
-      ZStack(alignment: .top) {
-        AppTheme.backgroundPrimary.ignoresSafeArea()
-        ScrollView {
-          VStack(spacing: 0) {
-            gaugeSection
-              .padding(.top, 24)
-            statusBadge
-            actionButtons
-              .padding(.top, 8)
-            if let d = lastDose, isActive {
-              lastDoseCard(d)
-                .padding(.top, 4)
-            }
+      ScrollView {
+        VStack(spacing: 0) {
+          gaugeSection
+            .padding(.top, 20)
+          statusBadge
+          actionButtons
+            .padding(.top, 8)
+          if let d = lastDose, isActive {
+            lastDoseCard(d)
+              .padding(.top, 6)
           }
-          .padding(.bottom, 100)
         }
+        .padding(.horizontal, 0)
       }
+      .contentMargins(.bottom, 24, for: .scrollContent)
+      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("")
       .toolbar {
         ToolbarItem(placement: .principal) {
@@ -88,8 +87,10 @@ struct TimerView: View {
           }
         }
       }
+      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
       .toolbarColorScheme(.dark, for: .navigationBar)
     }
+    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
     .onAppear { startTicker() }
     .onDisappear { ticker?.invalidate() }
     .sheet(isPresented: $showCustomSheet) {
@@ -97,6 +98,9 @@ struct TimerView: View {
     }
     .sheet(isPresented: $showMissedSheet) {
       MissedDoseSheet()
+    }
+    .sheet(isPresented: $showProRequired) {
+      ProRequiredSheet { nav.selectedTab = 4 }
     }
     .alert("Log Early?", isPresented: $showWarning) {
       Button("Cancel", role: .cancel) {}
@@ -133,20 +137,18 @@ struct TimerView: View {
     .padding(.vertical, 7)
     .background((isActive ? statusColor : AppTheme.textMuted).opacity(0.12))
     .clipShape(Capsule())
-    .padding(.top, 12)
-    .padding(.bottom, 20)
+    .padding(.top, 10)
+    .padding(.bottom, 18)
   }
 
   // MARK: - Action buttons
 
   private var actionButtons: some View {
     VStack(spacing: 12) {
-      Button {
-        attemptLog(amount: settings.standardDose)
-      } label: {
+      // Primary log button
+      Button { attemptLog(amount: settings.standardDose) } label: {
         HStack(spacing: 8) {
-          Image(systemName: "plus.circle.fill")
-            .font(.system(size: 18))
+          Image(systemName: "plus.circle.fill").font(.system(size: 18))
           Text("I took \(settings.standardDose.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
             .font(.system(size: 18, weight: .semibold))
         }
@@ -158,12 +160,10 @@ struct TimerView: View {
       }
       .padding(.horizontal, 20)
 
-      // Quick amounts — 4-column compact row
+      // Quick amounts — 4-column
       HStack(spacing: 8) {
         ForEach(settings.quickAmounts.prefix(4), id: \.self) { amt in
-          Button {
-            attemptLog(amount: amt)
-          } label: {
+          Button { attemptLog(amount: amt) } label: {
             Text("\(amt.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
               .font(.system(size: 13, weight: .semibold))
               .foregroundStyle(AppTheme.accentBlue)
@@ -178,9 +178,7 @@ struct TimerView: View {
 
       // Custom + Missed row
       HStack(spacing: 10) {
-        Button {
-          showCustomSheet = true
-        } label: {
+        Button { showCustomSheet = true } label: {
           HStack(spacing: 5) {
             Image(systemName: "pencil")
             Text("Custom")
@@ -195,9 +193,7 @@ struct TimerView: View {
         }
 
         if settings.proBetaAccepted {
-          Button {
-            showMissedSheet = true
-          } label: {
+          Button { showMissedSheet = true } label: {
             HStack(spacing: 5) {
               Image(systemName: "xmark.circle")
               Text("Missed dose")
@@ -211,18 +207,20 @@ struct TimerView: View {
             .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.proAmber.opacity(0.25), lineWidth: 0.5))
           }
         } else {
-          HStack(spacing: 5) {
-            Image(systemName: "lock.fill")
-              .font(.system(size: 12))
-            Text("Missed dose")
-              .font(.system(size: 14, weight: .medium))
+          // Locked: tapping opens Pro-required sheet
+          Button { showProRequired = true } label: {
+            HStack(spacing: 5) {
+              Image(systemName: "lock.fill").font(.system(size: 12))
+              Text("Missed dose")
+                .font(.system(size: 14, weight: .medium))
+            }
+            .foregroundStyle(AppTheme.textMuted)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 11)
+            .background(AppTheme.backgroundCard.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: 11))
+            .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.border.opacity(0.4), lineWidth: 0.5))
           }
-          .foregroundStyle(AppTheme.textMuted)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 11)
-          .background(AppTheme.backgroundCard.opacity(0.5))
-          .clipShape(RoundedRectangle(cornerRadius: 11))
-          .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.border.opacity(0.4), lineWidth: 0.5))
         }
       }
       .padding(.horizontal, 20)
@@ -248,14 +246,11 @@ struct TimerView: View {
 
       HStack(spacing: 12) {
         ZStack {
-          Circle()
-            .fill(AppTheme.accentBlue.opacity(0.15))
-            .frame(width: 44, height: 44)
+          Circle().fill(AppTheme.accentBlue.opacity(0.15)).frame(width: 44, height: 44)
           Image(systemName: "drop.fill")
             .foregroundStyle(AppTheme.accentBlue)
             .font(.system(size: 18))
         }
-
         VStack(alignment: .leading, spacing: 3) {
           HStack(spacing: 6) {
             Text("\(dose.amount.formatted(.number.precision(.fractionLength(1))))\(dose.unit)")
@@ -271,32 +266,18 @@ struct TimerView: View {
         Spacer()
       }
 
-      if !isSafe, isActive {
-        HStack(spacing: 6) {
-          Image(systemName: "exclamationmark.triangle.fill")
-            .font(.system(size: 11))
-            .foregroundStyle(AppTheme.statusAmber)
-          Text("Safe interval not yet reached — please wait")
-            .font(.system(size: 12))
-            .foregroundStyle(AppTheme.statusAmber)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(AppTheme.statusAmber.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-      } else if isSafe {
-        HStack(spacing: 6) {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 11))
-            .foregroundStyle(AppTheme.statusGreen)
-          Text("Safe interval reached")
-            .font(.system(size: 12))
-            .foregroundStyle(AppTheme.statusGreen)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(AppTheme.statusGreen.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+      if !isSafe {
+        statusBanner(
+          icon: "exclamationmark.triangle.fill",
+          text: "Safe interval not yet reached — please wait",
+          color: AppTheme.statusAmber
+        )
+      } else {
+        statusBanner(
+          icon: "checkmark.circle.fill",
+          text: "Safe interval reached",
+          color: AppTheme.statusGreen
+        )
       }
 
       if !dose.notes.isEmpty {
@@ -313,12 +294,23 @@ struct TimerView: View {
     .padding(.horizontal, 20)
   }
 
+  private func statusBanner(icon: String, text: String, color: Color) -> some View {
+    HStack(spacing: 6) {
+      Image(systemName: icon).font(.system(size: 11)).foregroundStyle(color)
+      Text(text).font(.system(size: 12)).foregroundStyle(color)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 7)
+    .background(color.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 8))
+  }
+
   private var relativeDoseAge: String {
     guard let d = lastDose else { return "" }
-    let secs = Int(now.timeIntervalSince(d.time))
-    if secs < 60 { return "just now" }
-    if secs < 3600 { return "\(secs / 60)m ago" }
-    let h = secs / 3600; let m = (secs % 3600) / 60
+    let s = Int(now.timeIntervalSince(d.time))
+    if s < 60 { return "just now" }
+    if s < 3600 { return "\(s / 60)m ago" }
+    let h = s / 3600; let m = (s % 3600) / 60
     return m > 0 ? "\(h)h \(m)m ago" : "\(h)h ago"
   }
 
@@ -326,8 +318,7 @@ struct TimerView: View {
     Text(text)
       .font(.system(size: 10, weight: .semibold))
       .foregroundStyle(color)
-      .padding(.horizontal, 7)
-      .padding(.vertical, 2)
+      .padding(.horizontal, 7).padding(.vertical, 2)
       .background(color.opacity(0.15))
       .clipShape(Capsule())
   }
@@ -340,24 +331,70 @@ struct TimerView: View {
   }
 
   private func attemptLog(amount: Double) {
-    if isActive && !isSafe {
-      pendingAmount = amount; showWarning = true
-    } else {
-      confirmLog(amount: amount)
-    }
+    if isActive && !isSafe { pendingAmount = amount; showWarning = true }
+    else { confirmLog(amount: amount) }
   }
 
   private func confirmLog(amount: Double) {
     let loc = LocationManager.shared
     DoseStore.logDose(
-      amount: amount,
-      unit: settings.unit,
+      amount: amount, unit: settings.unit,
       latitude: loc.currentLocation?.coordinate.latitude,
       longitude: loc.currentLocation?.coordinate.longitude,
       locationName: loc.locationName,
       deviceName: settings.deviceName,
-      context: context,
-      settings: settings
+      context: context, settings: settings
     )
+  }
+}
+
+// MARK: - Pro-required sheet
+
+private struct ProRequiredSheet: View {
+  @Environment(\.dismiss) private var dismiss
+  var onGoToPro: () -> Void
+
+  var body: some View {
+    VStack(spacing: 20) {
+      Image(systemName: "star.fill")
+        .font(.system(size: 44))
+        .foregroundStyle(AppTheme.proAmber)
+        .padding(.top, 32)
+      Text("Pro Feature")
+        .font(.system(size: 22, weight: .bold))
+        .foregroundStyle(AppTheme.textPrimary)
+      Text("Logging missed doses requires G Timer Pro beta access.")
+        .font(.system(size: 15))
+        .foregroundStyle(AppTheme.textSecondary)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 32)
+
+      Button {
+        dismiss()
+        onGoToPro()
+      } label: {
+        Text("Activate Pro — it's free")
+          .font(.system(size: 17, weight: .semibold))
+          .foregroundStyle(.white)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 15)
+          .background(
+            LinearGradient(colors: [AppTheme.proAmber, AppTheme.proOrange],
+                           startPoint: .leading, endPoint: .trailing)
+          )
+          .clipShape(RoundedRectangle(cornerRadius: 14))
+      }
+      .padding(.horizontal, 24)
+
+      Button("Maybe later") { dismiss() }
+        .font(.system(size: 15))
+        .foregroundStyle(AppTheme.textMuted)
+        .padding(.bottom, 32)
+    }
+    .frame(maxWidth: .infinity)
+    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+    .presentationDetents([.medium])
+    .presentationBackground(AppTheme.backgroundPrimary)
+    .preferredColorScheme(.dark)
   }
 }

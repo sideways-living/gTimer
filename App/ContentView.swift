@@ -1,10 +1,11 @@
 import SwiftUI
 
 struct ContentView: View {
-  @State private var selectedTab = 0
+  @Environment(AppNavigation.self) private var nav
 
   var body: some View {
-    TabView(selection: $selectedTab) {
+    @Bindable var nav = nav
+    TabView(selection: $nav.selectedTab) {
       TimerView()
         .tabItem { Label("Timer", systemImage: "timer") }
         .tag(0)
@@ -26,6 +27,5 @@ struct ContentView: View {
         .tag(4)
     }
     .tint(AppTheme.accentBlue)
-    .background(AppTheme.backgroundPrimary)
   }
 }
