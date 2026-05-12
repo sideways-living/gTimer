@@ -159,10 +159,19 @@ struct TimerView: View {
       }
       .padding(.horizontal, 20)
 
-      HStack(spacing: 10) {
-        customDoseButton
-        missedDoseButton
+      // Bottom row: widths derived from the top row's column geometry.
+      // Top splits equally (spacing 10), quick grid has two columns (spacing 8).
+      // Left = primary width + half of one quick column; right gets the remainder.
+      GeometryReader { geo in
+        let W = geo.size.width                  // available after outer padding
+        let leftW = (5 * W - 66) / 8           // primary + half quick-col
+        let rightW = (3 * W - 14) / 8          // remaining
+        HStack(spacing: 10) {
+          customDoseButton.frame(width: leftW)
+          missedDoseButton.frame(width: rightW)
+        }
       }
+      .frame(height: 48)
       .padding(.horizontal, 20)
     }
   }
