@@ -57,6 +57,7 @@ struct EditDoseSheet: View {
             dose.notes = notes
             dose.edited = true
             try? context.save()
+            DoseStore.refreshSharedAfterEdit(context: context, settings: settings)
             dismiss()
           } label: {
             Text("Save Changes")

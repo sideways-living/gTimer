@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HealthView: View {
+  @Environment(\.openURL) private var openURL
+
   var body: some View {
     NavigationStack {
       ScrollView {
@@ -41,14 +43,20 @@ struct HealthView: View {
               urgentTrigger("Seizure or muscle twitching")
               urgentTrigger("You are unsure — always call if in doubt")
 
-              Text("Call 999 (UK) · 112 (EU) · 911 (US)")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
-                .background(AppTheme.statusRed)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .padding(.top, 6)
+              Button {
+                // 112 is the international standard; redirects to 999/911 on local networks
+                if let url = URL(string: "tel://112") { openURL(url) }
+              } label: {
+                Text("Call 999 · 112 · 911")
+                  .font(.system(size: 16, weight: .bold))
+                  .foregroundStyle(.white)
+                  .frame(maxWidth: .infinity)
+                  .padding(.vertical, 13)
+                  .background(AppTheme.statusRed)
+                  .clipShape(RoundedRectangle(cornerRadius: 10))
+              }
+              .accessibilityLabel("Call emergency services")
+              .padding(.top, 6)
             }
           }
 

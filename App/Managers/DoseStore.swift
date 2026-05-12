@@ -55,6 +55,19 @@ final class DoseStore {
     WidgetCenter.shared.reloadAllTimelines()
   }
 
+  // After an in-place edit, re-derive the most-recent dose and update shared
+  // defaults so the widget reflects the corrected data.
+  static func refreshSharedAfterEdit(context: ModelContext, settings: SettingsManager) {
+    let desc = FetchDescriptor<DoseRecord>(
+      sortBy: [SortDescriptor(\.time, order: .reverse)]
+    )
+    if let newest = (try? context.fetch(desc))?.first {
+      updateShared(amount: newest.amount, unit: newest.unit,
+                   time: newest.time, settings: settings)
+    }
+    WidgetCenter.shared.reloadAllTimelines()
+  }
+
   // After a single deletion, find the new most-recent dose and update shared
   // defaults, preserving the interval/countdownMode already stored there.
   private static func refreshSharedAfterDeletion(context: ModelContext) {

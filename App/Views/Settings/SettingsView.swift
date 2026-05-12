@@ -236,8 +236,10 @@ struct SettingsView: View {
       VStack(spacing: 10) {
         row(label: "Safe to redose reminder") {
           @Bindable var s = settings
-          Toggle("", isOn: $s.notificationsEnabled)
+          Toggle("Safe to redose reminder", isOn: $s.notificationsEnabled)
+            .labelsHidden()
             .tint(AppTheme.accentBlue)
+            .accessibilityLabel("Safe to redose reminder")
             .onChange(of: settings.notificationsEnabled) {
               markUnsaved()
               if settings.notificationsEnabled {
@@ -257,12 +259,25 @@ struct SettingsView: View {
 
   private var deviceSection: some View {
     settingsCard(title: "Device") {
-      row(label: "Device name") {
-        TextField("My iPhone", text: $deviceNameText)
-          .multilineTextAlignment(.trailing)
-          .font(.system(size: 15))
-          .foregroundStyle(AppTheme.textPrimary)
-          .frame(maxWidth: 180)
+      VStack(spacing: 0) {
+        row(label: "Device name") {
+          TextField("My iPhone", text: $deviceNameText)
+            .multilineTextAlignment(.trailing)
+            .font(.system(size: 15))
+            .foregroundStyle(AppTheme.textPrimary)
+            .frame(maxWidth: 180)
+        }
+        cardDivider
+        HStack(spacing: 6) {
+          Image(systemName: "lock.fill")
+            .font(.system(size: 11))
+            .foregroundStyle(AppTheme.statusGreen)
+          Text("All dose data is stored locally on this device only.")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textMuted)
+          Spacer()
+        }
+        .padding(.vertical, 6)
       }
     }
   }
