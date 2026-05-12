@@ -42,11 +42,31 @@ struct HealthView: View {
             ])
           }
 
+          section(title: "🚨 Call Emergency Services If…", icon: "phone.fill", color: AppTheme.statusRed) {
+            VStack(alignment: .leading, spacing: 8) {
+              urgentTrigger("Person is unconscious or cannot be woken")
+              urgentTrigger("Breathing is slow, shallow, or irregular")
+              urgentTrigger("Lips or fingertips are turning blue (cyanosis)")
+              urgentTrigger("GHB/GBL was mixed with alcohol, benzodiazepines, or opioids")
+              urgentTrigger("Vomiting while not fully conscious")
+              urgentTrigger("You are unsure — always err on the side of calling")
+
+              Text("Call 999 (UK) · 112 (EU) · 911 (US)")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(AppTheme.statusRed)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.top, 4)
+            }
+          }
+
           section(title: "Emergency Response", icon: "cross.fill", color: AppTheme.statusRed) {
             VStack(alignment: .leading, spacing: 10) {
               emergencyStep("1", "Call emergency services immediately (999/112/911).")
               emergencyStep("2", "Place the person in the recovery position (on their side).")
-              emergencyStep("3", "Stay with them. Monitor breathing until help arrives.")
+              emergencyStep("3", "Stay with them. Monitor breathing continuously.")
               emergencyStep("4", "Tell paramedics what was taken and when — this is not optional.")
               emergencyStep("5", "Do NOT leave them to 'sleep it off' unsupervised.")
 
@@ -90,6 +110,7 @@ struct HealthView: View {
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
+        .padding(.bottom, 100)
       }
       .background(AppTheme.backgroundPrimary)
       .navigationTitle("Health & Safety")
@@ -148,6 +169,18 @@ struct HealthView: View {
 
   private func infoRow(_ bold: String, _ rest: String) -> some View {
     Text("\(bold) ") + Text(rest).foregroundColor(AppTheme.textSecondary)
+  }
+
+  private func urgentTrigger(_ text: String) -> some View {
+    HStack(alignment: .top, spacing: 8) {
+      Image(systemName: "exclamationmark.circle.fill")
+        .foregroundStyle(AppTheme.statusRed)
+        .font(.system(size: 13))
+        .padding(.top, 1)
+      Text(text)
+        .font(.system(size: 14, weight: .medium))
+        .foregroundStyle(AppTheme.textPrimary)
+    }
   }
 
   private func emergencyStep(_ num: String, _ text: String) -> some View {

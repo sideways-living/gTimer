@@ -11,7 +11,7 @@ struct TimerView: View {
   @State private var showMissedSheet = false
   @State private var showWarning = false
   @State private var pendingAmount: Double = 0
-  @State private var timer: Timer?
+  @State private var ticker: Timer?
 
   private var lastDose: DoseRecord? { doses.first }
 
@@ -25,16 +25,9 @@ struct TimerView: View {
     return now.timeIntervalSince(d.time)
   }
 
-  private var intervalSeconds: TimeInterval {
-    Double(settings.safeIntervalMinutes) * 60
-  }
-
+  private var intervalSeconds: TimeInterval { Double(settings.safeIntervalMinutes) * 60 }
   private var isSafe: Bool { elapsed >= intervalSeconds }
-
-  private var progress: Double {
-    guard isActive else { return 0 }
-    return min(elapsed / intervalSeconds, 1.0)
-  }
+  private var progress: Double { isActive ? min(elapsed / intervalSeconds, 1.0) : 0 }
 
   private var statusColor: Color {
     guard isActive else { return AppTheme.textMuted }
@@ -45,86 +38,75 @@ struct TimerView: View {
 
   private var displayTime: TimeInterval {
     guard isActive else { return 0 }
-    if settings.countdownMode && !isSafe {
-      return max(intervalSeconds - elapsed, 0)
-    }
+    if settings.countdownMode && !isSafe { return max(intervalSeconds - elapsed, 0) }
     return elapsed
   }
 
   private var timeString: String {
     guard isActive else { return "00:00:00" }
     let t = Int(displayTime)
-    let h = t / 3600
-    let m = (t % 3600) / 60
-    let s = t % 60
-    return String(format: "%02d:%02d:%02d", h, m, s)
+    return String(format: "%02d:%02d:%02d", t / 3600, (t % 3600) / 60, t % 60)
   }
 
   private var statusLabel: String {
     guard isActive else { return "No Active G Timer" }
     if isSafe { return "Safe to redose" }
-    let remaining = Int(intervalSeconds - elapsed)
-    let h = remaining / 3600
-    let m = (remaining % 3600) / 60
-    if h > 0 { return "Wait \(h)h \(m)min" }
-    return "Wait \(m)min"
+    let r = Int(intervalSeconds - elapsed)
+    let h = r / 3600; let m = (r % 3600) / 60
+    return h > 0 ? "Wait \(h)h \(m)min" : "Wait \(m)min"
   }
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: 0) {
-          headerView
-          gaugeSection
-          statusBadge
-          actionButtons
-          if let d = lastDose, isActive {
-            lastDoseCard(d)
+      ZStack(alignment: .top) {
+        AppTheme.backgroundPrimary.ignoresSafeArea()
+        ScrollView {
+          VStack(spacing: 0) {
+            gaugeSection
+              .padding(.top, 24)
+            statusBadge
+            actionButtons
+              .padding(.top, 8)
+            if let d = lastDose, isActive {
+              lastDoseCard(d)
+                .padding(.top, 4)
+            }
           }
-          Spacer(minLength: 20)
+          .padding(.bottom, 100)
         }
       }
-      .background(AppTheme.backgroundPrimary)
-      .navigationBarHidden(true)
-    }
-    .onAppear { startTimer() }
-    .onDisappear { timer?.invalidate() }
-    .sheet(isPresented: $showCustomSheet) {
-      CustomDoseSheet { amount in
-        attemptLog(amount: amount)
+      .navigationTitle("")
+      .toolbar {
+        ToolbarItem(placement: .principal) {
+          HStack(spacing: 7) {
+            Image(systemName: "drop.fill")
+              .font(.system(size: 17, weight: .bold))
+              .foregroundStyle(AppTheme.accentBlue)
+            Text("G Timer")
+              .font(.system(size: 20, weight: .bold))
+              .foregroundStyle(AppTheme.textPrimary)
+          }
+        }
       }
+      .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+    .onAppear { startTicker() }
+    .onDisappear { ticker?.invalidate() }
+    .sheet(isPresented: $showCustomSheet) {
+      CustomDoseSheet { attemptLog(amount: $0) }
     }
     .sheet(isPresented: $showMissedSheet) {
       MissedDoseSheet()
     }
     .alert("Log Early?", isPresented: $showWarning) {
       Button("Cancel", role: .cancel) {}
-      Button("Log Anyway", role: .destructive) {
-        confirmLog(amount: pendingAmount)
-      }
+      Button("Log Anyway", role: .destructive) { confirmLog(amount: pendingAmount) }
     } message: {
       Text("The safe interval hasn't passed yet. Logging early can increase risk.")
     }
   }
 
-  // MARK: - Subviews
-
-  private var headerView: some View {
-    HStack(spacing: 10) {
-      Image(systemName: "drop.fill")
-        .font(.system(size: 22, weight: .bold))
-        .foregroundStyle(AppTheme.accentBlue)
-      Text("G Timer")
-        .font(.system(size: 26, weight: .bold))
-        .foregroundStyle(AppTheme.textPrimary)
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 18)
-    .background(AppTheme.backgroundSecondary)
-    .overlay(alignment: .bottom) {
-      Divider().background(AppTheme.border)
-    }
-  }
+  // MARK: - Gauge
 
   private var gaugeSection: some View {
     ArcGaugeView(
@@ -134,122 +116,128 @@ struct TimerView: View {
       statusLabel: statusLabel,
       isActive: isActive
     )
-    .padding(.top, 28)
-    .padding(.bottom, 8)
   }
+
+  // MARK: - Status pill
 
   private var statusBadge: some View {
-    Group {
-      if isActive {
-        HStack(spacing: 6) {
-          Circle()
-            .fill(statusColor)
-            .frame(width: 8, height: 8)
-          Text(isSafe ? "Safe to redose" : "Not yet safe")
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(statusColor)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 7)
-        .background(statusColor.opacity(0.12))
-        .clipShape(Capsule())
-        .padding(.bottom, 20)
-      }
+    HStack(spacing: 6) {
+      Circle()
+        .fill(isActive ? statusColor : AppTheme.textMuted)
+        .frame(width: 8, height: 8)
+      Text(isActive ? (isSafe ? "Safe to redose" : "Not yet safe") : "No active timer")
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(isActive ? statusColor : AppTheme.textMuted)
     }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 7)
+    .background((isActive ? statusColor : AppTheme.textMuted).opacity(0.12))
+    .clipShape(Capsule())
+    .padding(.top, 12)
+    .padding(.bottom, 20)
   }
 
+  // MARK: - Action buttons
+
   private var actionButtons: some View {
-    VStack(spacing: 14) {
-      // Primary log button
+    VStack(spacing: 12) {
       Button {
         attemptLog(amount: settings.standardDose)
       } label: {
         HStack(spacing: 8) {
           Image(systemName: "plus.circle.fill")
+            .font(.system(size: 18))
           Text("I took \(settings.standardDose.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
-            .fontWeight(.semibold)
+            .font(.system(size: 18, weight: .semibold))
         }
-        .font(.system(size: 18))
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(.vertical, 17)
         .background(AppTheme.accentBlue)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
       }
       .padding(.horizontal, 20)
 
-      // Quick amounts
-      HStack(spacing: 10) {
-        ForEach(settings.quickAmounts, id: \.self) { amt in
+      // Quick amounts — 4-column compact row
+      HStack(spacing: 8) {
+        ForEach(settings.quickAmounts.prefix(4), id: \.self) { amt in
           Button {
             attemptLog(amount: amt)
           } label: {
             Text("\(amt.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
-              .font(.system(size: 14, weight: .medium))
+              .font(.system(size: 13, weight: .semibold))
               .foregroundStyle(AppTheme.accentBlue)
               .frame(maxWidth: .infinity)
-              .padding(.vertical, 10)
-              .background(AppTheme.accentBlue.opacity(0.12))
+              .padding(.vertical, 9)
+              .background(AppTheme.accentBlue.opacity(0.13))
               .clipShape(RoundedRectangle(cornerRadius: 10))
           }
         }
       }
       .padding(.horizontal, 20)
 
-      // Secondary actions
-      HStack(spacing: 12) {
+      // Custom + Missed row
+      HStack(spacing: 10) {
         Button {
           showCustomSheet = true
         } label: {
-          Label("Custom amount", systemImage: "pencil")
-            .font(.system(size: 14, weight: .medium))
-            .foregroundStyle(AppTheme.textSecondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(AppTheme.backgroundCard)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+          HStack(spacing: 5) {
+            Image(systemName: "pencil")
+            Text("Custom")
+          }
+          .font(.system(size: 14, weight: .medium))
+          .foregroundStyle(AppTheme.textSecondary)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 11)
+          .background(AppTheme.backgroundCard)
+          .clipShape(RoundedRectangle(cornerRadius: 11))
+          .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.border, lineWidth: 0.5))
         }
 
         if settings.proBetaAccepted {
           Button {
             showMissedSheet = true
           } label: {
-            Label("Missed dose", systemImage: "xmark.circle")
-              .font(.system(size: 14, weight: .medium))
-              .foregroundStyle(AppTheme.proAmber)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, 10)
-              .background(AppTheme.proAmber.opacity(0.1))
-              .clipShape(RoundedRectangle(cornerRadius: 10))
-          }
-        } else {
-          Button {} label: {
-            HStack(spacing: 4) {
-              Image(systemName: "lock.fill")
+            HStack(spacing: 5) {
+              Image(systemName: "xmark.circle")
               Text("Missed dose")
             }
             .font(.system(size: 14, weight: .medium))
-            .foregroundStyle(AppTheme.textMuted)
+            .foregroundStyle(AppTheme.proAmber)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(AppTheme.backgroundCard)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .padding(.vertical, 11)
+            .background(AppTheme.proAmber.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 11))
+            .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.proAmber.opacity(0.25), lineWidth: 0.5))
           }
-          .disabled(true)
+        } else {
+          HStack(spacing: 5) {
+            Image(systemName: "lock.fill")
+              .font(.system(size: 12))
+            Text("Missed dose")
+              .font(.system(size: 14, weight: .medium))
+          }
+          .foregroundStyle(AppTheme.textMuted)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 11)
+          .background(AppTheme.backgroundCard.opacity(0.5))
+          .clipShape(RoundedRectangle(cornerRadius: 11))
+          .overlay(RoundedRectangle(cornerRadius: 11).stroke(AppTheme.border.opacity(0.4), lineWidth: 0.5))
         }
       }
       .padding(.horizontal, 20)
     }
-    .padding(.bottom, 20)
   }
 
+  // MARK: - Last dose card
+
   private func lastDoseCard(_ dose: DoseRecord) -> some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: 12) {
       HStack {
-        Text("Last Dose")
-          .font(.system(size: 13, weight: .semibold))
+        Text("LAST DOSE")
+          .font(.system(size: 11, weight: .bold))
           .foregroundStyle(AppTheme.textMuted)
-          .textCase(.uppercase)
+          .kerning(0.5)
         Spacer()
         NavigationLink(destination: HistoryView()) {
           Text("View Full History")
@@ -265,37 +253,50 @@ struct TimerView: View {
             .frame(width: 44, height: 44)
           Image(systemName: "drop.fill")
             .foregroundStyle(AppTheme.accentBlue)
+            .font(.system(size: 18))
         }
 
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
           HStack(spacing: 6) {
             Text("\(dose.amount.formatted(.number.precision(.fractionLength(1))))\(dose.unit)")
-              .font(.system(size: 17, weight: .bold))
+              .font(.system(size: 18, weight: .bold))
               .foregroundStyle(AppTheme.textPrimary)
-            if dose.missed {
-              pill("Missed", color: AppTheme.statusAmber)
-            }
-            if dose.edited {
-              pill("Edited", color: AppTheme.textMuted)
-            }
+            if dose.missed { pill("Missed", color: AppTheme.statusAmber) }
+            if dose.edited { pill("Edited", color: AppTheme.textMuted) }
           }
-          Text(dose.time.formatted(date: .omitted, time: .shortened) + " · " + dose.time.formatted(.relative(presentation: .named)))
+          Text(dose.time.formatted(date: .omitted, time: .shortened) + " · " + relativeDoseAge)
             .font(.system(size: 13))
             .foregroundStyle(AppTheme.textSecondary)
         }
-
         Spacer()
       }
 
-      if !isSafe {
+      if !isSafe, isActive {
         HStack(spacing: 6) {
           Image(systemName: "exclamationmark.triangle.fill")
+            .font(.system(size: 11))
             .foregroundStyle(AppTheme.statusAmber)
-            .font(.system(size: 12))
           Text("Safe interval not yet reached — please wait")
             .font(.system(size: 12))
             .foregroundStyle(AppTheme.statusAmber)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(AppTheme.statusAmber.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+      } else if isSafe {
+        HStack(spacing: 6) {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 11))
+            .foregroundStyle(AppTheme.statusGreen)
+          Text("Safe interval reached")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.statusGreen)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(AppTheme.statusGreen.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
       }
 
       if !dose.notes.isEmpty {
@@ -307,10 +308,18 @@ struct TimerView: View {
     }
     .padding(16)
     .background(AppTheme.backgroundCard)
-    .clipShape(RoundedRectangle(cornerRadius: 14))
-    .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 1))
+    .clipShape(RoundedRectangle(cornerRadius: 16))
+    .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppTheme.border, lineWidth: 0.75))
     .padding(.horizontal, 20)
-    .padding(.bottom, 10)
+  }
+
+  private var relativeDoseAge: String {
+    guard let d = lastDose else { return "" }
+    let secs = Int(now.timeIntervalSince(d.time))
+    if secs < 60 { return "just now" }
+    if secs < 3600 { return "\(secs / 60)m ago" }
+    let h = secs / 3600; let m = (secs % 3600) / 60
+    return m > 0 ? "\(h)h \(m)m ago" : "\(h)h ago"
   }
 
   private func pill(_ text: String, color: Color) -> some View {
@@ -325,17 +334,14 @@ struct TimerView: View {
 
   // MARK: - Logic
 
-  private func startTimer() {
-    timer?.invalidate()
-    timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-      now = Date()
-    }
+  private func startTicker() {
+    ticker?.invalidate()
+    ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in now = Date() }
   }
 
   private func attemptLog(amount: Double) {
     if isActive && !isSafe {
-      pendingAmount = amount
-      showWarning = true
+      pendingAmount = amount; showWarning = true
     } else {
       confirmLog(amount: amount)
     }
@@ -346,7 +352,6 @@ struct TimerView: View {
     DoseStore.logDose(
       amount: amount,
       unit: settings.unit,
-      notes: "",
       latitude: loc.currentLocation?.coordinate.latitude,
       longitude: loc.currentLocation?.coordinate.longitude,
       locationName: loc.locationName,

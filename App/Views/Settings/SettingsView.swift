@@ -11,8 +11,13 @@ struct SettingsView: View {
   @State private var hasChanges = false
   @State private var photoPickerItem: PhotosPickerItem?
   @State private var quickAmountsText = ""
+  @State private var quickAmountsError = false
 
   private let intervalPresets = [60, 90, 120]
+
+  private var saveButtonColor: Color {
+    hasChanges ? AppTheme.accentBlue : AppTheme.textMuted
+  }
 
   var body: some View {
     NavigationStack {
@@ -30,6 +35,7 @@ struct SettingsView: View {
           }
           .padding(.horizontal, 16)
           .padding(.vertical, 16)
+          .padding(.bottom, 90)
         }
       }
       .navigationTitle("Settings")
@@ -38,7 +44,7 @@ struct SettingsView: View {
         ToolbarItem(placement: .topBarTrailing) {
           Button("Save") { saveAll() }
             .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(hasChanges ? AppTheme.accentBlue : AppTheme.textMuted)
+            .foregroundStyle(saveButtonColor)
             .disabled(!hasChanges)
         }
       }
@@ -52,7 +58,7 @@ struct SettingsView: View {
     .onChange(of: standardDoseText) { hasChanges = true }
     .onChange(of: deviceNameText) { hasChanges = true }
     .onChange(of: vanityNameText) { hasChanges = true }
-    .onChange(of: quickAmountsText) { hasChanges = true }
+    .onChange(of: quickAmountsText) { hasChanges = true; quickAmountsError = false }
     .onChange(of: customIntervalText) { hasChanges = true }
     .onChange(of: photoPickerItem) { loadPhoto() }
   }
@@ -61,9 +67,9 @@ struct SettingsView: View {
 
   private var doseSection: some View {
     settingsCard(title: "Dose Defaults") {
-      VStack(spacing: 14) {
+      VStack(spacing: 0) {
         row(label: "Standard dose") {
-          HStack {
+          HStack(spacing: 4) {
             TextField("1.5", text: $standardDoseText)
               .keyboardType(.decimalPad)
               .multilineTextAlignment(.trailing)
@@ -72,9 +78,10 @@ struct SettingsView: View {
               .frame(width: 60)
             Text(settings.unit)
               .foregroundStyle(AppTheme.textSecondary)
+              .font(.system(size: 15))
           }
         }
-
+        divider
         row(label: "Unit") {
           @Bindable var s = settings
           Picker("Unit", selection: $s.unit) {
@@ -86,7 +93,7 @@ struct SettingsView: View {
           .tint(AppTheme.accentBlue)
           .onChange(of: settings.unit) { hasChanges = true }
         }
-
+        divider
         row(label: "Substance") {
           @Bindable var s = settings
           Picker("Substance", selection: $s.substance) {
@@ -106,18 +113,19 @@ struct SettingsView: View {
       VStack(alignment: .leading, spacing: 14) {
         HStack(spacing: 8) {
           ForEach(intervalPresets, id: \.self) { preset in
+            let isSelected = settings.safeIntervalMinutes == preset && customIntervalText.isEmpty
             Button {
               settings.safeIntervalMinutes = preset
               customIntervalText = ""
               hasChanges = true
             } label: {
               Text("\(preset)m")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(settings.safeIntervalMinutes == preset && customIntervalText.isEmpty ? .white : AppTheme.accentBlue)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isSelected ? .white : AppTheme.accentBlue)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(settings.safeIntervalMinutes == preset && customIntervalText.isEmpty ? AppTheme.accentBlue : AppTheme.accentBlue.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.vertical, 9)
+                .background(isSelected ? AppTheme.accentBlue : AppTheme.accentBlue.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 9))
             }
           }
         }
@@ -127,37 +135,51 @@ struct SettingsView: View {
             .font(.system(size: 14))
             .foregroundStyle(AppTheme.textSecondary)
           Spacer()
-          TextField("90", text: $customIntervalText)
+          TextField("e.g. 105", text: $customIntervalText)
             .keyboardType(.numberPad)
             .multilineTextAlignment(.trailing)
             .font(.system(size: 16))
             .foregroundStyle(AppTheme.textPrimary)
-            .frame(width: 70)
+            .frame(width: 80)
         }
+        .padding(12)
+        .background(AppTheme.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 9))
       }
     }
   }
 
   private var quickAmountsSection: some View {
     settingsCard(title: "Quick Amounts") {
-      VStack(alignment: .leading, spacing: 8) {
-        Text("Comma-separated values, e.g. 0.5, 1.0, 1.5, 2.0")
-          .font(.system(size: 12))
-          .foregroundStyle(AppTheme.textMuted)
+      VStack(alignment: .leading, spacing: 10) {
         TextField("0.5, 1.0, 1.5, 2.0", text: $quickAmountsText)
           .keyboardType(.numbersAndPunctuation)
           .font(.system(size: 15))
           .foregroundStyle(AppTheme.textPrimary)
-          .padding(10)
+          .padding(12)
           .background(AppTheme.backgroundElevated)
-          .clipShape(RoundedRectangle(cornerRadius: 8))
+          .clipShape(RoundedRectangle(cornerRadius: 9))
+          .overlay(
+            RoundedRectangle(cornerRadius: 9)
+              .stroke(quickAmountsError ? AppTheme.statusRed : Color.clear, lineWidth: 1)
+          )
+
+        if quickAmountsError {
+          Text("All values must be positive numbers, separated by commas.")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.statusRed)
+        } else {
+          Text("Comma-separated amounts — e.g. 0.5, 1.0, 1.5, 2.0")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textMuted)
+        }
       }
     }
   }
 
   private var displaySection: some View {
     settingsCard(title: "Display") {
-      VStack(spacing: 14) {
+      VStack(spacing: 0) {
         row(label: "Timer mode") {
           @Bindable var s = settings
           Picker("Timer mode", selection: $s.countdownMode) {
@@ -168,7 +190,7 @@ struct SettingsView: View {
           .tint(AppTheme.accentBlue)
           .onChange(of: settings.countdownMode) { hasChanges = true }
         }
-
+        divider
         row(label: "Time format") {
           @Bindable var s = settings
           Picker("Format", selection: $s.timeFormat) {
@@ -185,7 +207,7 @@ struct SettingsView: View {
 
   private var notificationsSection: some View {
     settingsCard(title: "Notifications") {
-      VStack(spacing: 14) {
+      VStack(spacing: 10) {
         row(label: "Safe to redose reminder") {
           @Bindable var s = settings
           Toggle("", isOn: $s.notificationsEnabled)
@@ -201,6 +223,7 @@ struct SettingsView: View {
           Text("You'll receive a notification when your safe interval has passed.")
             .font(.system(size: 12))
             .foregroundStyle(AppTheme.textMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
       }
     }
@@ -208,13 +231,12 @@ struct SettingsView: View {
 
   private var deviceSection: some View {
     settingsCard(title: "Device") {
-      VStack(spacing: 14) {
-        row(label: "Device name") {
-          TextField("My iPhone", text: $deviceNameText)
-            .multilineTextAlignment(.trailing)
-            .font(.system(size: 15))
-            .foregroundStyle(AppTheme.textPrimary)
-        }
+      row(label: "Device name") {
+        TextField("My iPhone", text: $deviceNameText)
+          .multilineTextAlignment(.trailing)
+          .font(.system(size: 15))
+          .foregroundStyle(AppTheme.textPrimary)
+          .frame(maxWidth: 180)
       }
     }
   }
@@ -222,34 +244,46 @@ struct SettingsView: View {
   private var profileSection: some View {
     settingsCard(title: "Profile (Pro)") {
       VStack(spacing: 14) {
-        HStack {
+        HStack(spacing: 14) {
           if let data = settings.profilePictureData, let img = UIImage(data: data) {
             Image(uiImage: img)
               .resizable()
               .scaledToFill()
-              .frame(width: 56, height: 56)
+              .frame(width: 52, height: 52)
               .clipShape(Circle())
               .overlay(Circle().stroke(AppTheme.proAmber, lineWidth: 2))
           } else {
-            Circle()
-              .fill(AppTheme.backgroundElevated)
-              .frame(width: 56, height: 56)
-              .overlay(Image(systemName: "person.fill").foregroundStyle(AppTheme.textMuted))
+            ZStack {
+              Circle()
+                .fill(AppTheme.backgroundElevated)
+                .frame(width: 52, height: 52)
+              Image(systemName: "person.fill")
+                .foregroundStyle(AppTheme.textMuted)
+                .font(.system(size: 22))
+            }
           }
-          PhotosPicker(selection: $photoPickerItem, matching: .images) {
-            Text("Change Photo")
-              .font(.system(size: 14, weight: .medium))
-              .foregroundStyle(AppTheme.proAmber)
+          VStack(alignment: .leading, spacing: 4) {
+            PhotosPicker(selection: $photoPickerItem, matching: .images) {
+              Text("Change Photo")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(AppTheme.proAmber)
+            }
+            .accessibilityLabel("Change profile photo")
+            Text("JPG or PNG, shown in the Pro tab")
+              .font(.system(size: 11))
+              .foregroundStyle(AppTheme.textMuted)
           }
-          .accessibilityLabel("Change profile photo")
           Spacer()
         }
 
+        divider
+
         row(label: "Display name") {
-          TextField("Name", text: $vanityNameText)
+          TextField("Your name", text: $vanityNameText)
             .multilineTextAlignment(.trailing)
             .font(.system(size: 15))
             .foregroundStyle(AppTheme.textPrimary)
+            .frame(maxWidth: 180)
         }
       }
     }
@@ -257,19 +291,24 @@ struct SettingsView: View {
 
   // MARK: - Helpers
 
+  private var divider: some View {
+    Divider()
+      .background(AppTheme.border)
+      .padding(.vertical, 4)
+  }
+
   private func settingsCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 10) {
       Text(title.uppercased())
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(AppTheme.textMuted)
+        .kerning(0.3)
         .padding(.leading, 4)
-      VStack(spacing: 0) {
-        content()
-      }
-      .padding(14)
-      .background(AppTheme.backgroundCard)
-      .clipShape(RoundedRectangle(cornerRadius: 14))
-      .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
+      content()
+        .padding(14)
+        .background(AppTheme.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
     }
   }
 
@@ -281,34 +320,51 @@ struct SettingsView: View {
       Spacer()
       trailing()
     }
+    .padding(.vertical, 2)
   }
 
-  // MARK: - Actions
+  // MARK: - Save / discard
 
   private func saveAll() {
-    if let d = Double(standardDoseText) { settings.standardDose = d }
+    // Validate quick amounts
+    let parsed = quickAmountsText
+      .split(separator: ",")
+      .compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+      .filter { $0 > 0 }
+
+    let inputCount = quickAmountsText
+      .split(separator: ",")
+      .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+      .count
+
+    if inputCount > 0 && parsed.count != inputCount {
+      quickAmountsError = true
+      return
+    }
+
+    if let d = Double(standardDoseText), d > 0 { settings.standardDose = d }
     settings.deviceName = deviceNameText
     settings.vanityName = vanityNameText
 
     if let minutes = Int(customIntervalText), minutes > 0 {
       settings.safeIntervalMinutes = minutes
     }
-
-    let amounts = quickAmountsText
-      .split(separator: ",")
-      .compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-    if !amounts.isEmpty { settings.quickAmounts = amounts }
+    if !parsed.isEmpty { settings.quickAmounts = parsed }
 
     hasChanges = false
+    quickAmountsError = false
   }
 
   private func reloadFromSettings() {
     standardDoseText = settings.standardDose.formatted(.number.precision(.fractionLength(1)))
     deviceNameText = settings.deviceName
     vanityNameText = settings.vanityName
-    quickAmountsText = settings.quickAmounts.map { $0.formatted(.number.precision(.fractionLength(1))) }.joined(separator: ", ")
+    quickAmountsText = settings.quickAmounts
+      .map { $0.formatted(.number.precision(.fractionLength(1))) }
+      .joined(separator: ", ")
     customIntervalText = ""
     hasChanges = false
+    quickAmountsError = false
   }
 
   private func loadPhoto() {
