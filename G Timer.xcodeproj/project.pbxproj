@@ -1,0 +1,825 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		14B148C04EC8E05B18729DFE /* DoseDetailMapSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E359437B3EC12A9D6A8AB7E4 /* DoseDetailMapSheet.swift */; };
+		1AE230FCAC53D07E281176D4 /* TimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0797F2A8B58F36F9701E773 /* TimerView.swift */; };
+		201E3DE4062F2D054EB1F91B /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7D52BA41636CE2C91BBEEF6 /* LocationManager.swift */; };
+		2966D05B00FB0522556FC689 /* ProFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6791463818308178B8AD211E /* ProFeature.swift */; };
+		2ACC5CFDB3F9F20542409054 /* DoseRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 626C2609BC5DA1E25BB46E97 /* DoseRecord.swift */; };
+		32C1DC834DC0A7F27D7F52C9 /* EditDoseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1787690DBA6929A530B9BC /* EditDoseSheet.swift */; };
+		48FC7BF44EB1BD7D15CE6EF6 /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 867068BDABF75D7778441715 /* AppNavigation.swift */; };
+		496AAD13AF50068206459DDC /* DoseMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447E9916B8084D2027AB7F9F /* DoseMapView.swift */; };
+		4AE07F8A330CC095DE4BF30E /* CustomDoseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29EC264E0F490380B0F41683 /* CustomDoseSheet.swift */; };
+		4B1CA7F9C88992E51E0C9D86 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F647F5408F5F0D7347D82E /* ContentView.swift */; };
+		5066448E90BC899B72747937 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9444C55D89339A81F1FC001 /* Assets.xcassets */; };
+		53E23B496EBD9811AD9C935C /* SharedDoseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0CA2DE082569DFB7FB3F5D /* SharedDoseData.swift */; };
+		586B051489B67F3ACF3C26B6 /* MissedDoseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECE0B47E905FC20B06C0729 /* MissedDoseSheet.swift */; };
+		5B4F8009AED050E8B06D9945 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F3A39F8CEA663CE7BC8F94 /* NotificationManager.swift */; };
+		665DA73CBBE6A71AD84843A0 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4B3997859B7479BA22A536 /* App.swift */; };
+		671FD039317B055477B05F65 /* HealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77147D85A84EF801C56235BF /* HealthView.swift */; };
+		6F5D47F55333A02D8FB83AA7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 129395B4A574F022D35FCB4A /* SettingsView.swift */; };
+		75AAA8FF3F68227940B1A953 /* ArcGaugeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56CCB838E1DB676CF8A4D0E7 /* ArcGaugeView.swift */; };
+		7E04E4DD6EE3A98E5621C7D4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB77A57D04854B49FCC5AC12 /* ContentView.swift */; };
+		9B901753720ABF5F9643973A /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F64F7FF34708FF5B2C063937 /* AppGroup.swift */; };
+		9EEE509FF9211FCD69958DD4 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F64F7FF34708FF5B2C063937 /* AppGroup.swift */; };
+		9F0044958688283E56AAB7EA /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16C6FC4BAC2B204556CD5E3B /* AppTheme.swift */; };
+		A032DFFE160F640C0523D85E /* SharedDoseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0CA2DE082569DFB7FB3F5D /* SharedDoseData.swift */; };
+		A1E8F50EECC77607DEB9213B /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECFF0A5F345ACFEE506130B4 /* SettingsManager.swift */; };
+		AB9C451A2569BC7D5FBE7EA5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9444C55D89339A81F1FC001 /* Assets.xcassets */; };
+		AD9471D3AD59025DB4AF11DE /* SharedDoseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0CA2DE082569DFB7FB3F5D /* SharedDoseData.swift */; };
+		B6AD1ACEA70FA80E9BF33DF4 /* DoseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC4BD0039F6966DA9B18844F /* DoseStore.swift */; };
+		BC5FB7C31E4DE436E24B451D /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3446F25387A6D1411B41B36 /* ShareSheet.swift */; };
+		C2345557B5156BD20F7DDF03 /* G Timer Widget Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5F7B86708E304BA28ABB83BC /* G Timer Widget Extension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C39D1F539DFE6DF4DDCC57D6 /* DoseRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3758643DB3E58984DD446264 /* DoseRowView.swift */; };
+		CDE70C6A1DEC759CB42925EA /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3DE4C0276F0C373BC006329 /* App.swift */; };
+		E09A6487A499DEC06665200F /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F64F7FF34708FF5B2C063937 /* AppGroup.swift */; };
+		E0C8BF293DDCDB58E5F5099D /* G Timer Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 00392FB73EAD67FE7206BE6D /* G Timer Watch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EB1EDF1483CB17FB206A0A96 /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8155439FBA275EA05B210BD /* ViewModifiers.swift */; };
+		EC60BB2803AC8F858209BDC9 /* GTimerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D464FB5DBCCD0F6C68937CAD /* GTimerWidget.swift */; };
+		EE023F2D3E5B4F6CF4569A02 /* PaywallSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC83A375E35B6FC2133C9AA /* PaywallSheet.swift */; };
+		FE71B994ABA6220EAC8E65C6 /* ProView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 183C89F8539F3827EE847977 /* ProView.swift */; };
+		FF7271E4CD763A07928A3675 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 598329664BF149235E26818A /* HistoryView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		851FCFEAE371BA03C51358A1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4F95A47843B6F2E055B54E3A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E5DC0626A0C5615CAA60D578;
+			remoteInfo = "G Timer Widget Extension";
+		};
+		D0E3B768EEEF5C14CABB33CE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4F95A47843B6F2E055B54E3A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 82D5B85961246E7A49847C96;
+			remoteInfo = "G Timer Watch";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7E1BD2AC7F4229839171C0AD /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				E0C8BF293DDCDB58E5F5099D /* G Timer Watch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B8CBA07BCEB2EDE37430B0DE /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C2345557B5156BD20F7DDF03 /* G Timer Widget Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		00392FB73EAD67FE7206BE6D /* G Timer Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "G Timer Watch.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		0CC83A375E35B6FC2133C9AA /* PaywallSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallSheet.swift; sourceTree = "<group>"; };
+		10E8D5382D33BBA2F48E63C5 /* G Timer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "G Timer.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		129395B4A574F022D35FCB4A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		16C6FC4BAC2B204556CD5E3B /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		183C89F8539F3827EE847977 /* ProView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProView.swift; sourceTree = "<group>"; };
+		29EC264E0F490380B0F41683 /* CustomDoseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomDoseSheet.swift; sourceTree = "<group>"; };
+		3758643DB3E58984DD446264 /* DoseRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseRowView.swift; sourceTree = "<group>"; };
+		447E9916B8084D2027AB7F9F /* DoseMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseMapView.swift; sourceTree = "<group>"; };
+		56CCB838E1DB676CF8A4D0E7 /* ArcGaugeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcGaugeView.swift; sourceTree = "<group>"; };
+		598329664BF149235E26818A /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		5A4B3997859B7479BA22A536 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		5ECE0B47E905FC20B06C0729 /* MissedDoseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissedDoseSheet.swift; sourceTree = "<group>"; };
+		5F7B86708E304BA28ABB83BC /* G Timer Widget Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "G Timer Widget Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		626C2609BC5DA1E25BB46E97 /* DoseRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseRecord.swift; sourceTree = "<group>"; };
+		6791463818308178B8AD211E /* ProFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFeature.swift; sourceTree = "<group>"; };
+		74F647F5408F5F0D7347D82E /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		77147D85A84EF801C56235BF /* HealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthView.swift; sourceTree = "<group>"; };
+		867068BDABF75D7778441715 /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
+		A9444C55D89339A81F1FC001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B0797F2A8B58F36F9701E773 /* TimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerView.swift; sourceTree = "<group>"; };
+		B7D52BA41636CE2C91BBEEF6 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		BD1787690DBA6929A530B9BC /* EditDoseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditDoseSheet.swift; sourceTree = "<group>"; };
+		C3DE4C0276F0C373BC006329 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		CB77A57D04854B49FCC5AC12 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		D464FB5DBCCD0F6C68937CAD /* GTimerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GTimerWidget.swift; sourceTree = "<group>"; };
+		DC4BD0039F6966DA9B18844F /* DoseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseStore.swift; sourceTree = "<group>"; };
+		E359437B3EC12A9D6A8AB7E4 /* DoseDetailMapSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseDetailMapSheet.swift; sourceTree = "<group>"; };
+		E8F3A39F8CEA663CE7BC8F94 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		ECFF0A5F345ACFEE506130B4 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		EF0CA2DE082569DFB7FB3F5D /* SharedDoseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedDoseData.swift; sourceTree = "<group>"; };
+		F3446F25387A6D1411B41B36 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		F64F7FF34708FF5B2C063937 /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
+		F8155439FBA275EA05B210BD /* ViewModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		091743D1A7E88B67A052E53B /* History */ = {
+			isa = PBXGroup;
+			children = (
+				E359437B3EC12A9D6A8AB7E4 /* DoseDetailMapSheet.swift */,
+				447E9916B8084D2027AB7F9F /* DoseMapView.swift */,
+				3758643DB3E58984DD446264 /* DoseRowView.swift */,
+				BD1787690DBA6929A530B9BC /* EditDoseSheet.swift */,
+				598329664BF149235E26818A /* HistoryView.swift */,
+			);
+			path = History;
+			sourceTree = "<group>";
+		};
+		2C9314126D16007DF03E51BD /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				626C2609BC5DA1E25BB46E97 /* DoseRecord.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		2ED0092CF800CA55E2723E2C /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				F64F7FF34708FF5B2C063937 /* AppGroup.swift */,
+				EF0CA2DE082569DFB7FB3F5D /* SharedDoseData.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		47764A2FBA810B76F0CB1325 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				867068BDABF75D7778441715 /* AppNavigation.swift */,
+				DC4BD0039F6966DA9B18844F /* DoseStore.swift */,
+				B7D52BA41636CE2C91BBEEF6 /* LocationManager.swift */,
+				E8F3A39F8CEA663CE7BC8F94 /* NotificationManager.swift */,
+				ECFF0A5F345ACFEE506130B4 /* SettingsManager.swift */,
+			);
+			path = Managers;
+			sourceTree = "<group>";
+		};
+		4C8F1B87F987E3522CD263F5 /* Widget Extension */ = {
+			isa = PBXGroup;
+			children = (
+				D464FB5DBCCD0F6C68937CAD /* GTimerWidget.swift */,
+			);
+			path = "Widget Extension";
+			sourceTree = "<group>";
+		};
+		5C81B0D46890EF3C10D0E284 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				F3446F25387A6D1411B41B36 /* ShareSheet.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		611D0EE47AC6077EE579FE71 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				616962A410101BA8079CB9F2 /* Health */,
+				091743D1A7E88B67A052E53B /* History */,
+				F02E354A1847D7219F455297 /* Pro */,
+				6E7CCD3570078CE239974851 /* Settings */,
+				5C81B0D46890EF3C10D0E284 /* Shared */,
+				B684ACB19E068E565147419C /* Timer */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		616962A410101BA8079CB9F2 /* Health */ = {
+			isa = PBXGroup;
+			children = (
+				77147D85A84EF801C56235BF /* HealthView.swift */,
+			);
+			path = Health;
+			sourceTree = "<group>";
+		};
+		6246ED9992BCC5C5131ACE7C /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				5A4B3997859B7479BA22A536 /* App.swift */,
+				CB77A57D04854B49FCC5AC12 /* ContentView.swift */,
+			);
+			path = Watch;
+			sourceTree = "<group>";
+		};
+		6E7CCD3570078CE239974851 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				129395B4A574F022D35FCB4A /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		7A81D155CC28D28E8FABE134 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				00392FB73EAD67FE7206BE6D /* G Timer Watch.app */,
+				5F7B86708E304BA28ABB83BC /* G Timer Widget Extension.appex */,
+				10E8D5382D33BBA2F48E63C5 /* G Timer.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A8638EE22659E5C137D7C1D3 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				C3DE4C0276F0C373BC006329 /* App.swift */,
+				A9444C55D89339A81F1FC001 /* Assets.xcassets */,
+				74F647F5408F5F0D7347D82E /* ContentView.swift */,
+				47764A2FBA810B76F0CB1325 /* Managers */,
+				2C9314126D16007DF03E51BD /* Models */,
+				CE0FED052D9370883A0D7BC5 /* Theme */,
+				611D0EE47AC6077EE579FE71 /* Views */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		B684ACB19E068E565147419C /* Timer */ = {
+			isa = PBXGroup;
+			children = (
+				56CCB838E1DB676CF8A4D0E7 /* ArcGaugeView.swift */,
+				29EC264E0F490380B0F41683 /* CustomDoseSheet.swift */,
+				5ECE0B47E905FC20B06C0729 /* MissedDoseSheet.swift */,
+				B0797F2A8B58F36F9701E773 /* TimerView.swift */,
+			);
+			path = Timer;
+			sourceTree = "<group>";
+		};
+		CE0FED052D9370883A0D7BC5 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				16C6FC4BAC2B204556CD5E3B /* AppTheme.swift */,
+				F8155439FBA275EA05B210BD /* ViewModifiers.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		F02E354A1847D7219F455297 /* Pro */ = {
+			isa = PBXGroup;
+			children = (
+				0CC83A375E35B6FC2133C9AA /* PaywallSheet.swift */,
+				6791463818308178B8AD211E /* ProFeature.swift */,
+				183C89F8539F3827EE847977 /* ProView.swift */,
+			);
+			path = Pro;
+			sourceTree = "<group>";
+		};
+		F988E5B4BBB9AE3113518892 = {
+			isa = PBXGroup;
+			children = (
+				A8638EE22659E5C137D7C1D3 /* App */,
+				2ED0092CF800CA55E2723E2C /* Shared */,
+				6246ED9992BCC5C5131ACE7C /* Watch */,
+				4C8F1B87F987E3522CD263F5 /* Widget Extension */,
+				7A81D155CC28D28E8FABE134 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		82D5B85961246E7A49847C96 /* G Timer Watch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D8AD7AEB57226DED9C9F408E /* Build configuration list for PBXNativeTarget "G Timer Watch" */;
+			buildPhases = (
+				4BA51AB8BD068DFBE267150A /* Sources */,
+				1A8ED673BFABF59BE669C89E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "G Timer Watch";
+			packageProductDependencies = (
+			);
+			productName = "G Timer Watch";
+			productReference = 00392FB73EAD67FE7206BE6D /* G Timer Watch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		CB7043F581C1B2C28833A078 /* G Timer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FB0F43E8A5DF6077F336B13C /* Build configuration list for PBXNativeTarget "G Timer" */;
+			buildPhases = (
+				328792BEF7E9EACB2C4524F4 /* Sources */,
+				387E9530AAD601676538EB50 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "G Timer";
+			packageProductDependencies = (
+			);
+			productName = "G Timer";
+			productReference = 10E8D5382D33BBA2F48E63C5 /* G Timer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E5DC0626A0C5615CAA60D578 /* G Timer Widget Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6B6D31DCE2F5198F5C6598DA /* Build configuration list for PBXNativeTarget "G Timer Widget Extension" */;
+			buildPhases = (
+				419E81B8D15666596EEE918B /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "G Timer Widget Extension";
+			packageProductDependencies = (
+			);
+			productName = "G Timer Widget Extension";
+			productReference = 5F7B86708E304BA28ABB83BC /* G Timer Widget Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4F95A47843B6F2E055B54E3A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					CB7043F581C1B2C28833A078 = {
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.Mac = {
+								enabled = 1;
+							};
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
+					};
+					E5DC0626A0C5615CAA60D578 = {
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.Mac = {
+								enabled = 1;
+							};
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+						};
+					};
+				};
+			};
+			buildConfigurationList = 75B303D6D583E62C11B2891B /* Build configuration list for PBXProject "G Timer" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = F988E5B4BBB9AE3113518892;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 7A81D155CC28D28E8FABE134 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				CB7043F581C1B2C28833A078 /* G Timer */,
+				82D5B85961246E7A49847C96 /* G Timer Watch */,
+				E5DC0626A0C5615CAA60D578 /* G Timer Widget Extension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A8ED673BFABF59BE669C89E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5066448E90BC899B72747937 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		387E9530AAD601676538EB50 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB9C451A2569BC7D5FBE7EA5 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		328792BEF7E9EACB2C4524F4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CDE70C6A1DEC759CB42925EA /* App.swift in Sources */,
+				9EEE509FF9211FCD69958DD4 /* AppGroup.swift in Sources */,
+				48FC7BF44EB1BD7D15CE6EF6 /* AppNavigation.swift in Sources */,
+				9F0044958688283E56AAB7EA /* AppTheme.swift in Sources */,
+				75AAA8FF3F68227940B1A953 /* ArcGaugeView.swift in Sources */,
+				4B1CA7F9C88992E51E0C9D86 /* ContentView.swift in Sources */,
+				4AE07F8A330CC095DE4BF30E /* CustomDoseSheet.swift in Sources */,
+				14B148C04EC8E05B18729DFE /* DoseDetailMapSheet.swift in Sources */,
+				496AAD13AF50068206459DDC /* DoseMapView.swift in Sources */,
+				2ACC5CFDB3F9F20542409054 /* DoseRecord.swift in Sources */,
+				C39D1F539DFE6DF4DDCC57D6 /* DoseRowView.swift in Sources */,
+				B6AD1ACEA70FA80E9BF33DF4 /* DoseStore.swift in Sources */,
+				32C1DC834DC0A7F27D7F52C9 /* EditDoseSheet.swift in Sources */,
+				671FD039317B055477B05F65 /* HealthView.swift in Sources */,
+				FF7271E4CD763A07928A3675 /* HistoryView.swift in Sources */,
+				201E3DE4062F2D054EB1F91B /* LocationManager.swift in Sources */,
+				586B051489B67F3ACF3C26B6 /* MissedDoseSheet.swift in Sources */,
+				5B4F8009AED050E8B06D9945 /* NotificationManager.swift in Sources */,
+				EE023F2D3E5B4F6CF4569A02 /* PaywallSheet.swift in Sources */,
+				2966D05B00FB0522556FC689 /* ProFeature.swift in Sources */,
+				FE71B994ABA6220EAC8E65C6 /* ProView.swift in Sources */,
+				A1E8F50EECC77607DEB9213B /* SettingsManager.swift in Sources */,
+				6F5D47F55333A02D8FB83AA7 /* SettingsView.swift in Sources */,
+				BC5FB7C31E4DE436E24B451D /* ShareSheet.swift in Sources */,
+				AD9471D3AD59025DB4AF11DE /* SharedDoseData.swift in Sources */,
+				1AE230FCAC53D07E281176D4 /* TimerView.swift in Sources */,
+				EB1EDF1483CB17FB206A0A96 /* ViewModifiers.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		419E81B8D15666596EEE918B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B901753720ABF5F9643973A /* AppGroup.swift in Sources */,
+				EC60BB2803AC8F858209BDC9 /* GTimerWidget.swift in Sources */,
+				53E23B496EBD9811AD9C935C /* SharedDoseData.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4BA51AB8BD068DFBE267150A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				665DA73CBBE6A71AD84843A0 /* App.swift in Sources */,
+				E09A6487A499DEC06665200F /* AppGroup.swift in Sources */,
+				7E04E4DD6EE3A98E5621C7D4 /* ContentView.swift in Sources */,
+				A032DFFE160F640C0523D85E /* SharedDoseData.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0FB97EF3D5967711E5749767 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 82D5B85961246E7A49847C96 /* G Timer Watch */;
+			targetProxy = D0E3B768EEEF5C14CABB33CE /* PBXContainerItemProxy */;
+		};
+		BABD617BCA08F03B3D862A60 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = E5DC0626A0C5615CAA60D578 /* G Timer Widget Extension */;
+			targetProxy = 851FCFEAE371BA03C51358A1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		40D6596F13D4FCDA12392369 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Watch/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01.watchkitapp";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		4C323F0BFCE5EDD363F3057D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 6T537TDK7A;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		839A99338FD3B55898D82C50 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = "Widget Extension/Widget.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = "Widget Extension/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01.widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		883A7ED65038E9982B2FA0B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = "Widget Extension/Widget.entitlements";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = "Widget Extension/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01.widget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9741EB371A5BC1A359FE064F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		CAE478C18864AA3DF2EDA493 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 6T537TDK7A;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		D5ABB6C84D4491131C0DE2B0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Watch/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01.watchkitapp";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		FFA4561FCAEABEA10ADFDEF5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6B6D31DCE2F5198F5C6598DA /* Build configuration list for PBXNativeTarget "G Timer Widget Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				839A99338FD3B55898D82C50 /* Debug */,
+				883A7ED65038E9982B2FA0B5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		75B303D6D583E62C11B2891B /* Build configuration list for PBXProject "G Timer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C323F0BFCE5EDD363F3057D /* Debug */,
+				CAE478C18864AA3DF2EDA493 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D8AD7AEB57226DED9C9F408E /* Build configuration list for PBXNativeTarget "G Timer Watch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D5ABB6C84D4491131C0DE2B0 /* Debug */,
+				40D6596F13D4FCDA12392369 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FB0F43E8A5DF6077F336B13C /* Build configuration list for PBXNativeTarget "G Timer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FFA4561FCAEABEA10ADFDEF5 /* Debug */,
+				9741EB371A5BC1A359FE064F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 4F95A47843B6F2E055B54E3A /* Project object */;
+}
