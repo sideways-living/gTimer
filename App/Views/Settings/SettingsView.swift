@@ -7,13 +7,14 @@ enum SaveState { case idle, unsaved, saved }
 
 struct SettingsView: View {
   @Environment(SettingsManager.self) private var settings
+  @Environment(AppNavigation.self) private var nav
   @State private var saveState: SaveState = .idle
   @State private var customIntervalText = ""
   @State private var standardDoseText = ""
   @State private var deviceNameText = ""
   @State private var vanityNameText = ""
   @State private var photoPickerItem: PhotosPickerItem?
-  @State private var quickAmountsText = ""
+  @State private var quickAmountTexts = Array(repeating: "", count: 4)
   @State private var quickAmountsError: String? = nil
   @State private var intervalError: String? = nil
   @State private var hasLoaded = false
@@ -25,22 +26,27 @@ struct SettingsView: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: 16) {
-          doseSection
-          intervalSection
-          quickAmountsSection
-          displaySection
-          notificationsSection
-          deviceSection
-          locationSection
-          if settings.proBetaAccepted { profileSection }
+      ScrollViewReader { proxy in
+        ScrollView {
+          VStack(spacing: 16) {
+            doseSection
+            intervalSection
+            quickAmountsSection
+              .id(SettingsScrollTarget.quickAmounts)
+            displaySection
+            notificationsSection
+            deviceSection
+            locationSection
+            if settings.proBetaAccepted { profileSection }
+          }
+          .padding(.horizontal, 16)
+          .padding(.top, 16)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
+        .tabBarScrollClearance()
+        .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+        .onAppear { scrollToRequestedSection(proxy) }
+        .onChange(of: nav.settingsScrollTarget) { scrollToRequestedSection(proxy) }
       }
-      .tabBarScrollClearance()
-      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Settings")
       .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
       .toolbarColorScheme(.dark, for: .navigationBar)
@@ -56,7 +62,7 @@ struct SettingsView: View {
     .onChange(of: standardDoseText) { markUnsaved() }
     .onChange(of: deviceNameText) { markUnsaved() }
     .onChange(of: vanityNameText) { markUnsaved() }
-    .onChange(of: quickAmountsText) { markUnsaved(); quickAmountsError = nil }
+    .onChange(of: quickAmountTexts) { markUnsaved(); quickAmountsError = nil }
     .onChange(of: customIntervalText) { markUnsaved(); intervalError = nil }
     .onChange(of: photoPickerItem) { loadPhoto() }
   }
@@ -186,22 +192,28 @@ struct SettingsView: View {
   private var quickAmountsSection: some View {
     settingsCard(title: "Quick Amounts") {
       VStack(alignment: .leading, spacing: 10) {
-        TextField("0.5, 1.0, 1.5, 2.0", text: $quickAmountsText)
-          .keyboardType(.numbersAndPunctuation)
-          .font(.system(size: 15))
-          .foregroundStyle(AppTheme.textPrimary)
-          .padding(12)
-          .background(AppTheme.backgroundElevated)
-          .clipShape(RoundedRectangle(cornerRadius: 9))
-          .overlay(
-            RoundedRectangle(cornerRadius: 9)
-              .stroke(quickAmountsError != nil ? AppTheme.statusRed : Color.clear, lineWidth: 1)
-          )
+        HStack(spacing: 8) {
+          ForEach(0..<4, id: \.self) { index in
+            TextField("Dose \(index + 1)", text: $quickAmountTexts[index])
+              .keyboardType(.decimalPad)
+              .multilineTextAlignment(.center)
+              .font(.system(size: 15, weight: .semibold))
+              .foregroundStyle(AppTheme.textPrimary)
+              .padding(.vertical, 12)
+              .padding(.horizontal, 8)
+              .background(AppTheme.backgroundElevated)
+              .clipShape(RoundedRectangle(cornerRadius: 9))
+              .overlay(
+                RoundedRectangle(cornerRadius: 9)
+                  .stroke(quickAmountsError != nil ? AppTheme.statusRed : Color.clear, lineWidth: 1)
+              )
+          }
+        }
 
         if let err = quickAmountsError {
           Text(err).font(.system(size: 12)).foregroundStyle(AppTheme.statusRed)
         } else {
-          Text("Four comma-separated amounts — e.g. 0.5, 1.0, 1.5, 2.0")
+          Text("Leave boxes empty to show fewer quick-dose buttons.")
             .font(.system(size: 12)).foregroundStyle(AppTheme.textMuted)
         }
       }
@@ -327,14 +339,18 @@ struct SettingsView: View {
               .padding(.vertical, 6)
             }
             cardDivider
-            row(label: "Approximate location") {
+            row(label: "Show approximate location") {
               @Bindable var s = settings
-              Toggle("Approximate location", isOn: $s.locationApproximate)
+              Toggle("Show approximate location", isOn: $s.locationApproximate)
                 .labelsHidden()
                 .tint(AppTheme.accentBlue)
-                .accessibilityLabel("Approximate location")
+                .accessibilityLabel("Show approximate location")
                 .onChange(of: settings.locationApproximate) { markUnsaved() }
             }
+            Text("This only rounds how saved locations are displayed in the app. iOS still provides precise coordinates when precise location permission is enabled.")
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.textMuted)
+              .padding(.top, 2)
             cardDivider
             Button {
               if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -472,11 +488,17 @@ struct SettingsView: View {
   }
 
   private func saveAll() {
-    // Validate quick amounts: exactly 4 positive numbers
-    let parts = quickAmountsText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-    let parsed = parts.compactMap { Double($0) }.filter { $0 > 0 }
-    if parts.count != 4 || parsed.count != 4 {
-      quickAmountsError = "Enter exactly four positive numbers, e.g. 0.5, 1.0, 1.5, 2.0"
+    let enteredQuickAmounts = quickAmountTexts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    var parsed: [Double] = []
+    for value in enteredQuickAmounts where !value.isEmpty {
+      guard let amount = Double(value), amount > 0 else {
+        quickAmountsError = "Each quick dose must be a positive number, or left blank."
+        return
+      }
+      parsed.append(amount)
+    }
+    if parsed.count != Set(parsed.map { String(format: "%.6f", $0) }).count {
+      quickAmountsError = "Quick doses must not contain duplicates."
       return
     }
 
@@ -510,9 +532,12 @@ struct SettingsView: View {
     standardDoseText = settings.standardDose.formatted(.number.precision(.fractionLength(1)))
     deviceNameText = settings.deviceName
     vanityNameText = settings.vanityName
-    quickAmountsText = settings.quickAmounts
-      .map { $0.formatted(.number.precision(.fractionLength(1))) }
-      .joined(separator: ", ")
+    let amountStrings = settings.quickAmounts.prefix(4).map {
+      $0.formatted(.number.precision(.fractionLength(1)))
+    }
+    quickAmountTexts = (0..<4).map { index in
+      index < amountStrings.count ? amountStrings[index] : ""
+    }
     customIntervalText = ""
     saveState = .idle
     quickAmountsError = nil
@@ -527,6 +552,16 @@ struct SettingsView: View {
         settings.profilePictureData = data
         markUnsaved()
       }
+    }
+  }
+
+  private func scrollToRequestedSection(_ proxy: ScrollViewProxy) {
+    guard nav.settingsScrollTarget == .quickAmounts else { return }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+      withAnimation(.snappy) {
+        proxy.scrollTo(SettingsScrollTarget.quickAmounts, anchor: .top)
+      }
+      nav.settingsScrollTarget = nil
     }
   }
 }

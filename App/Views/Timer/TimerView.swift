@@ -212,45 +212,88 @@ struct TimerView: View {
     .accessibilityLabel("Log \(settings.standardDose.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
   }
 
-  // 2×2 grid of quick-dose buttons
   private var quickAmountsGrid: some View {
     let amounts = Array(settings.quickAmounts.prefix(4))
     return VStack(spacing: 8) {
-      ForEach(0..<2, id: \.self) { row in
+      switch amounts.count {
+      case 0:
+        quickAmountSettingsButton
+          .frame(height: 112)
+      case 1:
+        quickDoseButton(amounts[0])
+          .frame(height: 112)
+      case 2:
+        quickDoseButton(amounts[0])
+          .frame(height: 52)
+        quickDoseButton(amounts[1])
+          .frame(height: 52)
+      case 3:
+        quickDoseButton(amounts[0])
+          .frame(height: 52)
         HStack(spacing: 8) {
-          ForEach(0..<2, id: \.self) { col in
-            let idx = row * 2 + col
-            if idx < amounts.count {
-              let amt = amounts[idx]
-              let isDefault = abs(amt - settings.standardDose) < 0.001
-              Button { attemptLog(amount: amt) } label: {
-                Text("\(amt.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
-                  .font(.system(size: 15, weight: .bold))
-                  .foregroundStyle(isDefault ? .white : Color(white: 0.82))
-                  .minimumScaleFactor(0.75)
-                  .lineLimit(1)
-                  .frame(maxWidth: .infinity)
-                  .frame(height: 52)
-                  .background(
-                    RoundedRectangle(cornerRadius: 20)
-                      .fill(isDefault
-                        ? AppTheme.accentBlue.opacity(0.25)
-                        : AppTheme.backgroundElevated)
-                  )
-                  .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                      .strokeBorder(
-                        isDefault ? AppTheme.accentBlue : AppTheme.border,
-                        lineWidth: isDefault ? 1.5 : 0.5
-                      )
-                  )
-              }
-              .accessibilityLabel("Log \(amt.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
+          quickDoseButton(amounts[1])
+          quickDoseButton(amounts[2])
+        }
+        .frame(height: 52)
+      default:
+        ForEach(0..<2, id: \.self) { row in
+          HStack(spacing: 8) {
+            ForEach(0..<2, id: \.self) { col in
+              quickDoseButton(amounts[row * 2 + col])
             }
           }
+          .frame(height: 52)
         }
       }
     }
+  }
+
+  private func quickDoseButton(_ amount: Double) -> some View {
+    let isDefault = abs(amount - settings.standardDose) < 0.001
+    return Button { attemptLog(amount: amount) } label: {
+      Text("\(amount.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
+        .font(.system(size: 15, weight: .bold))
+        .foregroundStyle(isDefault ? .white : Color(white: 0.82))
+        .minimumScaleFactor(0.75)
+        .lineLimit(1)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+          RoundedRectangle(cornerRadius: 20)
+            .fill(isDefault
+              ? AppTheme.accentBlue.opacity(0.25)
+              : AppTheme.backgroundElevated)
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: 20)
+            .strokeBorder(
+              isDefault ? AppTheme.accentBlue : AppTheme.border,
+              lineWidth: isDefault ? 1.5 : 0.5
+            )
+        )
+    }
+    .accessibilityLabel("Log \(amount.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
+  }
+
+  private var quickAmountSettingsButton: some View {
+    Button {
+      nav.selectedTab = 3
+      nav.settingsScrollTarget = .quickAmounts
+    } label: {
+      VStack(spacing: 7) {
+        Image(systemName: "slider.horizontal.3")
+          .font(.system(size: 18, weight: .semibold))
+        Text("Set quick doses")
+          .font(.system(size: 13, weight: .semibold))
+          .minimumScaleFactor(0.8)
+          .lineLimit(1)
+      }
+      .foregroundStyle(AppTheme.accentBlue)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(AppTheme.accentBlue.opacity(0.10))
+      .clipShape(RoundedRectangle(cornerRadius: 20))
+      .overlay(RoundedRectangle(cornerRadius: 20).stroke(AppTheme.accentBlue.opacity(0.25), lineWidth: 0.75))
+    }
+    .accessibilityLabel("Open quick dose settings")
   }
 
   private var customDoseButton: some View {

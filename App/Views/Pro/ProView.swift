@@ -6,6 +6,13 @@ struct ProView: View {
   @State private var lastName = ""
   @State private var email = ""
   @State private var termsAccepted = false
+  @FocusState private var focusedField: SignupField?
+
+  private enum SignupField {
+    case firstName
+    case lastName
+    case email
+  }
 
   private var canActivate: Bool {
     !firstName.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -110,10 +117,19 @@ struct ProView: View {
 
         HStack(spacing: 12) {
           inputField("First Name", text: $firstName, contentType: .givenName)
+            .focused($focusedField, equals: .firstName)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .lastName }
           inputField("Last Name", text: $lastName, contentType: .familyName)
+            .focused($focusedField, equals: .lastName)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .email }
         }
 
         inputField("Email address", text: $email, keyboard: .emailAddress, contentType: .emailAddress)
+          .focused($focusedField, equals: .email)
+          .submitLabel(.done)
+          .onSubmit { focusedField = nil }
 
         // Acknowledgement checkbox
         Button { withAnimation(.snappy) { termsAccepted.toggle() } } label: {
