@@ -16,8 +16,14 @@ struct TimerView: View {
   @State private var pendingAmount: Double = 0
   @State private var pendingNotes: String = ""
   @State private var ticker: Timer?
+  @State private var editingDose: DoseRecord?
 
   private var lastDose: DoseRecord? { doses.first }
+  private var visibleDoses: [DoseRecord] {
+    if settings.proBetaAccepted { return doses }
+    let cutoff = Date().addingTimeInterval(-24 * 3600)
+    return doses.filter { $0.time >= cutoff }
+  }
 
   private var isActive: Bool {
     guard let d = lastDose else { return false }
@@ -60,36 +66,11 @@ struct TimerView: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: 0) {
-          gaugeSection
-            .padding(.top, 20)
-          statusBadge
-          actionButtons
-            .padding(.top, 8)
-          if let d = lastDose, isActive {
-            lastDoseCard(d)
-              .padding(.top, 6)
-          }
-        }
-        .padding(.horizontal, 0)
-      }
-      .tabBarScrollClearance()
-      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
-      .navigationTitle("")
-      .toolbar {
-        ToolbarItem(placement: .principal) {
-          HStack(spacing: 7) {
-            Image(systemName: "drop.fill")
-              .font(.system(size: 17, weight: .bold))
-              .foregroundStyle(AppTheme.accentBlue)
-            Text("G Timer")
-              .font(.system(size: 20, weight: .bold))
-              .foregroundStyle(AppTheme.textPrimary)
-          }
-        }
-      }
-      .platformNavigationBarStyle()
+      #if os(macOS)
+      macTimerLayout
+      #else
+      phoneTimerLayout
+      #endif
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
     .onAppear {
@@ -109,6 +90,7 @@ struct TimerView: View {
     .sheet(isPresented: $showPaywall) {
       PaywallSheet(feature: paywallFeature)
     }
+    .sheet(item: $editingDose) { EditDoseSheet(dose: $0) }
     .alert("Log Early?", isPresented: $showWarning) {
       Button("Cancel", role: .cancel) {}
       Button("Log Anyway", role: .destructive) { confirmLog(amount: pendingAmount, notes: pendingNotes) }
@@ -116,6 +98,129 @@ struct TimerView: View {
       Text("The safe interval hasn't passed yet. Logging early can increase risk.")
     }
   }
+
+  private var phoneTimerLayout: some View {
+    ScrollView {
+      timerStack(includeLastDose: true)
+    }
+    .tabBarScrollClearance()
+    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+    .navigationTitle("")
+    .toolbar {
+      ToolbarItem(placement: .principal) {
+        HStack(spacing: 7) {
+          Image(systemName: "drop.fill")
+            .font(.system(size: 17, weight: .bold))
+            .foregroundStyle(AppTheme.accentBlue)
+          Text("G Timer")
+            .font(.system(size: 20, weight: .bold))
+            .foregroundStyle(AppTheme.textPrimary)
+        }
+      }
+    }
+    .platformNavigationBarStyle()
+  }
+
+  #if os(macOS)
+  private var macTimerLayout: some View {
+    GeometryReader { geo in
+      let showsHistory = geo.size.width >= 860
+      HStack(alignment: .top, spacing: 0) {
+        ScrollView {
+          timerStack(includeLastDose: !showsHistory)
+            .frame(maxWidth: 460)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, showsHistory ? 28 : 20)
+            .padding(.vertical, 24)
+        }
+        .background(AppTheme.backgroundPrimary)
+
+        if showsHistory {
+          Divider().background(AppTheme.border)
+          macHistoryPanel
+            .frame(minWidth: 340, idealWidth: 390, maxWidth: 460)
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+    .navigationTitle("Timer")
+  }
+  #endif
+
+  private func timerStack(includeLastDose: Bool) -> some View {
+    VStack(spacing: 0) {
+      gaugeSection
+        .padding(.top, 20)
+      statusBadge
+      actionButtons
+        .padding(.top, 8)
+      if includeLastDose, let d = lastDose, isActive {
+        lastDoseCard(d)
+          .padding(.top, 6)
+      }
+    }
+    .padding(.horizontal, 0)
+  }
+
+  #if os(macOS)
+  private var macHistoryPanel: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack {
+        VStack(alignment: .leading, spacing: 3) {
+          Text("Recent History")
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(AppTheme.textPrimary)
+          Text(settings.proBetaAccepted ? "All dose records" : "Last 24 hours")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textMuted)
+        }
+        Spacer()
+        Button {
+          nav.selectedTab = 1
+        } label: {
+          Image(systemName: "arrow.right")
+            .font(.system(size: 14, weight: .semibold))
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(AppTheme.accentBlue)
+        .accessibilityLabel("Open full history")
+      }
+
+      if visibleDoses.isEmpty {
+        VStack(spacing: 10) {
+          Image(systemName: "clock.arrow.circlepath")
+            .font(.system(size: 30))
+            .foregroundStyle(AppTheme.textMuted)
+          Text(doses.isEmpty ? "No doses recorded yet" : "Older records are hidden in free mode.")
+            .font(.system(size: 14))
+            .foregroundStyle(AppTheme.textMuted)
+            .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      } else {
+        ScrollView {
+          LazyVStack(spacing: 8) {
+            ForEach(Array(visibleDoses.prefix(8))) { dose in
+              DoseRowView(
+                dose: dose,
+                isPro: settings.proBetaAccepted,
+                locationApproximate: settings.locationApproximate
+              ) {
+                if settings.proBetaAccepted { editingDose = dose }
+              } onDelete: {
+                DoseStore.delete(dose, context: context)
+              }
+            }
+          }
+          .padding(.bottom, 8)
+        }
+      }
+    }
+    .padding(20)
+    .background(AppTheme.backgroundSecondary)
+  }
+  #endif
 
   // MARK: - Gauge
 

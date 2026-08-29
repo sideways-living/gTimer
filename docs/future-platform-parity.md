@@ -15,7 +15,7 @@ The iOS SwiftUI app is the canonical implementation. Future Android and Windows 
 | iOS | Active canonical app | Main app builds for iPhone Simulator. Physical-device/App Store builds still need Apple Developer provisioning. |
 | iOS Widget | Present but disabled from the interim app Run path | Widget target exists, but embedding is temporarily disabled to avoid Simulator install failures before proper Developer provisioning. |
 | watchOS | Debug simulator build passing | Standalone watch app target builds, but it is not embedded in the current app-only iPhone Run path. Feature parity is partial. |
-| macOS | Initial Debug build passing | App builds for `My Mac` with a Mac sidebar shell; packaging, store readiness, and Mac-specific QA still need work. |
+| macOS | Initial Debug build passing | App builds for `My Mac` with a Mac sidebar shell and responsive timer/history layout; packaging, store readiness, and Mac-specific QA still need work. |
 | tvOS | No target | Not configured in the Xcode project. Would be a new platform port with limited feature fit. |
 | Android | Future planned | No implementation started. |
 | Windows | Future planned | No implementation started. |
@@ -42,7 +42,7 @@ App/Views/Shared/ShareSheet.swift:2:8: error: unable to resolve module dependenc
 import UIKit
 ```
 
-Current interpretation: the project still shares the iOS-first SwiftUI app for macOS. Platform abstractions now cover the first UIKit, keyboard, toolbar, pasteboard, device-name, share-sheet, and CoreLocation authorization blockers. The Mac app now uses sidebar navigation and a Mac-sized main window, but it still needs proper Mac UX review and packaging decisions.
+Current interpretation: the project still shares the iOS-first SwiftUI app for macOS. Platform abstractions now cover the first UIKit, keyboard, toolbar, pasteboard, device-name, share-sheet, and CoreLocation authorization blockers. The Mac app now uses sidebar navigation, a Mac-sized main window, and two timer layouts: compact windows show the timer above dose buttons, while wider windows add recent history on the right. It still needs proper Mac UX review and packaging decisions.
 
 Recommended short-term action: keep day-to-day iPhone development on iPhone Simulator, and run a macOS Debug build after shared UI/platform changes.
 
