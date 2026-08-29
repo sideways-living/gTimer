@@ -40,7 +40,7 @@ struct TimerView: View {
 
   private var displayTime: TimeInterval {
     guard isActive else { return 0 }
-    if settings.countdownMode && !isSafe { return max(intervalSeconds - elapsed, 0) }
+    if settings.countdownMode { return max(intervalSeconds - elapsed, 0) }
     return elapsed
   }
 
@@ -123,6 +123,7 @@ struct TimerView: View {
   private var gaugeSection: some View {
     ArcGaugeView(
       progress: progress,
+      countdownMode: settings.countdownMode,
       statusColor: statusColor,
       timeString: timeString,
       statusLabel: statusLabel,

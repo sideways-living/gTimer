@@ -1,11 +1,20 @@
 import SwiftUI
 
 struct ArcGaugeView: View {
-  var progress: Double   // 0…1
+  var progress: Double   // elapsed progress, 0...1
+  var countdownMode: Bool
   var statusColor: Color
   var timeString: String
   var statusLabel: String
   var isActive: Bool
+
+  private var clampedProgress: Double {
+    min(max(progress, 0), 1)
+  }
+
+  private var visibleProgress: Double {
+    countdownMode ? max(1 - clampedProgress, 0) : clampedProgress
+  }
 
   var body: some View {
     ZStack {
@@ -15,10 +24,9 @@ struct ArcGaugeView: View {
         .stroke(AppTheme.backgroundElevated, style: StrokeStyle(lineWidth: 18, lineCap: .round))
         .rotationEffect(.degrees(90))
 
-      // Fill arc
-      if isActive && progress > 0 {
+      if isActive && countdownMode {
         Circle()
-          .trim(from: 0.1, to: 0.1 + 0.8 * min(progress, 1.0))
+          .trim(from: 0.1, to: 0.9)
           .stroke(
             LinearGradient(
               colors: [statusColor.opacity(0.65), statusColor],
@@ -28,12 +36,33 @@ struct ArcGaugeView: View {
             style: StrokeStyle(lineWidth: 18, lineCap: .round)
           )
           .rotationEffect(.degrees(90))
-          .animation(.easeInOut(duration: 0.6), value: progress)
+
+        if clampedProgress > 0 {
+          Circle()
+            .trim(from: 0.9 - 0.8 * clampedProgress, to: 0.9)
+            .stroke(AppTheme.backgroundElevated, style: StrokeStyle(lineWidth: 20, lineCap: .round))
+            .rotationEffect(.degrees(90))
+            .animation(.easeInOut(duration: 0.6), value: clampedProgress)
+        }
+      } else if isActive && visibleProgress > 0 {
+        Circle()
+          .trim(from: 0.1, to: 0.1 + 0.8 * visibleProgress)
+          .stroke(
+            LinearGradient(
+              colors: [statusColor.opacity(0.65), statusColor],
+              startPoint: .leading,
+              endPoint: .trailing
+            ),
+            style: StrokeStyle(lineWidth: 18, lineCap: .round)
+          )
+          .rotationEffect(.degrees(90))
+          .animation(.easeInOut(duration: 0.6), value: visibleProgress)
       }
 
       // Glowing dot at the arc tip
-      if isActive && progress > 0 {
-        let tipAngle = Angle.degrees(90 + (0.1 + 0.8 * min(progress, 1.0)) * 360)
+      if isActive && visibleProgress > 0 {
+        let tipTrim = countdownMode ? 0.9 - 0.8 * clampedProgress : 0.1 + 0.8 * visibleProgress
+        let tipAngle = Angle.degrees(90 + tipTrim * 360)
         GeometryReader { geo in
           let r  = geo.size.width / 2 - 9
           let cx = geo.size.width / 2
