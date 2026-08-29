@@ -14,8 +14,9 @@ The iOS SwiftUI app is the canonical implementation. Future Android and Windows 
 | --- | --- | --- |
 | iOS | Active canonical app | Main app builds for iPhone Simulator. Physical-device/App Store builds still need Apple Developer provisioning. |
 | iOS Widget | Present but disabled from the interim app Run path | Widget target exists, but embedding is temporarily disabled to avoid Simulator install failures before proper Developer provisioning. |
-| watchOS | Target exists | Not part of the current app-only interim Run path. |
-| macOS | Initial Debug build passing | App builds for `My Mac`; UX, packaging, store readiness, and Mac-specific QA still need work. |
+| watchOS | Debug simulator build passing | Standalone watch app target builds, but it is not embedded in the current app-only iPhone Run path. Feature parity is partial. |
+| macOS | Initial Debug build passing | App builds for `My Mac` with a Mac sidebar shell; packaging, store readiness, and Mac-specific QA still need work. |
+| tvOS | No target | Not configured in the Xcode project. Would be a new platform port with limited feature fit. |
 | Android | Future planned | No implementation started. |
 | Windows | Future planned | No implementation started. |
 
@@ -41,11 +42,34 @@ App/Views/Shared/ShareSheet.swift:2:8: error: unable to resolve module dependenc
 import UIKit
 ```
 
-Current interpretation: the project still shares the iOS-first SwiftUI app for macOS. Platform abstractions now cover the first UIKit, keyboard, toolbar, pasteboard, device-name, share-sheet, and CoreLocation authorization blockers, but the Mac build still needs proper Mac UX review and packaging decisions.
+Current interpretation: the project still shares the iOS-first SwiftUI app for macOS. Platform abstractions now cover the first UIKit, keyboard, toolbar, pasteboard, device-name, share-sheet, and CoreLocation authorization blockers. The Mac app now uses sidebar navigation and a Mac-sized main window, but it still needs proper Mac UX review and packaging decisions.
 
 Recommended short-term action: keep day-to-day iPhone development on iPhone Simulator, and run a macOS Debug build after shared UI/platform changes.
 
 Recommended future macOS action: decide whether the first Mac release should remain a shared SwiftUI Mac app or split into an explicit Mac target with Mac-specific layout, window sizing, menu commands, and store metadata.
+
+## watchOS Finding
+
+There is a buildable standalone Apple Watch app target.
+
+Verified command:
+
+```sh
+xcodebuild \
+  -project "G Timer.xcodeproj" \
+  -scheme "G Timer Watch" \
+  -configuration Debug \
+  -destination "platform=watchOS Simulator,name=Apple Watch Series 11 (46mm),OS=26.5" \
+  build
+```
+
+Current interpretation: watchOS should stay as a companion glance/control surface, not a full parity target. The watch can show current timer state from shared data, but phone-only flows such as full settings, export, detailed history, maps, and profile setup should remain on iPhone/macOS unless a deliberate watch UX is designed.
+
+## tvOS Finding
+
+There is no tvOS target in the current Xcode project.
+
+tvOS is a poor fit for the core dose-logging workflow because Apple TV is usually shared, not personal, and lacks the same notification, location, Health-adjacent, and quick private input expectations as iPhone/Watch/Mac. If tvOS is ever pursued, treat it as a dashboard/view-only companion unless there is a strong product reason to support logging on a television.
 
 ## Canonical iOS Feature Set
 
@@ -109,6 +133,22 @@ CSV exports/imports should use the same field names unless a migration map is ex
 | Profile | Pro-gated display name/photo | Same gate or documented store-specific equivalent. |
 | Location attach | Pro-gated and off by default | Native permission prompt. |
 | Show approximate location | Display rounding only | If future privacy-preserving storage is added, update all platforms together. |
+
+## Apple Companion Platform Notes
+
+watchOS:
+
+- Keep as a companion timer/status surface.
+- Match countdown/count-up semantics with the iOS timer.
+- Read shared dose state from the iPhone app where possible.
+- Avoid adding full data-management workflows until the iOS/macOS data model is stable.
+
+tvOS:
+
+- No current implementation.
+- Do not claim parity unless a tvOS target exists and has a documented product scope.
+- Recommended scope, if added later: read-only timer display, basic status, and possibly educational health content.
+- Avoid location capture, private dose entry, profile setup, export, and Pro account flows on tvOS unless explicitly approved as product scope.
 
 ## Android Implementation Notes
 
@@ -205,6 +245,19 @@ Before macOS release work continues:
 - Review and refine Mac-specific navigation, window sizing, share/export, profile photo, map, notification, and location permission flows.
 - Decide whether WidgetKit/watchOS features remain Apple-platform-only.
 - Keep explicit macOS build validation in the release checklist.
+
+Before watchOS release work continues:
+
+- Decide whether it is standalone, companion-only, or both.
+- Verify app-group sharing and installation through the iPhone host once Developer provisioning is available.
+- Match the timer arc/countdown behavior with iOS.
+- Define which Pro features are intentionally unavailable on watchOS.
+
+Before tvOS work starts:
+
+- Confirm whether tvOS has a real user workflow or should remain out of scope.
+- Create a tvOS target only after defining a limited parity scope.
+- Document privacy expectations for shared-screen use.
 
 ## Update Rule
 

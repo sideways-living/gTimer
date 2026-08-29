@@ -28,7 +28,11 @@ enum PlatformTextContentType {
 
 extension View {
   func tabBarScrollClearance() -> some View {
+    #if os(iOS)
     self.contentMargins(.bottom, kTabBarClearance, for: .scrollContent)
+    #else
+    self
+    #endif
   }
 
   @ViewBuilder
@@ -64,6 +68,15 @@ extension View {
   func platformInlineNavigationTitle() -> some View {
     #if os(iOS)
     self.navigationBarTitleDisplayMode(.inline)
+    #else
+    self
+    #endif
+  }
+
+  @ViewBuilder
+  func platformMainWindowFrame() -> some View {
+    #if os(macOS)
+    self.frame(minWidth: 920, idealWidth: 1040, minHeight: 680, idealHeight: 760)
     #else
     self
     #endif

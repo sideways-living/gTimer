@@ -13,6 +13,7 @@ struct GTimerApp: App {
         .environment(nav)
         .modelContainer(for: DoseRecord.self)
         .preferredColorScheme(.dark)
+        .platformMainWindowFrame()
         .onOpenURL { url in
           if url.scheme == "gtimer" && url.host == "timer" {
             nav.selectedTab = 0
