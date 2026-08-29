@@ -14,7 +14,7 @@ struct MissedDoseSheet: View {
 
   private var locationAvailable: Bool {
     settings.attachLocationToDoses &&
-    LocationManager.shared.authorizationStatus == .authorizedWhenInUse
+      LocationManager.shared.hasLocationPermission
   }
 
   var body: some View {
@@ -29,7 +29,7 @@ struct MissedDoseSheet: View {
               .font(.system(size: 14, weight: .medium))
               .foregroundStyle(AppTheme.textSecondary)
             TextField("Amount", text: $amountText)
-              .keyboardType(.decimalPad)
+              .platformKeyboardType(.decimalPad)
               .font(.system(size: 20, weight: .semibold))
               .foregroundStyle(AppTheme.textPrimary)
               .padding(14)
@@ -140,7 +140,7 @@ struct MissedDoseSheet: View {
         .padding(20)
       }
       .navigationTitle("Missed Dose")
-      .navigationBarTitleDisplayMode(.inline)
+      .platformInlineNavigationTitle()
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel") { dismiss() }

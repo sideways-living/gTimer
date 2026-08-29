@@ -89,8 +89,7 @@ struct TimerView: View {
           }
         }
       }
-      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
-      .toolbarColorScheme(.dark, for: .navigationBar)
+      .platformNavigationBarStyle()
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
     .onAppear {

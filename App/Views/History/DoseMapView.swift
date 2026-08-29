@@ -40,9 +40,8 @@ struct DoseMapView: View {
       }
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Dose Map")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
-      .toolbarColorScheme(.dark, for: .navigationBar)
+      .platformInlineNavigationTitle()
+      .platformNavigationBarStyle()
     }
     .preferredColorScheme(.dark)
     .sheet(item: $selectedDose) { dose in

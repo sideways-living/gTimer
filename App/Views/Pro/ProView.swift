@@ -32,8 +32,7 @@ struct ProView: View {
       .tabBarScrollClearance()
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Pro")
-      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
-      .toolbarColorScheme(.dark, for: .navigationBar)
+      .platformNavigationBarStyle()
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
   }
@@ -218,12 +217,12 @@ struct ProView: View {
   private func inputField(
     _ placeholder: String,
     text: Binding<String>,
-    keyboard: UIKeyboardType = .default,
-    contentType: UITextContentType? = nil
+    keyboard: PlatformKeyboardType = .default,
+    contentType: PlatformTextContentType? = nil
   ) -> some View {
     TextField(placeholder, text: text)
-      .keyboardType(keyboard)
-      .textContentType(contentType)
+      .platformKeyboardType(keyboard)
+      .platformTextContentType(contentType)
       .autocorrectionDisabled()
       .font(.system(size: 16))
       .foregroundStyle(AppTheme.textPrimary)

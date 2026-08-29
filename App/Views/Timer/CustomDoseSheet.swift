@@ -23,7 +23,7 @@ struct CustomDoseSheet: View {
             .font(.system(size: 14, weight: .medium))
             .foregroundStyle(AppTheme.textSecondary)
           TextField("e.g. 1.2", text: $amountText)
-            .keyboardType(.decimalPad)
+            .platformKeyboardType(.decimalPad)
             .font(.system(size: 22, weight: .bold))
             .foregroundStyle(AppTheme.textPrimary)
             .padding(14)
@@ -67,7 +67,7 @@ struct CustomDoseSheet: View {
       .padding(20)
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Custom Amount")
-      .navigationBarTitleDisplayMode(.inline)
+      .platformInlineNavigationTitle()
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel") { dismiss() }

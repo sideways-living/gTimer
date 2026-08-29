@@ -4,7 +4,7 @@ Last updated: 2026-08-29
 
 ## Scope
 
-Do not start Android, Windows, or macOS development from this document alone. This is a planning and handoff document so future platform work can preserve feature parity with the Swift/Xcode iOS app.
+Do not start Android or Windows development from this document alone. This is a planning and handoff document so future platform work can preserve feature parity with the Swift/Xcode iOS app.
 
 The iOS SwiftUI app is the canonical implementation. Future Android and Windows versions should match its data model, user flows, feature gates, safety wording, and privacy behavior unless this document explicitly records a platform-specific substitute.
 
@@ -15,13 +15,13 @@ The iOS SwiftUI app is the canonical implementation. Future Android and Windows 
 | iOS | Active canonical app | Main app builds for iPhone Simulator. Physical-device/App Store builds still need Apple Developer provisioning. |
 | iOS Widget | Present but disabled from the interim app Run path | Widget target exists, but embedding is temporarily disabled to avoid Simulator install failures before proper Developer provisioning. |
 | watchOS | Target exists | Not part of the current app-only interim Run path. |
-| macOS | Not currently shippable | Xcode offers a Mac destination, but the app fails to build for macOS because iOS-specific code imports UIKit. |
+| macOS | Initial Debug build passing | App builds for `My Mac`; UX, packaging, store readiness, and Mac-specific QA still need work. |
 | Android | Future planned | No implementation started. |
 | Windows | Future planned | No implementation started. |
 
 ## macOS Finding
 
-There is not a working macOS version of G Timer right now.
+There is now an initial macOS Debug build of G Timer. Treat it as a development milestone, not a shippable Mac release.
 
 Verified command:
 
@@ -34,18 +34,18 @@ xcodebuild \
   build
 ```
 
-Current failure:
+Previous failure fixed in the initial macOS pass:
 
 ```text
 App/Views/Shared/ShareSheet.swift:2:8: error: unable to resolve module dependency: 'UIKit'
 import UIKit
 ```
 
-Interpretation: the project still exposes a Mac destination because its generated build settings include macOS support, but the app source is currently iOS-first and uses UIKit-backed components. Treat macOS as a future port, not an existing build.
+Current interpretation: the project still shares the iOS-first SwiftUI app for macOS. Platform abstractions now cover the first UIKit, keyboard, toolbar, pasteboard, device-name, share-sheet, and CoreLocation authorization blockers, but the Mac build still needs proper Mac UX review and packaging decisions.
 
-Recommended short-term action: keep day-to-day development on iPhone Simulator until the Apple Developer account/provisioning work is complete.
+Recommended short-term action: keep day-to-day iPhone development on iPhone Simulator, and run a macOS Debug build after shared UI/platform changes.
 
-Recommended future macOS action: create an explicit macOS target or cross-platform SwiftUI layer, then replace UIKit-only pieces with platform abstractions.
+Recommended future macOS action: decide whether the first Mac release should remain a shared SwiftUI Mac app or split into an explicit Mac target with Mac-specific layout, window sizing, menu commands, and store metadata.
 
 ## Canonical iOS Feature Set
 
@@ -199,12 +199,12 @@ Before Windows work starts:
 - Confirm location capture requirements.
 - Create Windows-specific QA checklist from this document.
 
-Before macOS work starts:
+Before macOS release work continues:
 
 - Decide whether macOS is a native Mac app, Catalyst app, or iPad-on-Mac support.
-- Remove or abstract UIKit-only components such as `ShareSheet`.
+- Review and refine Mac-specific navigation, window sizing, share/export, profile photo, map, notification, and location permission flows.
 - Decide whether WidgetKit/watchOS features remain Apple-platform-only.
-- Add explicit macOS build validation.
+- Keep explicit macOS build validation in the release checklist.
 
 ## Update Rule
 

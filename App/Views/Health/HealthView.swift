@@ -119,8 +119,7 @@ struct HealthView: View {
       .tabBarScrollClearance()
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Health & Safety")
-      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
-      .toolbarColorScheme(.dark, for: .navigationBar)
+      .platformNavigationBarStyle()
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
   }

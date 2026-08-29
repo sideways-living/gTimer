@@ -24,7 +24,7 @@ struct EditDoseSheet: View {
         VStack(spacing: 20) {
           field(label: "Amount (\(settings.unit))") {
             TextField("Amount", text: $amountText)
-              .keyboardType(.decimalPad)
+              .platformKeyboardType(.decimalPad)
               .font(.system(size: 20, weight: .semibold))
               .foregroundStyle(AppTheme.textPrimary)
           }
@@ -72,7 +72,7 @@ struct EditDoseSheet: View {
         .padding(20)
       }
       .navigationTitle("Edit Dose")
-      .navigationBarTitleDisplayMode(.inline)
+      .platformInlineNavigationTitle()
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel") {

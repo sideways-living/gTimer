@@ -8,6 +8,14 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
   var currentLocation: CLLocation?
   var locationName: String?
   var authorizationStatus: CLAuthorizationStatus = .notDetermined
+  var hasLocationPermission: Bool {
+    #if os(macOS)
+    authorizationStatus == .authorizedAlways
+    #else
+    authorizationStatus == .authorizedWhenInUse ||
+      authorizationStatus == .authorizedAlways
+    #endif
+  }
 
   private let manager = CLLocationManager()
   private var pendingContinuation: CheckedContinuation<CLLocation?, Never>?
@@ -28,8 +36,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
   // Fire-and-forget: request a fresh location in background.
   // Used to warm up a fix before the user taps "log dose".
   func requestLocationInBackground() {
-    guard authorizationStatus == .authorizedWhenInUse ||
-          authorizationStatus == .authorizedAlways else { return }
+    guard hasLocationPermission else { return }
     manager.requestLocation()
   }
 
@@ -38,8 +45,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
   // otherwise requests one-shot and waits up to `timeout` seconds.
   // Safe to call concurrently — a second call cancels the first pending wait.
   func captureForDose(timeout: TimeInterval = 5.0) async -> CLLocation? {
-    guard authorizationStatus == .authorizedWhenInUse ||
-          authorizationStatus == .authorizedAlways else { return nil }
+    guard hasLocationPermission else { return nil }
 
     if let loc = currentLocation, Date().timeIntervalSince(loc.timestamp) < 300 {
       return loc

@@ -1,6 +1,9 @@
 import SwiftUI
 import MapKit
 import SwiftData
+#if os(macOS)
+import AppKit
+#endif
 
 struct DoseDetailMapSheet: View {
   @Environment(\.dismiss) private var dismiss
@@ -100,7 +103,7 @@ struct DoseDetailMapSheet: View {
             actionButton(copied ? "checkmark" : "doc.on.doc", copied ? "Copied" : "Copy Coords") {
               let text = String(format: "%.5f, %.5f",
                                 dose.latitude ?? 0, dose.longitude ?? 0)
-              UIPasteboard.general.string = text
+              copyToPasteboard(text)
               withAnimation(.snappy) { copied = true }
               Task {
                 try? await Task.sleep(for: .seconds(2))
@@ -122,9 +125,8 @@ struct DoseDetailMapSheet: View {
       }
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Dose Location")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
-      .toolbarColorScheme(.dark, for: .navigationBar)
+      .platformInlineNavigationTitle()
+      .platformNavigationBarStyle()
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Done") { dismiss() }
@@ -170,6 +172,15 @@ struct DoseDetailMapSheet: View {
       .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
     }
     .accessibilityLabel(label)
+  }
+
+  private func copyToPasteboard(_ text: String) {
+    #if os(macOS)
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(text, forType: .string)
+    #else
+    UIPasteboard.general.string = text
+    #endif
   }
 }
 

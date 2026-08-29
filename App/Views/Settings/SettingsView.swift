@@ -2,12 +2,16 @@ import SwiftUI
 import PhotosUI
 import WidgetKit
 import CoreLocation
+#if os(macOS)
+import AppKit
+#endif
 
 enum SaveState { case idle, unsaved, saved }
 
 struct SettingsView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(AppNavigation.self) private var nav
+  @Environment(\.openURL) private var openURL
   @State private var saveState: SaveState = .idle
   @State private var customIntervalText = ""
   @State private var standardDoseText = ""
@@ -48,10 +52,9 @@ struct SettingsView: View {
         .onChange(of: nav.settingsScrollTarget) { scrollToRequestedSection(proxy) }
       }
       .navigationTitle("Settings")
-      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
-      .toolbarColorScheme(.dark, for: .navigationBar)
+      .platformNavigationBarStyle()
       .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItem(placement: .primaryAction) {
           saveButton
         }
       }
@@ -98,7 +101,7 @@ struct SettingsView: View {
         row(label: "Standard dose") {
           HStack(spacing: 4) {
             TextField("1.5", text: $standardDoseText)
-              .keyboardType(.decimalPad)
+              .platformKeyboardType(.decimalPad)
               .multilineTextAlignment(.trailing)
               .font(.system(size: 16))
               .foregroundStyle(AppTheme.textPrimary)
@@ -165,7 +168,7 @@ struct SettingsView: View {
               .foregroundStyle(AppTheme.textSecondary)
             Spacer()
             TextField("e.g. 105", text: $customIntervalText)
-              .keyboardType(.numberPad)
+              .platformKeyboardType(.numberPad)
               .multilineTextAlignment(.trailing)
               .font(.system(size: 16))
               .foregroundStyle(AppTheme.textPrimary)
@@ -195,7 +198,7 @@ struct SettingsView: View {
         HStack(spacing: 8) {
           ForEach(0..<4, id: \.self) { index in
             TextField("Dose \(index + 1)", text: $quickAmountTexts[index])
-              .keyboardType(.decimalPad)
+              .platformKeyboardType(.decimalPad)
               .multilineTextAlignment(.center)
               .font(.system(size: 15, weight: .semibold))
               .foregroundStyle(AppTheme.textPrimary)
@@ -353,9 +356,7 @@ struct SettingsView: View {
               .padding(.top, 2)
             cardDivider
             Button {
-              if let url = URL(string: UIApplication.openSettingsURLString) {
-                UIApplication.shared.open(url)
-              }
+              openLocationSettings()
             } label: {
               HStack {
                 Text("Manage location permission")
@@ -414,16 +415,28 @@ struct SettingsView: View {
     settingsCard(title: "Profile (Pro)") {
       VStack(spacing: 14) {
         HStack(spacing: 14) {
-          if let data = settings.profilePictureData, let img = UIImage(data: data) {
-            Image(uiImage: img)
-              .resizable().scaledToFill()
-              .frame(width: 52, height: 52).clipShape(Circle())
-              .overlay(Circle().stroke(AppTheme.proAmber, lineWidth: 2))
-          } else {
-            ZStack {
-              Circle().fill(AppTheme.backgroundElevated).frame(width: 52, height: 52)
-              Image(systemName: "person.fill").foregroundStyle(AppTheme.textMuted).font(.system(size: 22))
+          if let data = settings.profilePictureData {
+            #if os(macOS)
+            if let img = NSImage(data: data) {
+              Image(nsImage: img)
+                .resizable().scaledToFill()
+                .frame(width: 52, height: 52).clipShape(Circle())
+                .overlay(Circle().stroke(AppTheme.proAmber, lineWidth: 2))
+            } else {
+              profilePlaceholder
             }
+            #else
+            if let img = UIImage(data: data) {
+              Image(uiImage: img)
+                .resizable().scaledToFill()
+                .frame(width: 52, height: 52).clipShape(Circle())
+                .overlay(Circle().stroke(AppTheme.proAmber, lineWidth: 2))
+            } else {
+              profilePlaceholder
+            }
+            #endif
+          } else {
+            profilePlaceholder
           }
           VStack(alignment: .leading, spacing: 4) {
             PhotosPicker(selection: $photoPickerItem, matching: .images) {
@@ -454,6 +467,13 @@ struct SettingsView: View {
 
   private var cardDivider: some View {
     Divider().background(AppTheme.border).padding(.vertical, 4)
+  }
+
+  private var profilePlaceholder: some View {
+    ZStack {
+      Circle().fill(AppTheme.backgroundElevated).frame(width: 52, height: 52)
+      Image(systemName: "person.fill").foregroundStyle(AppTheme.textMuted).font(.system(size: 22))
+    }
   }
 
   private func settingsCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -563,5 +583,17 @@ struct SettingsView: View {
       }
       nav.settingsScrollTarget = nil
     }
+  }
+
+  private func openLocationSettings() {
+    #if os(iOS)
+    if let url = URL(string: UIApplication.openSettingsURLString) {
+      openURL(url)
+    }
+    #elseif os(macOS)
+    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices") {
+      openURL(url)
+    }
+    #endif
   }
 }

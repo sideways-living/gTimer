@@ -52,10 +52,9 @@ struct HistoryView: View {
         }
       }
       .navigationTitle("History")
-      .toolbarBackground(AppTheme.backgroundSecondary, for: .navigationBar)
-      .toolbarColorScheme(.dark, for: .navigationBar)
+      .platformNavigationBarStyle()
       .toolbar {
-        ToolbarItemGroup(placement: .topBarTrailing) {
+        ToolbarItemGroup(placement: .primaryAction) {
           if !allDoses.isEmpty {
             exportButton
           }

@@ -1,6 +1,9 @@
 import SwiftUI
 import PhotosUI
 import WidgetKit
+#if os(iOS)
+import UIKit
+#endif
 
 @Observable
 final class SettingsManager {
@@ -77,7 +80,7 @@ final class SettingsManager {
     countdownMode     = ud.object(forKey: "countdownMode") as? Bool ?? true
     timeFormat        = ud.string(forKey: "timeFormat") ?? "hours"
     syncEnabled       = ud.bool(forKey: "syncEnabled")
-    deviceName        = ud.string(forKey: "deviceName") ?? UIDevice.current.name
+    deviceName        = ud.string(forKey: "deviceName") ?? Self.defaultDeviceName
     vanityName        = ud.string(forKey: "vanityName") ?? ""
     proBetaAccepted   = ud.bool(forKey: "proBetaAccepted")
     profilePictureData = ud.data(forKey: "profilePictureData")
@@ -102,5 +105,13 @@ final class SettingsManager {
     if let encoded = try? JSONEncoder().encode(data) {
       AppGroup.sharedDefaults?.set(encoded, forKey: AppGroup.lastDoseKey)
     }
+  }
+
+  private static var defaultDeviceName: String {
+    #if os(iOS)
+    UIDevice.current.name
+    #else
+    Host.current().localizedName ?? "My Mac"
+    #endif
   }
 }
