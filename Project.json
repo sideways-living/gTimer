@@ -29,6 +29,7 @@
         "properties": {
           "com.apple.security.app-sandbox": true,
           "com.apple.security.network.client": true,
+          "com.apple.security.device.camera": true,
           "com.apple.security.application-groups": ["group.app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01"]
         }
       },
@@ -41,6 +42,7 @@
           "ITSAppUsesNonExemptEncryption": false,
           "NSLocationWhenInUseUsageDescription": "G Timer can optionally record your location with each dose log for your own reference.",
           "NSPhotoLibraryUsageDescription": "G Timer uses your photo library to set a profile picture.",
+          "NSCameraUsageDescription": "G Timer uses the camera to take a profile picture when you choose that option.",
           "UILaunchScreen": {},
           "LSApplicationCategoryType": "public.app-category.healthcare-fitness",
           "UISupportedInterfaceOrientations": [

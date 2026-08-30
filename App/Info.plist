@@ -39,6 +39,8 @@
 	<string>G Timer can optionally record your location with each dose log for your own reference.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>G Timer uses your photo library to set a profile picture.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>G Timer uses the camera to take a profile picture when you choose that option.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

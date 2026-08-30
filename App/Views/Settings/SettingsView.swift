@@ -2,8 +2,13 @@ import SwiftUI
 import PhotosUI
 import WidgetKit
 import CoreLocation
+import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#endif
 #if os(macOS)
 import AppKit
+import AVFoundation
 #endif
 
 enum SaveState { case idle, unsaved, saved }
@@ -18,6 +23,11 @@ struct SettingsView: View {
   @State private var deviceNameText = ""
   @State private var vanityNameText = ""
   @State private var photoPickerItem: PhotosPickerItem?
+  @State private var showPhotoSourceDialog = false
+  @State private var showPhotoPicker = false
+  @State private var showFilePicker = false
+  @State private var showCamera = false
+  @State private var photoImportError: String? = nil
   @State private var quickAmountTexts = Array(repeating: "", count: 4)
   @State private var quickAmountsError: String? = nil
   @State private var intervalError: String? = nil
@@ -61,6 +71,40 @@ struct SettingsView: View {
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
     .sheet(isPresented: $showPaywall) { PaywallSheet(feature: paywallFeature) }
+    .sheet(isPresented: $showCamera) {
+      #if os(iOS)
+      CameraCaptureView { data in
+        saveProfilePhotoData(data)
+      }
+      #elseif os(macOS)
+      CameraCaptureView(
+        onCapture: { data in
+          saveProfilePhotoData(data)
+          showCamera = false
+        },
+        onCancel: {
+          showCamera = false
+        }
+      )
+      .frame(minWidth: 560, minHeight: 420)
+      #endif
+    }
+    .photosPicker(isPresented: $showPhotoPicker, selection: $photoPickerItem, matching: .images)
+    .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.image]) { result in
+      importProfilePhotoFile(result)
+    }
+    .confirmationDialog("Change profile photo", isPresented: $showPhotoSourceDialog, titleVisibility: .visible) {
+      Button("Choose from Photos") { showPhotoPicker = true }
+      Button("Choose File") { showFilePicker = true }
+      #if os(iOS)
+      if UIImagePickerController.isSourceTypeAvailable(.camera) {
+        Button("Take Photo") { showCamera = true }
+      }
+      #elseif os(macOS)
+      Button("Take Photo") { showCamera = true }
+      #endif
+      Button("Cancel", role: .cancel) {}
+    }
     .onAppear { reloadFromSettings() }
     .onChange(of: standardDoseText) { markUnsaved() }
     .onChange(of: deviceNameText) { markUnsaved() }
@@ -439,11 +483,14 @@ struct SettingsView: View {
             profilePlaceholder
           }
           VStack(alignment: .leading, spacing: 4) {
-            PhotosPicker(selection: $photoPickerItem, matching: .images) {
+            Button {
+              showPhotoSourceDialog = true
+            } label: {
               Text("Change Photo")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(AppTheme.proAmber)
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Change profile photo")
             Text("Shown in the Pro tab")
               .font(.system(size: 11))
@@ -458,6 +505,12 @@ struct SettingsView: View {
             .font(.system(size: 15))
             .foregroundStyle(AppTheme.textPrimary)
             .frame(maxWidth: 180)
+        }
+        if let err = photoImportError {
+          Text(err)
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.statusAmber)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
       }
     }
@@ -569,10 +622,47 @@ struct SettingsView: View {
     guard let item = photoPickerItem else { return }
     Task {
       if let data = try? await item.loadTransferable(type: Data.self) {
-        settings.profilePictureData = data
-        markUnsaved()
+        saveProfilePhotoData(data)
+      } else {
+        photoImportError = "That photo could not be loaded."
       }
+      photoPickerItem = nil
     }
+  }
+
+  private func importProfilePhotoFile(_ result: Result<URL, Error>) {
+    switch result {
+    case .success(let url):
+      let didStartAccessing = url.startAccessingSecurityScopedResource()
+      defer {
+        if didStartAccessing { url.stopAccessingSecurityScopedResource() }
+      }
+      do {
+        saveProfilePhotoData(try Data(contentsOf: url))
+      } catch {
+        photoImportError = "That file could not be loaded."
+      }
+    case .failure:
+      photoImportError = "No photo was selected."
+    }
+  }
+
+  private func saveProfilePhotoData(_ data: Data) {
+    guard canLoadProfileImage(from: data) else {
+      photoImportError = "That image format could not be used."
+      return
+    }
+    settings.profilePictureData = data
+    photoImportError = nil
+    markUnsaved()
+  }
+
+  private func canLoadProfileImage(from data: Data) -> Bool {
+    #if os(macOS)
+    NSImage(data: data) != nil
+    #else
+    UIImage(data: data) != nil
+    #endif
   }
 
   private func scrollToRequestedSection(_ proxy: ScrollViewProxy) {
@@ -597,3 +687,210 @@ struct SettingsView: View {
     #endif
   }
 }
+
+#if os(iOS)
+private struct CameraCaptureView: UIViewControllerRepresentable {
+  @Environment(\.dismiss) private var dismiss
+  let onCapture: (Data) -> Void
+
+  func makeUIViewController(context: Context) -> UIImagePickerController {
+    let picker = UIImagePickerController()
+    picker.sourceType = .camera
+    picker.cameraCaptureMode = .photo
+    picker.delegate = context.coordinator
+    return picker
+  }
+
+  func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(onCapture: onCapture, dismiss: dismiss)
+  }
+
+  final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+    private let onCapture: (Data) -> Void
+    private let dismiss: DismissAction
+
+    init(onCapture: @escaping (Data) -> Void, dismiss: DismissAction) {
+      self.onCapture = onCapture
+      self.dismiss = dismiss
+    }
+
+    func imagePickerController(
+      _ picker: UIImagePickerController,
+      didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+    ) {
+      if let image = info[.editedImage] as? UIImage ?? info[.originalImage] as? UIImage,
+         let data = image.jpegData(compressionQuality: 0.86) {
+        onCapture(data)
+      }
+      dismiss()
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+      dismiss()
+    }
+  }
+}
+#endif
+
+#if os(macOS)
+private struct CameraCaptureView: NSViewControllerRepresentable {
+  let onCapture: (Data) -> Void
+  let onCancel: () -> Void
+
+  func makeNSViewController(context: Context) -> CameraCaptureViewController {
+    CameraCaptureViewController(onCapture: onCapture, onCancel: onCancel)
+  }
+
+  func updateNSViewController(_ nsViewController: CameraCaptureViewController, context: Context) {}
+}
+
+private final class CameraCaptureViewController: NSViewController, AVCapturePhotoCaptureDelegate {
+  private let onCapture: (Data) -> Void
+  private let onCancel: () -> Void
+  private let session = AVCaptureSession()
+  private let output = AVCapturePhotoOutput()
+  private var previewLayer: AVCaptureVideoPreviewLayer?
+  private let messageLabel = NSTextField(labelWithString: "Preparing camera...")
+  private let captureButton = NSButton(title: "Take Photo", target: nil, action: nil)
+  private let cancelButton = NSButton(title: "Cancel", target: nil, action: nil)
+
+  init(onCapture: @escaping (Data) -> Void, onCancel: @escaping () -> Void) {
+    self.onCapture = onCapture
+    self.onCancel = onCancel
+    super.init(nibName: nil, bundle: nil)
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func loadView() {
+    view = NSView(frame: NSRect(x: 0, y: 0, width: 560, height: 420))
+    view.wantsLayer = true
+    view.layer?.backgroundColor = NSColor.black.cgColor
+
+    messageLabel.font = .systemFont(ofSize: 15, weight: .medium)
+    messageLabel.textColor = .white
+    messageLabel.alignment = .center
+    messageLabel.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(messageLabel)
+
+    captureButton.target = self
+    captureButton.action = #selector(capturePhoto)
+    captureButton.keyEquivalent = "\r"
+    captureButton.translatesAutoresizingMaskIntoConstraints = false
+    captureButton.isEnabled = false
+    view.addSubview(captureButton)
+
+    cancelButton.target = self
+    cancelButton.action = #selector(cancel)
+    cancelButton.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(cancelButton)
+
+    NSLayoutConstraint.activate([
+      messageLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+      messageLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+      messageLabel.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 24),
+      messageLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -24),
+      captureButton.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: -54),
+      captureButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+      cancelButton.centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: 54),
+      cancelButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20)
+    ])
+  }
+
+  override func viewDidLoad() {
+    super.viewDidLoad()
+    requestCameraAccess()
+  }
+
+  override func viewDidLayout() {
+    super.viewDidLayout()
+    previewLayer?.frame = view.bounds
+  }
+
+  override func viewWillDisappear() {
+    super.viewWillDisappear()
+    stopSession()
+  }
+
+  private func requestCameraAccess() {
+    switch AVCaptureDevice.authorizationStatus(for: .video) {
+    case .authorized:
+      configureCamera()
+    case .notDetermined:
+      AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+        DispatchQueue.main.async {
+          granted ? self?.configureCamera() : self?.showUnavailableMessage()
+        }
+      }
+    default:
+      showUnavailableMessage()
+    }
+  }
+
+  private func configureCamera() {
+    session.beginConfiguration()
+    session.sessionPreset = .photo
+
+    guard let device = AVCaptureDevice.default(for: .video),
+          let input = try? AVCaptureDeviceInput(device: device),
+          session.canAddInput(input),
+          session.canAddOutput(output) else {
+      session.commitConfiguration()
+      showUnavailableMessage()
+      return
+    }
+
+    session.addInput(input)
+    session.addOutput(output)
+    session.commitConfiguration()
+
+    let preview = AVCaptureVideoPreviewLayer(session: session)
+    preview.videoGravity = .resizeAspectFill
+    preview.frame = view.bounds
+    view.layer?.insertSublayer(preview, at: 0)
+    previewLayer = preview
+    messageLabel.isHidden = true
+    captureButton.isEnabled = true
+
+    DispatchQueue.global(qos: .userInitiated).async { [session] in
+      session.startRunning()
+    }
+  }
+
+  private func showUnavailableMessage() {
+    messageLabel.stringValue = "Camera access is unavailable. Check macOS Privacy & Security settings."
+    captureButton.isEnabled = false
+  }
+
+  @objc private func capturePhoto() {
+    output.capturePhoto(with: AVCapturePhotoSettings(), delegate: self)
+  }
+
+  @objc private func cancel() {
+    onCancel()
+  }
+
+  func photoOutput(
+    _ output: AVCapturePhotoOutput,
+    didFinishProcessingPhoto photo: AVCapturePhoto,
+    error: Error?
+  ) {
+    guard error == nil, let data = photo.fileDataRepresentation() else {
+      showUnavailableMessage()
+      return
+    }
+    stopSession()
+    onCapture(data)
+  }
+
+  private func stopSession() {
+    if session.isRunning {
+      session.stopRunning()
+    }
+  }
+}
+#endif
