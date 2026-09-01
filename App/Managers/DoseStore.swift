@@ -69,6 +69,8 @@ final class DoseStore {
   // After an in-place edit, re-derive the most-recent dose and update shared
   // defaults so the widget reflects the corrected data.
   static func refreshSharedAfterEdit(context: ModelContext, settings: SettingsManager) {
+    backfillMissingEarlyDoseTiming(context: context, settings: settings)
+
     let desc = FetchDescriptor<DoseRecord>(
       sortBy: [SortDescriptor(\.time, order: .reverse)]
     )
@@ -77,6 +79,32 @@ final class DoseStore {
                    time: newest.time, settings: settings)
     }
     WidgetCenter.shared.reloadAllTimelines()
+  }
+
+  static func backfillMissingEarlyDoseTiming(context: ModelContext, settings: SettingsManager) {
+    let asc = FetchDescriptor<DoseRecord>(
+      sortBy: [SortDescriptor(\.time, order: .forward)]
+    )
+    let records = (try? context.fetch(asc)) ?? []
+    guard records.count > 1 else { return }
+
+    let intervalSeconds = Double(settings.safeIntervalMinutes) * 60
+    var previous: DoseRecord?
+    var changed = false
+
+    for record in records {
+      defer { previous = record }
+      guard record.earlyBySeconds == nil, let previous else { continue }
+      let elapsed = record.time.timeIntervalSince(previous.time)
+      guard elapsed >= 0, elapsed < intervalSeconds else { continue }
+      record.earlyBySeconds = intervalSeconds - elapsed
+      changed = true
+    }
+
+    if changed {
+      try? context.save()
+      WidgetCenter.shared.reloadAllTimelines()
+    }
   }
 
   // After a single deletion, find the new most-recent dose and update shared

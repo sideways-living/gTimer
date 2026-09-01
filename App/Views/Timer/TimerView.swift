@@ -76,6 +76,7 @@ struct TimerView: View {
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
     .onAppear {
       startTicker()
+      DoseStore.backfillMissingEarlyDoseTiming(context: context, settings: settings)
       // Warm up a location fix if Pro location recording is enabled
       if settings.proBetaAccepted && settings.attachLocationToDoses {
         LocationManager.shared.requestLocationInBackground()

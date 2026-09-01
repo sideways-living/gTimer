@@ -94,6 +94,9 @@ struct HistoryView: View {
       .sheet(isPresented: $showPaywall) { PaywallSheet(feature: paywallFeature) }
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+    .onAppear {
+      DoseStore.backfillMissingEarlyDoseTiming(context: context, settings: settings)
+    }
   }
 
   // MARK: - List
