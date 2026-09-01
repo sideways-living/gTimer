@@ -11,8 +11,6 @@ private struct HealthSupportResource: Identifiable {
 private struct HealthRegionInfo {
   let countryName: String
   let countryCodes: Set<String>
-  let emergencyLabel: String
-  let emergencyPhone: String
   let supportResources: [HealthSupportResource]
   let sourceResources: [HealthSupportResource]
 
@@ -25,8 +23,6 @@ private struct HealthRegionInfo {
     HealthRegionInfo(
       countryName: "Australia",
       countryCodes: ["AU"],
-      emergencyLabel: "Call 000",
-      emergencyPhone: "000",
       supportResources: [
         HealthSupportResource(name: "National Alcohol and Other Drug Hotline", detail: "Free, confidential support 24/7", phone: "1800 250 015", url: URL(string: "https://www.health.gov.au/contacts/national-alcohol-and-other-drug-hotline")),
         HealthSupportResource(name: "Poisons Information Centre", detail: "24-hour poisoning and overdose advice", phone: "13 11 26", url: URL(string: "https://www.poisonsinfo.nsw.gov.au/")),
@@ -41,8 +37,6 @@ private struct HealthRegionInfo {
     HealthRegionInfo(
       countryName: "New Zealand",
       countryCodes: ["NZ"],
-      emergencyLabel: "Call 111",
-      emergencyPhone: "111",
       supportResources: [
         HealthSupportResource(name: "Alcohol Drug Helpline", detail: "24/7 trained counsellor support", phone: "0800 787 797", url: URL(string: "https://alcoholdrughelp.org.nz/")),
         HealthSupportResource(name: "National Poisons Centre", detail: "Free 24/7 poisons advice", phone: "0800 764 766", url: URL(string: "https://poisons.co.nz/")),
@@ -57,8 +51,6 @@ private struct HealthRegionInfo {
     HealthRegionInfo(
       countryName: "United Kingdom",
       countryCodes: ["GB"],
-      emergencyLabel: "Call 999",
-      emergencyPhone: "999",
       supportResources: [
         HealthSupportResource(name: "FRANK", detail: "Confidential drugs advice 24/7", phone: "0300 123 6600", url: URL(string: "https://talktofrank.com/contact-frank")),
         HealthSupportResource(name: "NHS 111", detail: "Urgent medical help when it is not life-threatening", phone: "111", url: URL(string: "https://www.nhs.uk/nhs-services/urgent-and-emergency-care-services/when-to-use-111/")),
@@ -73,8 +65,6 @@ private struct HealthRegionInfo {
     HealthRegionInfo(
       countryName: "Ireland",
       countryCodes: ["IE"],
-      emergencyLabel: "Call 112 or 999",
-      emergencyPhone: "112",
       supportResources: [
         HealthSupportResource(name: "HSE Drugs & Alcohol Helpline", detail: "Confidential national support", phone: "1800 459 459", url: URL(string: "https://www.drugs.ie/phone")),
         HealthSupportResource(name: "Poisons Information Line", detail: "Public poisons advice", phone: "01 809 2166", url: URL(string: "https://poisons.ie/")),
@@ -89,8 +79,6 @@ private struct HealthRegionInfo {
     HealthRegionInfo(
       countryName: "United States",
       countryCodes: ["US"],
-      emergencyLabel: "Call 911",
-      emergencyPhone: "911",
       supportResources: [
         HealthSupportResource(name: "SAMHSA National Helpline", detail: "Free, confidential treatment referral 24/7", phone: "1-800-662-4357", url: URL(string: "https://www.samhsa.gov/find-help/helplines/national-helpline")),
         HealthSupportResource(name: "Poison Help", detail: "Free expert poison advice 24/7", phone: "1-800-222-1222", url: URL(string: "https://poisonhelp.hrsa.gov/poison-centers/find-poison-center")),
@@ -105,8 +93,6 @@ private struct HealthRegionInfo {
     HealthRegionInfo(
       countryName: "Canada",
       countryCodes: ["CA"],
-      emergencyLabel: "Call 911",
-      emergencyPhone: "911",
       supportResources: [
         HealthSupportResource(name: "National Overdose Response Service", detail: "Confidential overdose-prevention support", phone: "1-888-688-6677", url: URL(string: "https://www.canada.ca/en/health-canada/services/substance-use/get-help-with-substance-use.html")),
         HealthSupportResource(name: "Poison centres", detail: "Toll-free local poison centre access", phone: "1-844-764-7669", url: URL(string: "https://www.canada.ca/en/health-canada/news/2023/03/canada-launches-new-toll-free-1-844-poison-x-number-for-poison-centres.html")),
@@ -121,8 +107,6 @@ private struct HealthRegionInfo {
     HealthRegionInfo(
       countryName: "South Africa",
       countryCodes: ["ZA"],
-      emergencyLabel: "Call 112 from a mobile",
-      emergencyPhone: "112",
       supportResources: [
         HealthSupportResource(name: "Substance Abuse Helpline", detail: "Department of Social Development/SADAG 24-hour support", phone: "0800 12 13 14", url: URL(string: "https://www.gov.za/Alcoholandsubstanceabuse")),
         HealthSupportResource(name: "Ambulance", detail: "Medical emergency from landline or mobile", phone: "10177", url: URL(string: "https://www.westerncape.gov.za/know-who-you-can-call-emergency")),
@@ -139,8 +123,6 @@ private struct HealthRegionInfo {
   static let international = HealthRegionInfo(
     countryName: "your region",
     countryCodes: [],
-    emergencyLabel: "Call local emergency services",
-    emergencyPhone: "112",
     supportResources: [
       HealthSupportResource(name: "Local emergency services", detail: "Use the emergency number for your current country", phone: "112", url: nil),
       HealthSupportResource(name: "Local poison centre", detail: "Search your national health service or poison centre", phone: nil, url: nil),
@@ -156,10 +138,24 @@ private struct HealthRegionInfo {
 
 struct HealthView: View {
   @Environment(\.openURL) private var openURL
+  @Environment(SettingsManager.self) private var settings
   @State private var locationManager = LocationManager.shared
 
+  private var selectedCountryCode: String? {
+    if !settings.homeCountryCode.isEmpty { return settings.homeCountryCode }
+    return locationManager.countryCode ?? Locale.current.region?.identifier
+  }
+
   private var regionInfo: HealthRegionInfo {
-    HealthRegionInfo.current(for: locationManager.countryCode)
+    HealthRegionInfo.current(for: selectedCountryCode)
+  }
+
+  private var emergencyNumbers: [String] {
+    EmergencyNumberCatalogue.preferredEmergencyNumbers(for: selectedCountryCode)
+  }
+
+  private var emergencyLabel: String {
+    EmergencyNumberCatalogue.emergencyLabel(for: selectedCountryCode)
   }
 
   var body: some View {
@@ -203,9 +199,11 @@ struct HealthView: View {
               urgentTrigger("You are unsure — always call if in doubt")
 
               Button {
-                openPhone(regionInfo.emergencyPhone)
+                if let phone = emergencyNumbers.first {
+                  openPhone(phone)
+                }
               } label: {
-                Text(regionInfo.emergencyLabel)
+                Text(emergencyLabel)
                   .font(.system(size: 16, weight: .bold))
                   .foregroundStyle(.white)
                   .frame(maxWidth: .infinity)
@@ -231,7 +229,7 @@ struct HealthView: View {
 
           section(title: "Emergency Response Steps", icon: "cross.fill", color: AppTheme.statusRed) {
             VStack(alignment: .leading, spacing: 10) {
-              emergencyStep("1", "Call emergency services immediately: \(regionInfo.emergencyLabel).")
+              emergencyStep("1", "Call emergency services immediately: \(emergencyLabel).")
               emergencyStep("2", "Place the person in the recovery position (on their side).")
               emergencyStep("3", "Stay with them and monitor breathing continuously.")
               emergencyStep("4", "Tell paramedics exactly what was taken and when.")

@@ -2,6 +2,8 @@
 
 G Timer localises the Health & Safety support rows by country. Use the last reverse-geocoded country code when the user has already granted location access; otherwise fall back to the device region. Do not request precise location solely to choose health content.
 
+Emergency-service phone numbers are also localised by country. The broad reference table is maintained in `docs/emergency-numbers-by-country.md`; the app should use the saved home country first, then the last known location country, then the device region.
+
 Core safety content should stay conservative across regions:
 
 - GHB/GBL are central nervous system depressants.

@@ -22,6 +22,9 @@ struct SettingsView: View {
   @State private var standardDoseText = ""
   @State private var deviceNameText = ""
   @State private var vanityNameText = ""
+  @State private var homeCityText = ""
+  @State private var homeCountryCode = ""
+  @State private var homeAddressText = ""
   @State private var photoPickerItem: PhotosPickerItem?
   @State private var showPhotoSourceDialog = false
   @State private var showPhotoPicker = false
@@ -51,6 +54,7 @@ struct SettingsView: View {
             notificationsSection
             deviceSection
             locationSection
+            homeLocationSection
             if settings.proBetaAccepted { profileSection }
           }
           .padding(.horizontal, 16)
@@ -109,6 +113,9 @@ struct SettingsView: View {
     .onChange(of: standardDoseText) { markUnsaved() }
     .onChange(of: deviceNameText) { markUnsaved() }
     .onChange(of: vanityNameText) { markUnsaved() }
+    .onChange(of: homeCityText) { markUnsaved() }
+    .onChange(of: homeCountryCode) { markUnsaved() }
+    .onChange(of: homeAddressText) { markUnsaved() }
     .onChange(of: quickAmountTexts) { markUnsaved(); quickAmountsError = nil }
     .onChange(of: customIntervalText) { markUnsaved(); intervalError = nil }
     .onChange(of: photoPickerItem) { loadPhoto() }
@@ -455,6 +462,57 @@ struct SettingsView: View {
     }
   }
 
+  private var homeLocationSection: some View {
+    settingsCard(title: "Home Location") {
+      VStack(alignment: .leading, spacing: 10) {
+        row(label: "Country") {
+          Picker("Country", selection: $homeCountryCode) {
+            ForEach(EmergencyNumberCatalogue.countries) { country in
+              Text(country.name).tag(country.code)
+            }
+          }
+          .pickerStyle(.menu)
+          .tint(AppTheme.accentBlue)
+          .frame(maxWidth: 220)
+        }
+        cardDivider
+        row(label: "City") {
+          TextField("City", text: $homeCityText)
+            .multilineTextAlignment(.trailing)
+            .font(.system(size: 15))
+            .foregroundStyle(AppTheme.textPrimary)
+            .frame(maxWidth: 180)
+        }
+        cardDivider
+        VStack(alignment: .leading, spacing: 6) {
+          Text("Address")
+            .font(.system(size: 15))
+            .foregroundStyle(AppTheme.textPrimary)
+          TextField("Optional street address", text: $homeAddressText, axis: .vertical)
+            .lineLimit(1...3)
+            .font(.system(size: 15))
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding(10)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+        }
+        cardDivider
+        HStack(spacing: 8) {
+          Image(systemName: "phone.fill")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.statusRed)
+          Text("Emergency number: \(EmergencyNumberCatalogue.emergencyLabel(for: homeCountryCode).replacingOccurrences(of: "Call ", with: ""))")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(AppTheme.textSecondary)
+          Spacer()
+        }
+        Text("This is used for Health & Safety emergency-number localisation. It can be just city and country; the address is optional.")
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
+      }
+    }
+  }
+
   private var profileSection: some View {
     settingsCard(title: "Profile (Pro)") {
       VStack(spacing: 14) {
@@ -587,6 +645,9 @@ struct SettingsView: View {
     if let d = Double(standardDoseText), d > 0 { settings.standardDose = d }
     settings.deviceName = deviceNameText
     settings.vanityName = vanityNameText
+    settings.homeCity = homeCityText.trimmingCharacters(in: .whitespacesAndNewlines)
+    settings.homeCountryCode = homeCountryCode
+    settings.homeAddress = homeAddressText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.quickAmounts = parsed
 
     quickAmountsError = nil
@@ -605,6 +666,9 @@ struct SettingsView: View {
     standardDoseText = settings.standardDose.formatted(.number.precision(.fractionLength(1)))
     deviceNameText = settings.deviceName
     vanityNameText = settings.vanityName
+    homeCityText = settings.homeCity
+    homeCountryCode = settings.homeCountryCode
+    homeAddressText = settings.homeAddress
     let amountStrings = settings.quickAmounts.prefix(4).map {
       $0.formatted(.number.precision(.fractionLength(1)))
     }
