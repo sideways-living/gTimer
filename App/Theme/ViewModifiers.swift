@@ -7,6 +7,7 @@ import UIKit
 // Apply this to every ScrollView that lives inside a tab so its bottom content
 // clears the tab bar entirely, including on smaller devices.
 private let kTabBarClearance: CGFloat = 180
+private let kMacBottomBarClearance: CGFloat = 116
 
 #if os(iOS)
 typealias PlatformKeyboardType = UIKeyboardType
@@ -30,6 +31,8 @@ extension View {
   func tabBarScrollClearance() -> some View {
     #if os(iOS)
     self.contentMargins(.bottom, kTabBarClearance, for: .scrollContent)
+    #elseif os(macOS)
+    self.contentMargins(.bottom, kMacBottomBarClearance, for: .scrollContent)
     #else
     self
     #endif

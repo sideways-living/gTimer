@@ -26,23 +26,14 @@ struct ContentView: View {
 
   #if os(macOS)
   private var macContent: some View {
-    NavigationSplitView {
-      List(selection: selectedTabBinding) {
-        Section("G Timer") {
-          ForEach(tabs) { tab in
-            Label(tab.title, systemImage: tab.systemImage)
-              .tag(tab.rawValue)
-          }
-        }
-      }
-      .navigationTitle("G Timer")
-      .scrollContentBackground(.hidden)
-      .background(AppTheme.backgroundSecondary)
-      .listStyle(.sidebar)
-    } detail: {
+    ZStack(alignment: .bottom) {
       selectedTab.content
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+
+      macBottomBar
+        .padding(.horizontal, 24)
+        .padding(.bottom, 20)
     }
     .tint(AppTheme.accentBlue)
     .background(AppTheme.backgroundPrimary)
@@ -52,11 +43,32 @@ struct ContentView: View {
     AppTab(rawValue: nav.selectedTab) ?? .timer
   }
 
-  private var selectedTabBinding: Binding<Int> {
-    Binding(
-      get: { nav.selectedTab },
-      set: { nav.selectedTab = $0 }
-    )
+  private var macBottomBar: some View {
+    HStack(spacing: 8) {
+      ForEach(tabs) { tab in
+        Button {
+          nav.selectedTab = tab.rawValue
+        } label: {
+          Label(tab.title, systemImage: tab.systemImage)
+            .labelStyle(.titleAndIcon)
+            .font(.system(size: 13, weight: .semibold))
+            .lineLimit(1)
+            .padding(.horizontal, 13)
+            .frame(height: 38)
+            .foregroundStyle(nav.selectedTab == tab.rawValue ? .white : AppTheme.textSecondary)
+            .background(
+              Capsule()
+                .fill(nav.selectedTab == tab.rawValue ? AppTheme.accentBlue : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tab.title)
+      }
+    }
+    .padding(6)
+    .background(.ultraThinMaterial, in: Capsule())
+    .overlay(Capsule().stroke(AppTheme.border.opacity(0.8), lineWidth: 0.75))
+    .shadow(color: Color.black.opacity(0.24), radius: 18, x: 0, y: 10)
   }
   #endif
 }

@@ -133,6 +133,7 @@ struct TimerView: View {
             .padding(.horizontal, showsHistory ? 28 : 20)
             .padding(.vertical, 24)
         }
+        .tabBarScrollClearance()
         .background(AppTheme.backgroundPrimary)
 
         if showsHistory {
@@ -213,7 +214,7 @@ struct TimerView: View {
               }
             }
           }
-          .padding(.bottom, 8)
+          .padding(.bottom, 96)
         }
       }
     }
