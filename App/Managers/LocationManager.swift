@@ -7,6 +7,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
   var currentLocation: CLLocation?
   var locationName: String?
+  var countryCode: String?
   var authorizationStatus: CLAuthorizationStatus = .notDetermined
   var hasLocationPermission: Bool {
     #if os(macOS)
@@ -95,6 +96,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
   private func reverseGeocode(_ location: CLLocation) {
     CLGeocoder().reverseGeocodeLocation(location) { [weak self] placemarks, _ in
       if let place = placemarks?.first {
+        self?.countryCode = place.isoCountryCode
         self?.locationName = [place.locality, place.country]
           .compactMap { $0 }
           .joined(separator: ", ")
