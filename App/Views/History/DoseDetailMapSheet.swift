@@ -53,7 +53,7 @@ struct DoseDetailMapSheet: View {
                   .font(.system(size: 13, weight: .bold))
                   .foregroundStyle(.white)
               }
-              Triangle()
+              MapPinTriangle()
                 .fill(AppTheme.accentBlue)
                 .frame(width: 8, height: 5)
             }
@@ -114,10 +114,11 @@ struct DoseDetailMapSheet: View {
 
           // Actions
           HStack(spacing: 10) {
-            actionButton("map", "Open in Maps") {
-              let item = MKMapItem(placemark: MKPlacemark(coordinate: dose.coordinate))
-              item.name = dose.locationName ?? "Dose location"
-              item.openInMaps()
+            actionButton("scope", "Recenter") {
+              position = .camera(MapCamera(
+                centerCoordinate: dose.coordinate,
+                distance: 1500
+              ))
             }
 
             actionButton(copied ? "checkmark" : "doc.on.doc", copied ? "Copied" : "Copy Coords") {
@@ -198,8 +199,8 @@ struct DoseDetailMapSheet: View {
   }
 }
 
-// Small triangle for the map pin point
-private struct Triangle: Shape {
+// Small triangle for the map pin point.
+struct MapPinTriangle: Shape {
   func path(in rect: CGRect) -> Path {
     var p = Path()
     p.move(to: CGPoint(x: rect.midX, y: rect.maxY))

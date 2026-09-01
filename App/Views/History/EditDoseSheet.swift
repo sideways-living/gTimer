@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct EditDoseSheet: View {
   @Environment(SettingsManager.self) private var settings
@@ -15,6 +16,7 @@ struct EditDoseSheet: View {
   @State private var longitudeText = ""
   @State private var locationError: String?
   @State private var isCapturingLocation = false
+  @State private var editMapPosition: MapCameraPosition = .automatic
   @State private var showDiscard = false
 
   private var isDirty: Bool {
@@ -130,6 +132,40 @@ struct EditDoseSheet: View {
         coordinateField("Longitude", text: $longitudeText)
       }
 
+      if let coordinate = editedCoordinate {
+        Map(position: $editMapPosition) {
+          Annotation("", coordinate: coordinate, anchor: .bottom) {
+            VStack(spacing: 2) {
+              ZStack {
+                Circle()
+                  .fill(AppTheme.accentBlue)
+                  .frame(width: 24, height: 24)
+                  .shadow(color: AppTheme.accentBlue.opacity(0.5), radius: 4)
+                Image(systemName: "drop.fill")
+                  .font(.system(size: 11, weight: .bold))
+                  .foregroundStyle(.white)
+              }
+              MapPinTriangle()
+                .fill(AppTheme.accentBlue)
+                .frame(width: 7, height: 5)
+            }
+          }
+        }
+        .mapStyle(.standard)
+        .frame(height: 150)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
+        .onAppear {
+          updateEditMapPosition(coordinate)
+        }
+        .onChange(of: latitudeText) {
+          if let coordinate = editedCoordinate { updateEditMapPosition(coordinate) }
+        }
+        .onChange(of: longitudeText) {
+          if let coordinate = editedCoordinate { updateEditMapPosition(coordinate) }
+        }
+      }
+
       Button {
         captureCurrentLocation()
       } label: {
@@ -225,6 +261,7 @@ struct EditDoseSheet: View {
       }
       latitudeText = coordinateText(captured.coordinate.latitude)
       longitudeText = coordinateText(captured.coordinate.longitude)
+      updateEditMapPosition(captured.coordinate)
       if let name = loc.locationName, !name.isEmpty {
         locationNameText = name
       }
@@ -273,5 +310,21 @@ struct EditDoseSheet: View {
   private func coordinateText(_ value: Double?) -> String {
     guard let value else { return "" }
     return String(format: "%.6f", value)
+  }
+
+  private var editedCoordinate: CLLocationCoordinate2D? {
+    let cleanLat = latitudeText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let cleanLon = longitudeText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard
+      let lat = Double(cleanLat),
+      let lon = Double(cleanLon),
+      (-90...90).contains(lat),
+      (-180...180).contains(lon)
+    else { return nil }
+    return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+  }
+
+  private func updateEditMapPosition(_ coordinate: CLLocationCoordinate2D) {
+    editMapPosition = .camera(MapCamera(centerCoordinate: coordinate, distance: 1500))
   }
 }
