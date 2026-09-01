@@ -168,6 +168,7 @@ Android-specific substitutions:
 - Replace iOS location permission flow with Android foreground location permission.
 - Replace WidgetKit with Android widgets.
 - If cross-platform sync is needed, do not use an Android-only sync backend unless the product decision explicitly allows it.
+- Use the retained launcher and Play Store icon assets in `FuturePlatformAssets/Android` so the Android release matches the Apple app icon.
 
 ## Windows Implementation Notes
 
@@ -184,6 +185,15 @@ Windows-specific substitutions:
 - If Windows Widgets are not suitable, document a tray/live-tile/taskbar equivalent before claiming widget parity.
 - Location capture depends on Windows device/location permissions and hardware availability.
 - Do not silently omit Pro, export, location, or history behavior; mark unsupported items as product decisions.
+- Use the retained Windows icon source files in `FuturePlatformAssets/Windows` for `.ico`, MSIX, Start menu, taskbar, and store packaging.
+
+## Retained Future Platform Assets
+
+Non-Apple icon assets from the September 2026 G Timer icon pack are checked in under `FuturePlatformAssets`.
+
+- `FuturePlatformAssets/Android` preserves the supplied Android adaptive launcher, density-specific launcher PNGs, monochrome icon, and Play Store 512 image.
+- `FuturePlatformAssets/Windows` keeps a Windows `.ico` plus PNG source sizes derived from the supplied icon pack.
+- `FuturePlatformAssets/Web` keeps the supplied favicon and web/PWA PNGs for future web or shell builds.
 
 ## Sync Decision
 
