@@ -94,14 +94,14 @@ struct SettingsView: View {
       importProfilePhotoFile(result)
     }
     .confirmationDialog("Change profile photo", isPresented: $showPhotoSourceDialog, titleVisibility: .visible) {
-      Button("Choose from Photos") { showPhotoPicker = true }
-      Button("Choose File") { showFilePicker = true }
+      Button("Choose from Photos") { presentPhotoPicker() }
+      Button("Choose File") { presentFilePicker() }
       #if os(iOS)
       if UIImagePickerController.isSourceTypeAvailable(.camera) {
-        Button("Take Photo") { showCamera = true }
+        Button("Take Photo") { presentCamera() }
       }
       #elseif os(macOS)
-      Button("Take Photo") { showCamera = true }
+      Button("Take Photo") { presentCamera() }
       #endif
       Button("Cancel", role: .cancel) {}
     }
@@ -646,6 +646,43 @@ struct SettingsView: View {
       photoImportError = "No photo was selected."
     }
   }
+
+  private func presentPhotoPicker() {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+      showPhotoPicker = true
+    }
+  }
+
+  private func presentFilePicker() {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+      #if os(macOS)
+      openProfilePhotoPanel()
+      #else
+      showFilePicker = true
+      #endif
+    }
+  }
+
+  private func presentCamera() {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+      showCamera = true
+    }
+  }
+
+  #if os(macOS)
+  private func openProfilePhotoPanel() {
+    let panel = NSOpenPanel()
+    panel.allowsMultipleSelection = false
+    panel.canChooseDirectories = false
+    panel.canChooseFiles = true
+    panel.allowedContentTypes = [.image]
+    panel.prompt = "Choose"
+    panel.begin { response in
+      guard response == .OK, let url = panel.url else { return }
+      importProfilePhotoFile(.success(url))
+    }
+  }
+  #endif
 
   private func saveProfilePhotoData(_ data: Data) {
     guard canLoadProfileImage(from: data) else {
