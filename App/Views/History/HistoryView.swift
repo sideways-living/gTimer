@@ -35,7 +35,11 @@ struct HistoryView: View {
     let intervalSecs = Double(settings.safeIntervalMinutes) * 60
     var count = 0
     for (i, dose) in allDoses.enumerated() {
-      guard dose.hasLocation, i + 1 < allDoses.count else { continue }
+      if dose.wasTakenEarly {
+        count += 1
+        continue
+      }
+      guard i + 1 < allDoses.count else { continue }
       let prev = allDoses[i + 1]
       if dose.time.timeIntervalSince(prev.time) < intervalSecs { count += 1 }
     }
@@ -303,7 +307,7 @@ struct HistoryView: View {
   }
 
   private func csvContent() -> String {
-    var lines = ["Date,Time,Amount,Unit,Missed,Edited,Notes,Device,Latitude,Longitude,LocationName,AccuracyMeters,LocationSource"]
+    var lines = ["Date,Time,Amount,Unit,Missed,Edited,EarlyByMinutes,Notes,Device,Latitude,Longitude,LocationName,AccuracyMeters,LocationSource"]
     let fmt = DateFormatter(); fmt.dateStyle = .short
     let tfmt = DateFormatter(); tfmt.timeStyle = .short
     for d in allDoses {
@@ -314,6 +318,7 @@ struct HistoryView: View {
         d.unit,
         d.missed ? "Yes" : "No",
         d.edited ? "Yes" : "No",
+        d.earlyBySeconds.map { String(Int(($0 / 60).rounded())) } ?? "",
         "\"\(d.notes.replacingOccurrences(of: "\"", with: "\"\""))\"",
         d.deviceName,
         d.latitude.map { String(format: "%.6f", $0) } ?? "",

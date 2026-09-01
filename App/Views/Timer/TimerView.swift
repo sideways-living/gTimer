@@ -15,6 +15,7 @@ struct TimerView: View {
   @State private var showWarning = false
   @State private var pendingAmount: Double = 0
   @State private var pendingNotes: String = ""
+  @State private var pendingEarlyBySeconds: TimeInterval?
   @State private var ticker: Timer?
   @State private var editingDose: DoseRecord?
 
@@ -92,10 +93,12 @@ struct TimerView: View {
     }
     .sheet(item: $editingDose) { EditDoseSheet(dose: $0) }
     .alert("Log Early?", isPresented: $showWarning) {
-      Button("Cancel", role: .cancel) {}
-      Button("Log Anyway", role: .destructive) { confirmLog(amount: pendingAmount, notes: pendingNotes) }
+      Button("Cancel", role: .cancel) { pendingEarlyBySeconds = nil }
+      Button("Log Anyway", role: .destructive) {
+        confirmLog(amount: pendingAmount, notes: pendingNotes, earlyBySeconds: pendingEarlyBySeconds)
+      }
     } message: {
-      Text("The safe interval hasn't passed yet. Logging early can increase risk.")
+      Text("The safe interval hasn't passed yet. This would be logged as \(formattedEarlyBy(pendingEarlyBySeconds)) early.")
     }
   }
 
@@ -497,12 +500,22 @@ struct TimerView: View {
             Text("\(dose.amount.formatted(.number.precision(.fractionLength(1))))\(dose.unit)")
               .font(.system(size: 18, weight: .bold))
               .foregroundStyle(AppTheme.textPrimary)
+            if dose.wasTakenEarly { pill("Early", color: AppTheme.statusRed) }
             if dose.missed { pill("Missed", color: AppTheme.statusAmber) }
             if dose.edited { pill("Edited", color: AppTheme.textMuted) }
           }
           Text(dose.time.formatted(date: .omitted, time: .shortened) + " · " + relativeDoseAge)
             .font(.system(size: 13))
             .foregroundStyle(AppTheme.textSecondary)
+          if let earlyBy = dose.formattedEarlyBy {
+            HStack(spacing: 4) {
+              Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 10))
+              Text("Taken \(earlyBy) early")
+                .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(AppTheme.statusRed)
+          }
           // Location line (Pro)
           if let locLabel = dose.displayLocation(approximate: settings.locationApproximate) {
             HStack(spacing: 4) {
@@ -615,15 +628,17 @@ struct TimerView: View {
     if isActive && !isSafe {
       pendingAmount = amount
       pendingNotes = notes
+      pendingEarlyBySeconds = max(intervalSeconds - elapsed, 0)
       showWarning = true
     } else {
       confirmLog(amount: amount, notes: notes)
     }
   }
 
-  private func confirmLog(amount: Double, notes: String = "") {
+  private func confirmLog(amount: Double, notes: String = "", earlyBySeconds: TimeInterval? = nil) {
     let loc = LocationManager.shared
     let captureLocation = settings.proBetaAccepted && settings.attachLocationToDoses
+    let earlyBySeconds = earlyBySeconds.flatMap { $0 > 0 ? $0 : nil }
 
     if captureLocation {
       Task { @MainActor in
@@ -632,6 +647,7 @@ struct TimerView: View {
           amount: amount,
           unit: settings.unit,
           notes: notes,
+          earlyBySeconds: earlyBySeconds,
           capturedLocation: captured,
           locationName: loc.locationName,
           locationSource: "automatic",
@@ -645,10 +661,22 @@ struct TimerView: View {
         amount: amount,
         unit: settings.unit,
         notes: notes,
+        earlyBySeconds: earlyBySeconds,
         deviceName: settings.deviceName,
         context: context,
         settings: settings
       )
     }
+    pendingEarlyBySeconds = nil
+  }
+
+  private func formattedEarlyBy(_ seconds: TimeInterval?) -> String {
+    guard let seconds, seconds > 0 else { return "0m" }
+    let totalMinutes = max(Int((seconds / 60).rounded()), 1)
+    let hours = totalMinutes / 60
+    let minutes = totalMinutes % 60
+    if hours > 0 && minutes > 0 { return "\(hours)h \(minutes)m" }
+    if hours > 0 { return "\(hours)h" }
+    return "\(minutes)m"
   }
 }

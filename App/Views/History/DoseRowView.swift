@@ -24,6 +24,7 @@ struct DoseRowView: View {
             Text("\(dose.amount.formatted(.number.precision(.fractionLength(1))))\(dose.unit)")
               .font(.system(size: 16, weight: .bold))
               .foregroundStyle(AppTheme.textPrimary)
+            if dose.wasTakenEarly { pill("Early", color: AppTheme.statusRed) }
             if dose.missed { pill("Missed", color: AppTheme.statusAmber) }
             if dose.edited { pill("Edited", color: AppTheme.textMuted) }
           }
@@ -37,6 +38,15 @@ struct DoseRowView: View {
               .font(.system(size: 12))
               .foregroundStyle(AppTheme.textMuted)
               .lineLimit(1)
+          }
+          if let earlyBy = dose.formattedEarlyBy {
+            HStack(spacing: 4) {
+              Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 10))
+              Text("Taken \(earlyBy) early")
+                .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(AppTheme.statusRed)
           }
         }
 

@@ -12,6 +12,7 @@ final class DoseRecord {
   var notes: String
   var missed: Bool
   var edited: Bool
+  var earlyBySeconds: Double?
   // Existing location fields
   var latitude: Double?
   var longitude: Double?
@@ -31,6 +32,7 @@ final class DoseRecord {
     notes: String = "",
     missed: Bool = false,
     edited: Bool = false,
+    earlyBySeconds: Double? = nil,
     latitude: Double? = nil,
     longitude: Double? = nil,
     locationName: String? = nil,
@@ -46,6 +48,7 @@ final class DoseRecord {
     self.notes = notes
     self.missed = missed
     self.edited = edited
+    self.earlyBySeconds = earlyBySeconds
     self.latitude = latitude
     self.longitude = longitude
     self.locationName = locationName
@@ -71,4 +74,19 @@ final class DoseRecord {
   }
 
   var resolvedLocationSource: String { locationSource ?? "none" }
+
+  var wasTakenEarly: Bool {
+    guard let earlyBySeconds else { return false }
+    return earlyBySeconds > 0
+  }
+
+  var formattedEarlyBy: String? {
+    guard let earlyBySeconds, earlyBySeconds > 0 else { return nil }
+    let totalMinutes = max(Int((earlyBySeconds / 60).rounded()), 1)
+    let hours = totalMinutes / 60
+    let minutes = totalMinutes % 60
+    if hours > 0 && minutes > 0 { return "\(hours)h \(minutes)m" }
+    if hours > 0 { return "\(hours)h" }
+    return "\(minutes)m"
+  }
 }
