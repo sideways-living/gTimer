@@ -1,26 +1,74 @@
 {
   "images": [
     {
-      "filename": "Icon.png",
+      "filename": "AppIcon~ios-marketing.png",
       "idiom": "universal",
       "platform": "ios",
       "size": "1024x1024"
     },
     {
-      "filename": "Icon.png",
+      "filename": "AppIcon16.png",
+      "idiom": "mac",
+      "scale": "1x",
+      "size": "16x16"
+    },
+    {
+      "filename": "AppIcon32.png",
       "idiom": "mac",
       "scale": "2x",
+      "size": "16x16"
+    },
+    {
+      "filename": "AppIcon32.png",
+      "idiom": "mac",
+      "scale": "1x",
+      "size": "32x32"
+    },
+    {
+      "filename": "AppIcon64.png",
+      "idiom": "mac",
+      "scale": "2x",
+      "size": "32x32"
+    },
+    {
+      "filename": "AppIcon128.png",
+      "idiom": "mac",
+      "scale": "1x",
+      "size": "128x128"
+    },
+    {
+      "filename": "AppIcon256.png",
+      "idiom": "mac",
+      "scale": "2x",
+      "size": "128x128"
+    },
+    {
+      "filename": "AppIcon256.png",
+      "idiom": "mac",
+      "scale": "1x",
+      "size": "256x256"
+    },
+    {
+      "filename": "AppIcon512.png",
+      "idiom": "mac",
+      "scale": "2x",
+      "size": "256x256"
+    },
+    {
+      "filename": "AppIcon512.png",
+      "idiom": "mac",
+      "scale": "1x",
       "size": "512x512"
     },
     {
-      "filename": "Icon.png",
-      "idiom": "universal",
-      "platform": "watchos",
-      "size": "1024x1024"
+      "filename": "AppIcon1024.png",
+      "idiom": "mac",
+      "scale": "2x",
+      "size": "512x512"
     }
   ],
   "info": {
-    "author": "xcode",
+    "author": "iconkitchen",
     "version": 1
   }
 }

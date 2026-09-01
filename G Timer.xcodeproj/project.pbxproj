@@ -17,7 +17,7 @@
 		496AAD13AF50068206459DDC /* DoseMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447E9916B8084D2027AB7F9F /* DoseMapView.swift */; };
 		4AE07F8A330CC095DE4BF30E /* CustomDoseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29EC264E0F490380B0F41683 /* CustomDoseSheet.swift */; };
 		4B1CA7F9C88992E51E0C9D86 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F647F5408F5F0D7347D82E /* ContentView.swift */; };
-		5066448E90BC899B72747937 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A9444C55D89339A81F1FC001 /* Assets.xcassets */; };
+		5066448E90BC899B72747937 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B28D2B5A4BC8462AA4939D2E /* Assets.xcassets */; };
 		53E23B496EBD9811AD9C935C /* SharedDoseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0CA2DE082569DFB7FB3F5D /* SharedDoseData.swift */; };
 		586B051489B67F3ACF3C26B6 /* MissedDoseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECE0B47E905FC20B06C0729 /* MissedDoseSheet.swift */; };
 		5B4F8009AED050E8B06D9945 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F3A39F8CEA663CE7BC8F94 /* NotificationManager.swift */; };
@@ -110,6 +110,7 @@
 		77147D85A84EF801C56235BF /* HealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthView.swift; sourceTree = "<group>"; };
 		867068BDABF75D7778441715 /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
 		A9444C55D89339A81F1FC001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B28D2B5A4BC8462AA4939D2E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B0797F2A8B58F36F9701E773 /* TimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerView.swift; sourceTree = "<group>"; };
 		B7D52BA41636CE2C91BBEEF6 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		BD1787690DBA6929A530B9BC /* EditDoseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditDoseSheet.swift; sourceTree = "<group>"; };
@@ -209,6 +210,7 @@
 			isa = PBXGroup;
 			children = (
 				5A4B3997859B7479BA22A536 /* App.swift */,
+				B28D2B5A4BC8462AA4939D2E /* Assets.xcassets */,
 				CB77A57D04854B49FCC5AC12 /* ContentView.swift */,
 			);
 			path = Watch;
