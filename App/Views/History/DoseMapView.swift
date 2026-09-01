@@ -4,6 +4,7 @@ import SwiftData
 
 struct DoseMapView: View {
   @Environment(SettingsManager.self) private var settings
+  @Environment(\.dismiss) private var dismiss
   @Query(sort: \DoseRecord.time, order: .reverse) private var allDoses: [DoseRecord]
 
   @State private var position: MapCameraPosition = .automatic
@@ -32,6 +33,26 @@ struct DoseMapView: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 0) {
+        HStack {
+          Text("Dose Map")
+            .font(.system(size: 20, weight: .bold))
+            .foregroundStyle(AppTheme.textPrimary)
+          Spacer()
+          Button {
+            dismiss()
+          } label: {
+            Image(systemName: "xmark")
+              .font(.system(size: 13, weight: .bold))
+              .foregroundStyle(AppTheme.textSecondary)
+              .frame(width: 32, height: 32)
+              .background(AppTheme.backgroundCard)
+              .clipShape(Circle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Close")
+        }
+        .padding(16)
+
         if locatedDoses.isEmpty {
           emptyState
         } else {

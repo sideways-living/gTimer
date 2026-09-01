@@ -18,6 +18,8 @@ struct CustomDoseSheet: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 20) {
+        sheetHeader(title: "Custom Amount")
+
         VStack(alignment: .leading, spacing: 8) {
           Text("Amount (\(settings.unit))")
             .font(.system(size: 14, weight: .medium))
@@ -68,15 +70,30 @@ struct CustomDoseSheet: View {
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
       .navigationTitle("Custom Amount")
       .platformInlineNavigationTitle()
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") { dismiss() }
-            .foregroundStyle(AppTheme.textSecondary)
-        }
-      }
     }
     .presentationDetents([.medium])
     .presentationBackground(AppTheme.backgroundPrimary)
     .preferredColorScheme(.dark)
+  }
+
+  private func sheetHeader(title: String) -> some View {
+    HStack {
+      Text(title)
+        .font(.system(size: 20, weight: .bold))
+        .foregroundStyle(AppTheme.textPrimary)
+      Spacer()
+      Button {
+        dismiss()
+      } label: {
+        Image(systemName: "xmark")
+          .font(.system(size: 13, weight: .bold))
+          .foregroundStyle(AppTheme.textSecondary)
+          .frame(width: 32, height: 32)
+          .background(AppTheme.backgroundCard)
+          .clipShape(Circle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("Close")
+    }
   }
 }

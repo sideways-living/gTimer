@@ -466,11 +466,12 @@ struct SettingsView: View {
     settingsCard(title: "Home Location") {
       VStack(alignment: .leading, spacing: 10) {
         row(label: "Country") {
-          Picker("Country", selection: $homeCountryCode) {
+          Picker("", selection: $homeCountryCode) {
             ForEach(EmergencyNumberCatalogue.countries) { country in
               Text(country.name).tag(country.code)
             }
           }
+          .labelsHidden()
           .pickerStyle(.menu)
           .tint(AppTheme.accentBlue)
           .frame(maxWidth: 220)

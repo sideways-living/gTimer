@@ -20,6 +20,26 @@ struct DoseDetailMapSheet: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 0) {
+        HStack {
+          Text("Dose Location")
+            .font(.system(size: 20, weight: .bold))
+            .foregroundStyle(AppTheme.textPrimary)
+          Spacer()
+          Button {
+            dismiss()
+          } label: {
+            Image(systemName: "xmark")
+              .font(.system(size: 13, weight: .bold))
+              .foregroundStyle(AppTheme.textSecondary)
+              .frame(width: 32, height: 32)
+              .background(AppTheme.backgroundCard)
+              .clipShape(Circle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Close")
+        }
+        .padding(16)
+
         // Map
         Map(position: $position) {
           Annotation("", coordinate: dose.coordinate, anchor: .bottom) {
@@ -127,12 +147,6 @@ struct DoseDetailMapSheet: View {
       .navigationTitle("Dose Location")
       .platformInlineNavigationTitle()
       .platformNavigationBarStyle()
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Done") { dismiss() }
-            .foregroundStyle(AppTheme.textSecondary)
-        }
-      }
       .confirmationDialog("Remove location from this dose?",
                           isPresented: $showRemoveConfirm, titleVisibility: .visible) {
         Button("Remove Location", role: .destructive) {

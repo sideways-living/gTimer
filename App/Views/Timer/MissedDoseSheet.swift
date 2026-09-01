@@ -22,6 +22,7 @@ struct MissedDoseSheet: View {
       ZStack {
         AppTheme.backgroundPrimary.ignoresSafeArea()
         VStack(spacing: 20) {
+          sheetHeader(title: "Missed Dose")
           infoBox
 
           VStack(alignment: .leading, spacing: 8) {
@@ -141,12 +142,6 @@ struct MissedDoseSheet: View {
       }
       .navigationTitle("Missed Dose")
       .platformInlineNavigationTitle()
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") { dismiss() }
-            .foregroundStyle(AppTheme.textSecondary)
-        }
-      }
     }
     .presentationDetents([.large])
     .preferredColorScheme(.dark)
@@ -166,5 +161,26 @@ struct MissedDoseSheet: View {
     .padding(12)
     .background(AppTheme.proAmber.opacity(0.08))
     .clipShape(RoundedRectangle(cornerRadius: 10))
+  }
+
+  private func sheetHeader(title: String) -> some View {
+    HStack {
+      Text(title)
+        .font(.system(size: 20, weight: .bold))
+        .foregroundStyle(AppTheme.textPrimary)
+      Spacer()
+      Button {
+        dismiss()
+      } label: {
+        Image(systemName: "xmark")
+          .font(.system(size: 13, weight: .bold))
+          .foregroundStyle(AppTheme.textSecondary)
+          .frame(width: 32, height: 32)
+          .background(AppTheme.backgroundCard)
+          .clipShape(Circle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("Close")
+    }
   }
 }

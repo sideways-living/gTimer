@@ -9,6 +9,25 @@ struct PaywallSheet: View {
 
   var body: some View {
     VStack(spacing: 0) {
+      HStack {
+        Spacer()
+        Button {
+          PaywallThrottle.shared.markDismissed(feature)
+          dismiss()
+        } label: {
+          Image(systemName: "xmark")
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(AppTheme.textSecondary)
+            .frame(width: 32, height: 32)
+            .background(AppTheme.backgroundCard)
+            .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Close")
+      }
+      .padding(.horizontal, 20)
+      .padding(.top, 16)
+
       ScrollView {
         VStack(spacing: 20) {
           // Feature icon + headline
