@@ -3,6 +3,15 @@ import Foundation
 
 final class NotificationManager {
   static let shared = NotificationManager()
+  private let reminderIdentifier = "redose_reminder"
+  private let messageIndexKey = "redoseReminderMessageIndex"
+  private let harmReductionMessages = [
+    "Stay mindful of your choices",
+    "Please consider your wellbeing before any decision.",
+    "Make informed choices.",
+    "This is a reminder, not a recommendation.",
+    "Ask yourself 'Do I need another dose right now?'"
+  ]
 
   func requestPermission() async {
     _ = try? await UNUserNotificationCenter.current()
@@ -15,18 +24,26 @@ final class NotificationManager {
     guard fireDate > Date() else { return }
 
     let content = UNMutableNotificationContent()
-    content.title = "G Timer – Safe to Redose"
-    content.body = "Your safe interval has passed. Stay safe."
+    content.title = "Your minimum time between doses has passed"
+    content.body = nextHarmReductionMessage()
     content.sound = .default
 
     let interval = fireDate.timeIntervalSinceNow
     guard interval > 0 else { return }
     let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
-    let request = UNNotificationRequest(identifier: "redose_reminder", content: content, trigger: trigger)
+    let request = UNNotificationRequest(identifier: reminderIdentifier, content: content, trigger: trigger)
     UNUserNotificationCenter.current().add(request)
   }
 
   func cancelRedoseReminder() {
-    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["redose_reminder"])
+    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [reminderIdentifier])
+  }
+
+  private func nextHarmReductionMessage() -> String {
+    let defaults = UserDefaults.standard
+    let index = defaults.integer(forKey: messageIndexKey)
+    let message = harmReductionMessages[index % harmReductionMessages.count]
+    defaults.set((index + 1) % harmReductionMessages.count, forKey: messageIndexKey)
+    return message
   }
 }
