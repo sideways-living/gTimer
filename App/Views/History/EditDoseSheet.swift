@@ -16,8 +16,13 @@ struct EditDoseSheet: View {
   @State private var longitudeText = ""
   @State private var locationError: String?
   @State private var isCapturingLocation = false
+  @State private var isLookingUpLocation = false
   @State private var editMapPosition: MapCameraPosition = .automatic
   @State private var showDiscard = false
+
+  private var savedLocationSuggestions: [ManualDoseLocation] {
+    ManualLocationStore.shared.suggestions(matching: locationNameText)
+  }
 
   private var isDirty: Bool {
     let a = Double(amountText) ?? dose.amount
@@ -127,6 +132,40 @@ struct EditDoseSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border))
 
+      if !savedLocationSuggestions.isEmpty {
+        VStack(spacing: 6) {
+          ForEach(savedLocationSuggestions) { suggestion in
+            Button {
+              applySavedLocation(suggestion)
+            } label: {
+              HStack(spacing: 10) {
+                Image(systemName: "clock.arrow.circlepath")
+                  .font(.system(size: 12, weight: .semibold))
+                  .foregroundStyle(AppTheme.accentBlue)
+                VStack(alignment: .leading, spacing: 2) {
+                  Text(suggestion.name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(AppTheme.textPrimary)
+                    .lineLimit(1)
+                  Text("\(coordinateText(suggestion.latitude)), \(coordinateText(suggestion.longitude))")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(AppTheme.textMuted)
+                }
+                Spacer()
+                Text("Fill")
+                  .font(.system(size: 11, weight: .bold))
+                  .foregroundStyle(AppTheme.accentBlue)
+              }
+              .padding(10)
+              .background(AppTheme.backgroundCard.opacity(0.75))
+              .clipShape(RoundedRectangle(cornerRadius: 10))
+              .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
+            }
+            .buttonStyle(.plain)
+          }
+        }
+      }
+
       HStack(spacing: 10) {
         coordinateField("Latitude", text: $latitudeText)
         coordinateField("Longitude", text: $longitudeText)
@@ -165,6 +204,29 @@ struct EditDoseSheet: View {
           if let coordinate = editedCoordinate { updateEditMapPosition(coordinate) }
         }
       }
+
+      Button {
+        lookUpLocation()
+      } label: {
+        HStack(spacing: 8) {
+          if isLookingUpLocation {
+            ProgressView()
+              .controlSize(.small)
+          } else {
+            Image(systemName: "magnifyingglass")
+              .font(.system(size: 12, weight: .semibold))
+          }
+          Text(isLookingUpLocation ? "Looking up location..." : "Look up coordinates")
+            .font(.system(size: 13, weight: .semibold))
+        }
+        .foregroundStyle(AppTheme.accentBlue)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(AppTheme.accentBlue.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+      }
+      .buttonStyle(.plain)
+      .disabled(isLookingUpLocation || locationNameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
       Button {
         captureCurrentLocation()
@@ -269,6 +331,40 @@ struct EditDoseSheet: View {
     }
   }
 
+  private func lookUpLocation() {
+    let query = locationNameText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !query.isEmpty else {
+      locationError = "Enter a location name or address to look up."
+      return
+    }
+
+    isLookingUpLocation = true
+    locationError = nil
+    Task { @MainActor in
+      guard let location = await ManualLocationStore.shared.lookUp(query) else {
+        isLookingUpLocation = false
+        locationError = "Location lookup could not find coordinates."
+        return
+      }
+
+      applySavedLocation(location)
+      ManualLocationStore.shared.save(
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude
+      )
+      isLookingUpLocation = false
+    }
+  }
+
+  private func applySavedLocation(_ location: ManualDoseLocation) {
+    locationNameText = location.name
+    latitudeText = coordinateText(location.latitude)
+    longitudeText = coordinateText(location.longitude)
+    locationError = nil
+    updateEditMapPosition(CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude))
+  }
+
   private func saveChanges() {
     let a = Double(amountText) ?? dose.amount
     let cleanName = locationNameText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -293,6 +389,7 @@ struct EditDoseSheet: View {
       dose.locationAccuracyMeters = nil
       dose.locationCapturedAt = Date()
       dose.locationSource = "manual"
+      ManualLocationStore.shared.save(name: cleanName, latitude: lat, longitude: lon)
     } else {
       locationError = "Enter valid latitude and longitude, or leave both blank."
       return

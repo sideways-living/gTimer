@@ -20,6 +20,7 @@
 		5066448E90BC899B72747937 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B28D2B5A4BC8462AA4939D2E /* Assets.xcassets */; };
 		53E23B496EBD9811AD9C935C /* SharedDoseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0CA2DE082569DFB7FB3F5D /* SharedDoseData.swift */; };
 		586B051489B67F3ACF3C26B6 /* MissedDoseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ECE0B47E905FC20B06C0729 /* MissedDoseSheet.swift */; };
+		5D9E425A7F4FA38319A049F2 /* ManualLocationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63A82B669846D2E21059431B /* ManualLocationStore.swift */; };
 		5B4F8009AED050E8B06D9945 /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8F3A39F8CEA663CE7BC8F94 /* NotificationManager.swift */; };
 		665DA73CBBE6A71AD84843A0 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4B3997859B7479BA22A536 /* App.swift */; };
 		671FD039317B055477B05F65 /* HealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77147D85A84EF801C56235BF /* HealthView.swift */; };
@@ -105,6 +106,7 @@
 		5ECE0B47E905FC20B06C0729 /* MissedDoseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissedDoseSheet.swift; sourceTree = "<group>"; };
 		5F7B86708E304BA28ABB83BC /* G Timer Widget Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "G Timer Widget Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		626C2609BC5DA1E25BB46E97 /* DoseRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoseRecord.swift; sourceTree = "<group>"; };
+		63A82B669846D2E21059431B /* ManualLocationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManualLocationStore.swift; sourceTree = "<group>"; };
 		6791463818308178B8AD211E /* ProFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProFeature.swift; sourceTree = "<group>"; };
 		74F647F5408F5F0D7347D82E /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		77147D85A84EF801C56235BF /* HealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthView.swift; sourceTree = "<group>"; };
@@ -163,6 +165,7 @@
 				867068BDABF75D7778441715 /* AppNavigation.swift */,
 				DC4BD0039F6966DA9B18844F /* DoseStore.swift */,
 				B7D52BA41636CE2C91BBEEF6 /* LocationManager.swift */,
+				63A82B669846D2E21059431B /* ManualLocationStore.swift */,
 				E8F3A39F8CEA663CE7BC8F94 /* NotificationManager.swift */,
 				ECFF0A5F345ACFEE506130B4 /* SettingsManager.swift */,
 			);
@@ -437,6 +440,7 @@
 				671FD039317B055477B05F65 /* HealthView.swift in Sources */,
 				FF7271E4CD763A07928A3675 /* HistoryView.swift in Sources */,
 				201E3DE4062F2D054EB1F91B /* LocationManager.swift in Sources */,
+				5D9E425A7F4FA38319A049F2 /* ManualLocationStore.swift in Sources */,
 				586B051489B67F3ACF3C26B6 /* MissedDoseSheet.swift in Sources */,
 				5B4F8009AED050E8B06D9945 /* NotificationManager.swift in Sources */,
 				EE023F2D3E5B4F6CF4569A02 /* PaywallSheet.swift in Sources */,
