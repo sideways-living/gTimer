@@ -17,6 +17,9 @@ struct EditDoseSheet: View {
   @State private var locationError: String?
   @State private var isCapturingLocation = false
   @State private var isLookingUpLocation = false
+  @State private var placeSearchResults: [ManualDoseLocation] = []
+  @State private var placeSearchTask: Task<Void, Never>?
+  @State private var suppressNextPlaceSearch = false
   @State private var editMapPosition: MapCameraPosition = .automatic
   @State private var showDiscard = false
 
@@ -38,52 +41,52 @@ struct EditDoseSheet: View {
     NavigationStack {
       ZStack {
         AppTheme.backgroundPrimary.ignoresSafeArea()
-        VStack(spacing: 20) {
-          sheetHeader(title: "Edit Dose")
+        ScrollView {
+          VStack(spacing: 20) {
+            sheetHeader(title: "Edit Dose")
 
-          field(label: "Amount (\(settings.unit))") {
-            TextField("Amount", text: $amountText)
-              .platformKeyboardType(.decimalPad)
-              .font(.system(size: 20, weight: .semibold))
-              .foregroundStyle(AppTheme.textPrimary)
+            field(label: "Amount (\(settings.unit))") {
+              TextField("Amount", text: $amountText)
+                .platformKeyboardType(.decimalPad)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(AppTheme.textPrimary)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+              Text("Date & Time")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(AppTheme.textSecondary)
+              DatePicker("Date & Time", selection: $selectedDate, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
+                .labelsHidden()
+                .colorScheme(.dark)
+                .padding(10)
+                .background(AppTheme.backgroundCard)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            field(label: "Notes") {
+              TextField("Notes", text: $notes, axis: .vertical)
+                .font(.system(size: 16))
+                .foregroundStyle(AppTheme.textPrimary)
+                .lineLimit(2...4)
+            }
+
+            locationEditor
+
+            Button {
+              saveChanges()
+            } label: {
+              Text("Save Changes")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(AppTheme.accentBlue)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
           }
-
-          VStack(alignment: .leading, spacing: 8) {
-            Text("Date & Time")
-              .font(.system(size: 14, weight: .medium))
-              .foregroundStyle(AppTheme.textSecondary)
-            DatePicker("Date & Time", selection: $selectedDate, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
-              .labelsHidden()
-              .colorScheme(.dark)
-              .padding(10)
-              .background(AppTheme.backgroundCard)
-              .clipShape(RoundedRectangle(cornerRadius: 12))
-          }
-
-          field(label: "Notes") {
-            TextField("Notes", text: $notes, axis: .vertical)
-              .font(.system(size: 16))
-              .foregroundStyle(AppTheme.textPrimary)
-              .lineLimit(2...4)
-          }
-
-          locationEditor
-
-          Spacer()
-
-          Button {
-            saveChanges()
-          } label: {
-            Text("Save Changes")
-              .font(.system(size: 17, weight: .semibold))
-              .foregroundStyle(.white)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, 15)
-              .background(AppTheme.accentBlue)
-              .clipShape(RoundedRectangle(cornerRadius: 14))
-          }
+          .padding(20)
         }
-        .padding(20)
       }
       .navigationTitle("Edit Dose")
       .platformInlineNavigationTitle()
@@ -93,6 +96,9 @@ struct EditDoseSheet: View {
       }
     }
     .presentationDetents([.large])
+    #if os(macOS)
+    .frame(width: 520, height: 640)
+    #endif
     .preferredColorScheme(.dark)
     .onAppear {
       amountText = dose.amount.formatted(.number.precision(.fractionLength(1)))
@@ -101,6 +107,9 @@ struct EditDoseSheet: View {
       locationNameText = dose.locationName ?? ""
       latitudeText = coordinateText(dose.latitude)
       longitudeText = coordinateText(dose.longitude)
+    }
+    .onDisappear {
+      placeSearchTask?.cancel()
     }
   }
 
@@ -131,35 +140,46 @@ struct EditDoseSheet: View {
         .background(AppTheme.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border))
+        .onChange(of: locationNameText) {
+          if suppressNextPlaceSearch {
+            suppressNextPlaceSearch = false
+            return
+          }
+          schedulePlaceSearch()
+        }
 
-      if !savedLocationSuggestions.isEmpty {
-        VStack(spacing: 6) {
+      if !savedLocationSuggestions.isEmpty || !placeSearchResults.isEmpty {
+        VStack(alignment: .leading, spacing: 8) {
+          if !savedLocationSuggestions.isEmpty {
+            Text("Saved")
+              .font(.system(size: 11, weight: .bold))
+              .foregroundStyle(AppTheme.textMuted)
+          }
           ForEach(savedLocationSuggestions) { suggestion in
             Button {
               applySavedLocation(suggestion)
             } label: {
-              HStack(spacing: 10) {
-                Image(systemName: "clock.arrow.circlepath")
-                  .font(.system(size: 12, weight: .semibold))
-                  .foregroundStyle(AppTheme.accentBlue)
-                VStack(alignment: .leading, spacing: 2) {
-                  Text(suggestion.name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(AppTheme.textPrimary)
-                    .lineLimit(1)
-                  Text("\(coordinateText(suggestion.latitude)), \(coordinateText(suggestion.longitude))")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundStyle(AppTheme.textMuted)
-                }
-                Spacer()
-                Text("Fill")
-                  .font(.system(size: 11, weight: .bold))
-                  .foregroundStyle(AppTheme.accentBlue)
-              }
-              .padding(10)
-              .background(AppTheme.backgroundCard.opacity(0.75))
-              .clipShape(RoundedRectangle(cornerRadius: 10))
-              .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
+              locationSuggestionRow(suggestion, icon: "clock.arrow.circlepath", actionLabel: "Fill")
+            }
+            .buttonStyle(.plain)
+          }
+
+          if !placeSearchResults.isEmpty {
+            Text("Places")
+              .font(.system(size: 11, weight: .bold))
+              .foregroundStyle(AppTheme.textMuted)
+              .padding(.top, savedLocationSuggestions.isEmpty ? 0 : 4)
+          }
+          ForEach(placeSearchResults) { result in
+            Button {
+              applySavedLocation(result)
+              ManualLocationStore.shared.save(
+                name: result.name,
+                latitude: result.latitude,
+                longitude: result.longitude
+              )
+            } label: {
+              locationSuggestionRow(result, icon: "mappin.and.ellipse", actionLabel: "Use")
             }
             .buttonStyle(.plain)
           }
@@ -309,6 +329,35 @@ struct EditDoseSheet: View {
     }
   }
 
+  private func locationSuggestionRow(
+    _ location: ManualDoseLocation,
+    icon: String,
+    actionLabel: String
+  ) -> some View {
+    HStack(spacing: 10) {
+      Image(systemName: icon)
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(AppTheme.accentBlue)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(location.name)
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(AppTheme.textPrimary)
+          .lineLimit(1)
+        Text("\(coordinateText(location.latitude)), \(coordinateText(location.longitude))")
+          .font(.system(size: 11, design: .monospaced))
+          .foregroundStyle(AppTheme.textMuted)
+      }
+      Spacer()
+      Text(actionLabel)
+        .font(.system(size: 11, weight: .bold))
+        .foregroundStyle(AppTheme.accentBlue)
+    }
+    .padding(10)
+    .background(AppTheme.backgroundCard.opacity(0.75))
+    .clipShape(RoundedRectangle(cornerRadius: 10))
+    .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
+  }
+
   private func captureCurrentLocation() {
     isCapturingLocation = true
     locationError = nil
@@ -341,7 +390,22 @@ struct EditDoseSheet: View {
     isLookingUpLocation = true
     locationError = nil
     Task { @MainActor in
-      guard let location = await ManualLocationStore.shared.lookUp(query) else {
+      let context = ManualLocationSearchContext(
+        homeCity: settings.homeCity,
+        homeCountryCode: settings.homeCountryCode,
+        homeAddress: settings.homeAddress,
+        currentCoordinate: LocationManager.shared.currentLocation?.coordinate
+      )
+      var location = await ManualLocationStore.shared.searchResults(
+        matching: query,
+        context: context,
+        limit: 1
+      ).first
+      if location == nil {
+        location = await ManualLocationStore.shared.lookUp(query)
+      }
+
+      guard let location else {
         isLookingUpLocation = false
         locationError = "Location lookup could not find coordinates."
         return
@@ -358,11 +422,48 @@ struct EditDoseSheet: View {
   }
 
   private func applySavedLocation(_ location: ManualDoseLocation) {
+    placeSearchTask?.cancel()
+    placeSearchResults = []
+    suppressNextPlaceSearch = true
     locationNameText = location.name
     latitudeText = coordinateText(location.latitude)
     longitudeText = coordinateText(location.longitude)
     locationError = nil
     updateEditMapPosition(CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude))
+  }
+
+  private func schedulePlaceSearch() {
+    placeSearchTask?.cancel()
+    let query = locationNameText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard query.count >= 3 else {
+      placeSearchResults = []
+      return
+    }
+
+    let context = ManualLocationSearchContext(
+      homeCity: settings.homeCity,
+      homeCountryCode: settings.homeCountryCode,
+      homeAddress: settings.homeAddress,
+      currentCoordinate: LocationManager.shared.currentLocation?.coordinate
+    )
+
+    placeSearchTask = Task {
+      try? await Task.sleep(for: .milliseconds(350))
+      guard !Task.isCancelled else { return }
+      let results = await ManualLocationStore.shared.searchResults(
+        matching: query,
+        context: context
+      )
+      guard !Task.isCancelled else { return }
+      await MainActor.run {
+        placeSearchResults = results.filter { result in
+          !savedLocationSuggestions.contains(where: { saved in
+            saved.name.caseInsensitiveCompare(result.name) == .orderedSame ||
+              (abs(saved.latitude - result.latitude) < 0.0001 && abs(saved.longitude - result.longitude) < 0.0001)
+          })
+        }
+      }
+    }
   }
 
   private func saveChanges() {

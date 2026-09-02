@@ -15,6 +15,13 @@ struct ManualDoseLocation: Codable, Identifiable, Equatable {
   }
 }
 
+struct ManualLocationSearchContext {
+  var homeCity: String
+  var homeCountryCode: String
+  var homeAddress: String
+  var currentCoordinate: CLLocationCoordinate2D?
+}
+
 final class ManualLocationStore {
   static let shared = ManualLocationStore()
 
@@ -34,6 +41,39 @@ final class ManualLocationStore {
       .filter { $0.name.localizedCaseInsensitiveContains(cleanQuery) }
       .prefix(limit)
       .map { $0 }
+  }
+
+  func searchResults(
+    matching query: String,
+    context: ManualLocationSearchContext,
+    limit: Int = 4
+  ) async -> [ManualDoseLocation] {
+    let cleanQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard cleanQuery.count >= 3 else { return [] }
+
+    let biasCoordinate = await searchBiasCoordinate(context: context)
+    var results: [ManualDoseLocation] = []
+    let region = biasCoordinate.map {
+      MKCoordinateRegion(
+        center: $0,
+        latitudinalMeters: 35_000,
+        longitudinalMeters: 35_000
+      )
+    }
+
+    for searchQuery in searchQueries(for: cleanQuery, context: context) {
+      let found = await lookUpWithMapSearch(searchQuery, region: region, limit: limit)
+      results.append(contentsOf: found)
+      if results.count >= limit { break }
+    }
+
+    return ranked(
+      deduplicated(results),
+      query: cleanQuery,
+      biasCoordinate: biasCoordinate
+    )
+    .prefix(limit)
+    .map { $0 }
   }
 
   func save(name: String, latitude: Double, longitude: Double) {
@@ -57,7 +97,7 @@ final class ManualLocationStore {
     let cleanQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !cleanQuery.isEmpty else { return nil }
 
-    if let location = await lookUpWithMapSearch(cleanQuery) {
+    if let location = await lookUpWithMapSearch(cleanQuery, region: nil, limit: 1).first {
       return location
     }
     return await lookUpWithGeocoder(cleanQuery)
@@ -75,18 +115,27 @@ final class ManualLocationStore {
     defaults.set(data, forKey: storageKey)
   }
 
-  private func lookUpWithMapSearch(_ query: String) async -> ManualDoseLocation? {
+  private func lookUpWithMapSearch(
+    _ query: String,
+    region: MKCoordinateRegion?,
+    limit: Int
+  ) async -> [ManualDoseLocation] {
     let request = MKLocalSearch.Request()
     request.naturalLanguageQuery = query
+    if let region {
+      request.region = region
+      request.resultTypes = [.address, .pointOfInterest]
+    }
 
     do {
       let response = try await MKLocalSearch(request: request).start()
-      guard let item = response.mapItems.first else { return nil }
-      let coordinate = item.placemark.coordinate
-      let name = bestName(for: item, fallback: query)
-      return ManualDoseLocation(name: name, latitude: coordinate.latitude, longitude: coordinate.longitude)
+      return response.mapItems.prefix(limit).map { item in
+        let coordinate = item.placemark.coordinate
+        let name = bestName(for: item, fallback: query)
+        return ManualDoseLocation(name: name, latitude: coordinate.latitude, longitude: coordinate.longitude)
+      }
     } catch {
-      return nil
+      return []
     }
   }
 
@@ -131,6 +180,85 @@ final class ManualLocationStore {
       .filter { !$0.isEmpty }
     let name = components.removingDuplicates().joined(separator: ", ")
     return name.isEmpty ? fallback : name
+  }
+
+  private func searchQueries(for query: String, context: ManualLocationSearchContext) -> [String] {
+    let city = context.homeCity.trimmingCharacters(in: .whitespacesAndNewlines)
+    let address = context.homeAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+    let country = EmergencyNumberCatalogue.country(for: context.homeCountryCode)?.name ?? ""
+
+    var queries: [String] = []
+    if !address.isEmpty {
+      queries.append([query, address, city, country].filter { !$0.isEmpty }.joined(separator: ", "))
+    }
+    if !city.isEmpty {
+      queries.append([query, city, country].filter { !$0.isEmpty }.joined(separator: ", "))
+    }
+    queries.append(query)
+    return queries.removingDuplicates()
+  }
+
+  private func searchBiasCoordinate(context: ManualLocationSearchContext) async -> CLLocationCoordinate2D? {
+    if let saved = savedLocations().first {
+      return CLLocationCoordinate2D(latitude: saved.latitude, longitude: saved.longitude)
+    }
+
+    let country = EmergencyNumberCatalogue.country(for: context.homeCountryCode)?.name ?? ""
+    let address = [
+      context.homeAddress,
+      context.homeCity,
+      country
+    ]
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+      .joined(separator: ", ")
+    if !address.isEmpty, let home = await lookUpWithGeocoder(address) {
+      return CLLocationCoordinate2D(latitude: home.latitude, longitude: home.longitude)
+    }
+
+    return context.currentCoordinate
+  }
+
+  private func deduplicated(_ locations: [ManualDoseLocation]) -> [ManualDoseLocation] {
+    var unique: [ManualDoseLocation] = []
+    for location in locations {
+      let exists = unique.contains {
+        $0.name.caseInsensitiveCompare(location.name) == .orderedSame ||
+          (abs($0.latitude - location.latitude) < 0.0001 && abs($0.longitude - location.longitude) < 0.0001)
+      }
+      if !exists { unique.append(location) }
+    }
+    return unique
+  }
+
+  private func ranked(
+    _ locations: [ManualDoseLocation],
+    query: String,
+    biasCoordinate: CLLocationCoordinate2D?
+  ) -> [ManualDoseLocation] {
+    locations.sorted { first, second in
+      score(first, query: query, biasCoordinate: biasCoordinate) >
+        score(second, query: query, biasCoordinate: biasCoordinate)
+    }
+  }
+
+  private func score(
+    _ location: ManualDoseLocation,
+    query: String,
+    biasCoordinate: CLLocationCoordinate2D?
+  ) -> Double {
+    var score = 0.0
+    if location.name.localizedCaseInsensitiveContains(query) { score += 40 }
+    if location.name.localizedCaseInsensitiveContains(query.components(separatedBy: " ").first ?? query) { score += 10 }
+
+    if let biasCoordinate {
+      let bias = CLLocation(latitude: biasCoordinate.latitude, longitude: biasCoordinate.longitude)
+      let candidate = CLLocation(latitude: location.latitude, longitude: location.longitude)
+      let distanceKm = bias.distance(from: candidate) / 1000
+      score += max(0, 50 - min(distanceKm, 50))
+    }
+
+    return score
   }
 }
 
