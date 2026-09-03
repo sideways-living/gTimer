@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import WidgetKit
 import CoreLocation
+import SwiftData
 import UniformTypeIdentifiers
 #if os(iOS)
 import UIKit
@@ -17,6 +18,7 @@ struct SettingsView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(AppNavigation.self) private var nav
   @Environment(\.openURL) private var openURL
+  @Query(sort: \DoseRecord.time, order: .reverse) private var doseRecords: [DoseRecord]
   @State private var saveState: SaveState = .idle
   @State private var customIntervalText = ""
   @State private var standardDoseText = ""
@@ -25,6 +27,13 @@ struct SettingsView: View {
   @State private var homeCityText = ""
   @State private var homeCountryCode = ""
   @State private var homeAddressText = ""
+  @State private var homeLatitudeText = ""
+  @State private var homeLongitudeText = ""
+  @State private var homeLocationError: String? = nil
+  @State private var homeLocationResults: [ManualDoseLocation] = []
+  @State private var homeLocationSearchTask: Task<Void, Never>?
+  @State private var isLookingUpHomeLocation = false
+  @State private var suppressNextHomeLocationSearch = false
   @State private var photoPickerItem: PhotosPickerItem?
   @State private var showPhotoSourceDialog = false
   @State private var showPhotoPicker = false
@@ -40,6 +49,9 @@ struct SettingsView: View {
 
   private let intervalPresets = [60, 90, 120]
   private var hasChanges: Bool { saveState == .unsaved }
+  private var homeLocationSuggestions: [ManualDoseLocation] {
+    ManualLocationStore.shared.suggestions(matching: homeAddressText, limit: 4)
+  }
 
   var body: some View {
     NavigationStack {
@@ -115,10 +127,22 @@ struct SettingsView: View {
     .onChange(of: vanityNameText) { markUnsaved() }
     .onChange(of: homeCityText) { markUnsaved() }
     .onChange(of: homeCountryCode) { markUnsaved() }
-    .onChange(of: homeAddressText) { markUnsaved() }
+    .onChange(of: homeAddressText) {
+      markUnsaved()
+      if suppressNextHomeLocationSearch {
+        suppressNextHomeLocationSearch = false
+      } else {
+        scheduleHomeLocationSearch()
+      }
+    }
+    .onChange(of: homeLatitudeText) { markUnsaved(); homeLocationError = nil }
+    .onChange(of: homeLongitudeText) { markUnsaved(); homeLocationError = nil }
     .onChange(of: quickAmountTexts) { markUnsaved(); quickAmountsError = nil }
     .onChange(of: customIntervalText) { markUnsaved(); intervalError = nil }
     .onChange(of: photoPickerItem) { loadPhoto() }
+    .onDisappear {
+      homeLocationSearchTask?.cancel()
+    }
   }
 
   // MARK: - Save button (3 states)
@@ -496,6 +520,56 @@ struct SettingsView: View {
             .padding(10)
             .background(AppTheme.backgroundElevated)
             .clipShape(RoundedRectangle(cornerRadius: 9))
+            .onChange(of: homeAddressText) {
+              homeLocationError = nil
+            }
+          if !homeLocationSuggestions.isEmpty || !homeLocationResults.isEmpty {
+            homeLocationSuggestionList
+          }
+          HStack(spacing: 8) {
+            TextField("Latitude", text: $homeLatitudeText)
+              .platformKeyboardType(.decimalPad)
+              .font(.system(size: 13, design: .monospaced))
+              .foregroundStyle(AppTheme.textPrimary)
+              .padding(10)
+              .background(AppTheme.backgroundElevated)
+              .clipShape(RoundedRectangle(cornerRadius: 9))
+            TextField("Longitude", text: $homeLongitudeText)
+              .platformKeyboardType(.decimalPad)
+              .font(.system(size: 13, design: .monospaced))
+              .foregroundStyle(AppTheme.textPrimary)
+              .padding(10)
+              .background(AppTheme.backgroundElevated)
+              .clipShape(RoundedRectangle(cornerRadius: 9))
+          }
+          Button {
+            lookUpHomeLocation()
+          } label: {
+            HStack(spacing: 8) {
+              if isLookingUpHomeLocation {
+                ProgressView()
+                  .controlSize(.small)
+              } else {
+                Image(systemName: "magnifyingglass")
+                  .font(.system(size: 12, weight: .semibold))
+              }
+              Text(isLookingUpHomeLocation ? "Looking up home address..." : "Look up home coordinates")
+                .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(AppTheme.accentBlue)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(AppTheme.accentBlue.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+          }
+          .buttonStyle(.plain)
+          .disabled(isLookingUpHomeLocation || homeAddressText.trimmingCharacters(in: .whitespacesAndNewlines).count < 3)
+
+          if let homeLocationError {
+            Text(homeLocationError)
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.statusAmber)
+          }
         }
         cardDivider
         HStack(spacing: 8) {
@@ -510,6 +584,49 @@ struct SettingsView: View {
         Text("This is used for Health & Safety emergency-number localisation. It can be just city and country; the address is optional.")
           .font(.system(size: 12))
           .foregroundStyle(AppTheme.textMuted)
+        #if os(macOS)
+        Text("On Mac, this saved home address is also used as the dose location only when live location is unavailable.")
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
+        #endif
+      }
+    }
+  }
+
+  private var homeLocationSuggestionList: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      if !homeLocationSuggestions.isEmpty {
+        Text("Saved")
+          .font(.system(size: 11, weight: .bold))
+          .foregroundStyle(AppTheme.textMuted)
+      }
+      ForEach(homeLocationSuggestions) { location in
+        Button {
+          applyHomeLocation(location)
+        } label: {
+          locationSuggestionRow(location, icon: "clock.arrow.circlepath", actionLabel: "Fill")
+        }
+        .buttonStyle(.plain)
+      }
+
+      if !homeLocationResults.isEmpty {
+        Text("Places")
+          .font(.system(size: 11, weight: .bold))
+          .foregroundStyle(AppTheme.textMuted)
+          .padding(.top, homeLocationSuggestions.isEmpty ? 0 : 4)
+      }
+      ForEach(homeLocationResults) { location in
+        Button {
+          applyHomeLocation(location)
+          ManualLocationStore.shared.save(
+            name: location.name,
+            latitude: location.latitude,
+            longitude: location.longitude
+          )
+        } label: {
+          locationSuggestionRow(location, icon: "mappin.and.ellipse", actionLabel: "Use")
+        }
+        .buttonStyle(.plain)
       }
     }
   }
@@ -612,6 +729,34 @@ struct SettingsView: View {
     .padding(.vertical, 2)
   }
 
+  private func locationSuggestionRow(
+    _ location: ManualDoseLocation,
+    icon: String,
+    actionLabel: String
+  ) -> some View {
+    HStack(spacing: 10) {
+      Image(systemName: icon)
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(AppTheme.accentBlue)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(location.name)
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(AppTheme.textPrimary)
+          .lineLimit(1)
+        Text("\(coordinateText(location.latitude)), \(coordinateText(location.longitude))")
+          .font(.system(size: 11, design: .monospaced))
+          .foregroundStyle(AppTheme.textMuted)
+      }
+      Spacer()
+      Text(actionLabel)
+        .font(.system(size: 11, weight: .bold))
+        .foregroundStyle(AppTheme.accentBlue)
+    }
+    .padding(10)
+    .background(AppTheme.backgroundElevated)
+    .clipShape(RoundedRectangle(cornerRadius: 10))
+  }
+
   // MARK: - Save / validate
 
   private func markUnsaved() {
@@ -649,10 +794,32 @@ struct SettingsView: View {
     settings.homeCity = homeCityText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.homeCountryCode = homeCountryCode
     settings.homeAddress = homeAddressText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let cleanHomeLatitude = homeLatitudeText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let cleanHomeLongitude = homeLongitudeText.trimmingCharacters(in: .whitespacesAndNewlines)
+    if cleanHomeLatitude.isEmpty && cleanHomeLongitude.isEmpty {
+      settings.homeLatitude = nil
+      settings.homeLongitude = nil
+    } else if
+      let latitude = Double(cleanHomeLatitude),
+      let longitude = Double(cleanHomeLongitude),
+      (-90...90).contains(latitude),
+      (-180...180).contains(longitude) {
+      settings.homeLatitude = latitude
+      settings.homeLongitude = longitude
+      ManualLocationStore.shared.save(
+        name: settings.homeAddress.isEmpty ? homeLocationLabel : settings.homeAddress,
+        latitude: latitude,
+        longitude: longitude
+      )
+    } else {
+      homeLocationError = "Enter valid home latitude and longitude, or leave both blank."
+      return
+    }
     settings.quickAmounts = parsed
 
     quickAmountsError = nil
     intervalError = nil
+    homeLocationError = nil
     saveState = .saved
     WidgetCenter.shared.reloadAllTimelines()
 
@@ -670,6 +837,9 @@ struct SettingsView: View {
     homeCityText = settings.homeCity
     homeCountryCode = settings.homeCountryCode
     homeAddressText = settings.homeAddress
+    homeLatitudeText = coordinateText(settings.homeLatitude)
+    homeLongitudeText = coordinateText(settings.homeLongitude)
+    ManualLocationStore.shared.absorbHistoryLocations(from: doseRecords)
     let amountStrings = settings.quickAmounts.prefix(4).map {
       $0.formatted(.number.precision(.fractionLength(1)))
     }
@@ -680,7 +850,117 @@ struct SettingsView: View {
     saveState = .idle
     quickAmountsError = nil
     intervalError = nil
+    homeLocationError = nil
     Task { @MainActor in hasLoaded = true }
+  }
+
+  private func applyHomeLocation(_ location: ManualDoseLocation) {
+    homeLocationSearchTask?.cancel()
+    homeLocationResults = []
+    suppressNextHomeLocationSearch = true
+    homeAddressText = location.name
+    homeLatitudeText = coordinateText(location.latitude)
+    homeLongitudeText = coordinateText(location.longitude)
+    homeLocationError = nil
+    markUnsaved()
+  }
+
+  private func lookUpHomeLocation() {
+    let query = homeAddressText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard query.count >= 3 else {
+      homeLocationError = "Enter a home address or location name to look up."
+      return
+    }
+
+    isLookingUpHomeLocation = true
+    homeLocationError = nil
+    Task { @MainActor in
+      let results = await ManualLocationStore.shared.searchResults(
+        matching: query,
+        context: homeSearchContext,
+        limit: 1
+      )
+      var location = results.first
+      if location == nil {
+        location = await ManualLocationStore.shared.lookUp(query)
+      }
+      guard let location else {
+        isLookingUpHomeLocation = false
+        homeLocationError = "Home address lookup could not find coordinates."
+        return
+      }
+
+      applyHomeLocation(location)
+      ManualLocationStore.shared.save(
+        name: location.name,
+        latitude: location.latitude,
+        longitude: location.longitude
+      )
+      isLookingUpHomeLocation = false
+    }
+  }
+
+  private func scheduleHomeLocationSearch() {
+    homeLocationSearchTask?.cancel()
+    let query = homeAddressText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard query.count >= 3 else {
+      homeLocationResults = []
+      return
+    }
+
+    let context = homeSearchContext
+    homeLocationSearchTask = Task {
+      try? await Task.sleep(for: .milliseconds(350))
+      guard !Task.isCancelled else { return }
+      let results = await ManualLocationStore.shared.searchResults(
+        matching: query,
+        context: context
+      )
+      guard !Task.isCancelled else { return }
+      await MainActor.run {
+        homeLocationResults = results.filter { result in
+          !homeLocationSuggestions.contains(where: { saved in
+            saved.name.caseInsensitiveCompare(result.name) == .orderedSame ||
+              (abs(saved.latitude - result.latitude) < 0.0001 && abs(saved.longitude - result.longitude) < 0.0001)
+          })
+        }
+      }
+    }
+  }
+
+  private var homeSearchContext: ManualLocationSearchContext {
+    ManualLocationSearchContext(
+      homeCity: homeCityText,
+      homeCountryCode: homeCountryCode,
+      homeAddress: homeAddressText,
+      homeCoordinate: parsedHomeCoordinate,
+      currentCoordinate: LocationManager.shared.currentLocation?.coordinate
+    )
+  }
+
+  private var parsedHomeCoordinate: CLLocationCoordinate2D? {
+    guard let latitude = Double(homeLatitudeText.trimmingCharacters(in: .whitespacesAndNewlines)),
+          let longitude = Double(homeLongitudeText.trimmingCharacters(in: .whitespacesAndNewlines)),
+          (-90...90).contains(latitude),
+          (-180...180).contains(longitude)
+    else { return nil }
+    return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+  }
+
+  private var homeLocationLabel: String {
+    [
+      homeAddressText,
+      homeCityText,
+      EmergencyNumberCatalogue.country(for: homeCountryCode)?.name ?? ""
+    ]
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+      .joined(separator: ", ")
+  }
+
+  private func coordinateText(_ value: Double?) -> String {
+    guard let value else { return "" }
+    return String(format: "%.6f", value)
   }
 
   private func loadPhoto() {

@@ -394,6 +394,7 @@ struct EditDoseSheet: View {
         homeCity: settings.homeCity,
         homeCountryCode: settings.homeCountryCode,
         homeAddress: settings.homeAddress,
+        homeCoordinate: homeCoordinate,
         currentCoordinate: LocationManager.shared.currentLocation?.coordinate
       )
       var location = await ManualLocationStore.shared.searchResults(
@@ -444,6 +445,7 @@ struct EditDoseSheet: View {
       homeCity: settings.homeCity,
       homeCountryCode: settings.homeCountryCode,
       homeAddress: settings.homeAddress,
+      homeCoordinate: homeCoordinate,
       currentCoordinate: LocationManager.shared.currentLocation?.coordinate
     )
 
@@ -524,5 +526,14 @@ struct EditDoseSheet: View {
 
   private func updateEditMapPosition(_ coordinate: CLLocationCoordinate2D) {
     editMapPosition = .camera(MapCamera(centerCoordinate: coordinate, distance: 1500))
+  }
+
+  private var homeCoordinate: CLLocationCoordinate2D? {
+    guard let latitude = settings.homeLatitude,
+          let longitude = settings.homeLongitude,
+          (-90...90).contains(latitude),
+          (-180...180).contains(longitude)
+    else { return nil }
+    return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
   }
 }

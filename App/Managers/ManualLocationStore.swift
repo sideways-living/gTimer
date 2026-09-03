@@ -19,6 +19,7 @@ struct ManualLocationSearchContext {
   var homeCity: String
   var homeCountryCode: String
   var homeAddress: String
+  var homeCoordinate: CLLocationCoordinate2D?
   var currentCoordinate: CLLocationCoordinate2D?
 }
 
@@ -41,6 +42,19 @@ final class ManualLocationStore {
       .filter { $0.name.localizedCaseInsensitiveContains(cleanQuery) }
       .prefix(limit)
       .map { $0 }
+  }
+
+  func absorbHistoryLocations(from records: [DoseRecord]) {
+    for record in records where record.hasLocation {
+      guard let latitude = record.latitude, let longitude = record.longitude else { continue }
+      let name = record.locationName?.trimmingCharacters(in: .whitespacesAndNewlines)
+      let fallbackName = String(format: "%.6f, %.6f", latitude, longitude)
+      save(
+        name: name?.isEmpty == false ? name ?? fallbackName : fallbackName,
+        latitude: latitude,
+        longitude: longitude
+      )
+    }
   }
 
   func searchResults(
@@ -101,6 +115,24 @@ final class ManualLocationStore {
       return location
     }
     return await lookUpWithGeocoder(cleanQuery)
+  }
+
+  func homeFallbackLocation(context: ManualLocationSearchContext) async -> ManualDoseLocation? {
+    let name = homeLocationName(context: context)
+
+    if let coordinate = context.homeCoordinate {
+      return ManualDoseLocation(
+        name: name,
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude
+      )
+    }
+
+    guard !name.isEmpty else { return nil }
+    if let location = await lookUpWithMapSearch(name, region: nil, limit: 1).first {
+      return location
+    }
+    return await lookUpWithGeocoder(name)
   }
 
   private func savedLocations() -> [ManualDoseLocation] {
@@ -203,6 +235,10 @@ final class ManualLocationStore {
       return CLLocationCoordinate2D(latitude: saved.latitude, longitude: saved.longitude)
     }
 
+    if let homeCoordinate = context.homeCoordinate {
+      return homeCoordinate
+    }
+
     let country = EmergencyNumberCatalogue.country(for: context.homeCountryCode)?.name ?? ""
     let address = [
       context.homeAddress,
@@ -217,6 +253,18 @@ final class ManualLocationStore {
     }
 
     return context.currentCoordinate
+  }
+
+  private func homeLocationName(context: ManualLocationSearchContext) -> String {
+    let country = EmergencyNumberCatalogue.country(for: context.homeCountryCode)?.name ?? ""
+    return [
+      context.homeAddress,
+      context.homeCity,
+      country
+    ]
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+      .joined(separator: ", ")
   }
 
   private func deduplicated(_ locations: [ManualDoseLocation]) -> [ManualDoseLocation] {

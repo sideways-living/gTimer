@@ -95,19 +95,34 @@ struct MissedDoseSheet: View {
             isLogging = true
             let a = Double(amountText) ?? settings.standardDose
             let loc = LocationManager.shared
+            #if os(macOS)
+            let shouldAttachLocation = attachLocation && settings.attachLocationToDoses
+            #else
+            let shouldAttachLocation = attachLocation && locationAvailable
+            #endif
 
-            if attachLocation && locationAvailable {
+            if shouldAttachLocation {
               Task { @MainActor in
                 let captured = await loc.captureForDose()
+                #if os(macOS)
+                let fallback = captured == nil ? await homeFallbackLocation() : nil
+                let doseLocation = captured ?? fallback?.location
+                let doseLocationName = captured == nil ? fallback?.name : loc.locationName
+                let doseLocationSource = captured == nil && fallback != nil ? "home-fallback" : "manual"
+                #else
+                let doseLocation = captured
+                let doseLocationName = loc.locationName
+                let doseLocationSource = "manual"
+                #endif
                 DoseStore.logDose(
                   amount: a,
                   unit: settings.unit,
                   time: selectedDate,
                   notes: notes,
                   missed: true,
-                  capturedLocation: captured,
-                  locationName: loc.locationName,
-                  locationSource: "manual",
+                  capturedLocation: doseLocation,
+                  locationName: doseLocationName,
+                  locationSource: doseLocationSource,
                   deviceName: settings.deviceName,
                   context: context,
                   settings: settings
@@ -183,4 +198,35 @@ struct MissedDoseSheet: View {
       .accessibilityLabel("Close")
     }
   }
+
+  #if os(macOS)
+  private func homeFallbackLocation() async -> (location: CLLocation, name: String)? {
+    let context = ManualLocationSearchContext(
+      homeCity: settings.homeCity,
+      homeCountryCode: settings.homeCountryCode,
+      homeAddress: settings.homeAddress,
+      homeCoordinate: homeCoordinate,
+      currentCoordinate: LocationManager.shared.currentLocation?.coordinate
+    )
+    guard let fallback = await ManualLocationStore.shared.homeFallbackLocation(context: context) else { return nil }
+    ManualLocationStore.shared.save(
+      name: fallback.name,
+      latitude: fallback.latitude,
+      longitude: fallback.longitude
+    )
+    return (
+      CLLocation(latitude: fallback.latitude, longitude: fallback.longitude),
+      fallback.name
+    )
+  }
+
+  private var homeCoordinate: CLLocationCoordinate2D? {
+    guard let latitude = settings.homeLatitude,
+          let longitude = settings.homeLongitude,
+          (-90...90).contains(latitude),
+          (-180...180).contains(longitude)
+    else { return nil }
+    return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+  }
+  #endif
 }

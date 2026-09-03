@@ -327,6 +327,12 @@ final class SettingsManager {
   var homeAddress: String {
     didSet { UserDefaults.standard.set(homeAddress, forKey: "homeAddress") }
   }
+  var homeLatitude: Double? {
+    didSet { UserDefaults.standard.set(homeLatitude, forKey: "homeLatitude") }
+  }
+  var homeLongitude: Double? {
+    didSet { UserDefaults.standard.set(homeLongitude, forKey: "homeLongitude") }
+  }
 
   init() {
     let ud = UserDefaults.standard
@@ -351,6 +357,8 @@ final class SettingsManager {
       ?? EmergencyNumberCatalogue.country(for: defaultCountryCode)?.code
       ?? "AU"
     homeAddress = ud.string(forKey: "homeAddress") ?? ""
+    homeLatitude = ud.object(forKey: "homeLatitude") as? Double
+    homeLongitude = ud.object(forKey: "homeLongitude") as? Double
 
     if let data = ud.data(forKey: "quickAmounts"),
        let decoded = try? JSONDecoder().decode([Double].self, from: data) {
