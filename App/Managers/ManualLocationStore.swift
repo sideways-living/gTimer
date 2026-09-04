@@ -111,10 +111,7 @@ final class ManualLocationStore {
     let cleanQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !cleanQuery.isEmpty else { return nil }
 
-    if let location = await lookUpWithMapSearch(cleanQuery, region: nil, limit: 1).first {
-      return location
-    }
-    return await lookUpWithGeocoder(cleanQuery)
+    return await lookUpWithMapSearch(cleanQuery, region: nil, limit: 1).first
   }
 
   func homeFallbackLocation(context: ManualLocationSearchContext) async -> ManualDoseLocation? {
@@ -129,10 +126,7 @@ final class ManualLocationStore {
     }
 
     guard !name.isEmpty else { return nil }
-    if let location = await lookUpWithMapSearch(name, region: nil, limit: 1).first {
-      return location
-    }
-    return await lookUpWithGeocoder(name)
+    return await lookUpWithMapSearch(name, region: nil, limit: 1).first
   }
 
   private func savedLocations() -> [ManualDoseLocation] {
@@ -162,7 +156,7 @@ final class ManualLocationStore {
     do {
       let response = try await MKLocalSearch(request: request).start()
       return response.mapItems.prefix(limit).map { item in
-        let coordinate = item.placemark.coordinate
+        let coordinate = item.location.coordinate
         let name = bestName(for: item, fallback: query)
         return ManualDoseLocation(name: name, latitude: coordinate.latitude, longitude: coordinate.longitude)
       }
@@ -171,42 +165,14 @@ final class ManualLocationStore {
     }
   }
 
-  private func lookUpWithGeocoder(_ query: String) async -> ManualDoseLocation? {
-    await withCheckedContinuation { continuation in
-      CLGeocoder().geocodeAddressString(query) { placemarks, _ in
-        guard let place = placemarks?.first,
-              let location = place.location
-        else {
-          continuation.resume(returning: nil)
-          return
-        }
-
-        let components = [
-          place.name,
-          place.locality,
-          place.administrativeArea,
-          place.country
-        ]
-          .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-          .filter { !$0.isEmpty }
-        let name = components.removingDuplicates().joined(separator: ", ")
-        continuation.resume(returning: ManualDoseLocation(
-          name: name.isEmpty ? query : name,
-          latitude: location.coordinate.latitude,
-          longitude: location.coordinate.longitude
-        ))
-      }
-    }
-  }
-
   private func bestName(for item: MKMapItem, fallback: String) -> String {
-    let place = item.placemark
+    let address = item.address
+    let addressRepresentations = item.addressRepresentations
     let components = [
       item.name,
-      place.title,
-      place.locality,
-      place.administrativeArea,
-      place.country
+      address?.shortAddress,
+      addressRepresentations?.cityWithContext(.full),
+      address?.fullAddress
     ]
       .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
       .filter { !$0.isEmpty }
@@ -248,7 +214,7 @@ final class ManualLocationStore {
       .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
       .filter { !$0.isEmpty }
       .joined(separator: ", ")
-    if !address.isEmpty, let home = await lookUpWithGeocoder(address) {
+    if !address.isEmpty, let home = await lookUpWithMapSearch(address, region: nil, limit: 1).first {
       return CLLocationCoordinate2D(latitude: home.latitude, longitude: home.longitude)
     }
 

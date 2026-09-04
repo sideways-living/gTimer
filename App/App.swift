@@ -62,6 +62,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.1",
+      build: 91,
+      category: .bugFixes,
+      message: "Updated location lookups to use MapKit geocoding APIs required by iOS 26 and macOS 26."
+    ),
+    AppUpdateEntry(
       version: "0.9.0",
       build: 90,
       category: .newFeatures,
@@ -94,11 +100,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.0"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.1"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "90"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "91"
   }
 
   var displayVersion: String {

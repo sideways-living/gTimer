@@ -1,5 +1,6 @@
 import CoreLocation
 import Foundation
+import MapKit
 
 @Observable
 final class LocationManager: NSObject, CLLocationManagerDelegate {
@@ -94,13 +95,30 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
   }
 
   private func reverseGeocode(_ location: CLLocation) {
-    CLGeocoder().reverseGeocodeLocation(location) { [weak self] placemarks, _ in
-      if let place = placemarks?.first {
-        self?.countryCode = place.isoCountryCode
-        self?.locationName = [place.locality, place.country]
-          .compactMap { $0 }
-          .joined(separator: ", ")
+    Task {
+      guard let request = MKReverseGeocodingRequest(location: location),
+            let item = try? await request.mapItems.first
+      else { return }
+
+      let address = item.addressRepresentations
+      let locationName = address?.cityWithContext(.full)
+        ?? address?.fullAddress(includingRegion: true, singleLine: true)
+      let countryCode = Self.countryCode(for: address?.regionName)
+
+      await MainActor.run { [weak self] in
+        self?.countryCode = countryCode
+        self?.locationName = locationName
       }
     }
+  }
+
+  private static func countryCode(for regionName: String?) -> String? {
+    guard let regionName = regionName?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !regionName.isEmpty
+    else { return nil }
+
+    return EmergencyNumberCatalogue.countries.first {
+      $0.name.caseInsensitiveCompare(regionName) == .orderedSame
+    }?.code
   }
 }
