@@ -292,7 +292,7 @@ private struct MediumWidgetView: View {
         Image(systemName: "drop.fill")
           .font(.system(size: 11, weight: .bold))
           .foregroundStyle(WT.accentBlue)
-        Text("G Timer")
+        Text("gTimer")
           .font(.system(size: 12, weight: .bold))
           .foregroundStyle(WT.textPrimary)
       }
@@ -395,7 +395,7 @@ private struct MediumWidgetView: View {
           Image(systemName: "drop")
             .font(.system(size: 20))
             .foregroundStyle(WT.textMuted)
-          Text("No Active\nG Timer")
+          Text("No Active\ngTimer")
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(WT.textMuted)
             .multilineTextAlignment(.center)
@@ -437,7 +437,7 @@ struct GTimerWidget: Widget {
     ) { entry in
       GTimerWidgetView(entry: entry)
     }
-    .configurationDisplayName("G Timer")
+    .configurationDisplayName("gTimer")
     .description("Track your GHB/GBL dosing interval.")
     .supportedFamilies([.systemSmall, .systemMedium])
   }

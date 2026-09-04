@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>G Timer</string>
+	<string>gTimer</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -36,11 +36,11 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.healthcare-fitness</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>G Timer can optionally record your location with each dose log for your own reference.</string>
+	<string>gTimer can optionally record your location with each dose log for your own reference.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>G Timer uses your photo library to set a profile picture.</string>
+	<string>gTimer uses your photo library to set a profile picture.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>G Timer uses the camera to take a profile picture when you choose that option.</string>
+	<string>gTimer uses the camera to take a profile picture when you choose that option.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

@@ -39,7 +39,7 @@ struct ContentView: View {
         HStack(spacing: 5) {
           Image(systemName: "drop.fill")
             .foregroundStyle(Color(red: 0.231, green: 0.510, blue: 0.965))
-          Text("G Timer")
+          Text("gTimer")
             .font(.headline)
             .foregroundStyle(.white)
         }

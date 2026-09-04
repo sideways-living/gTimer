@@ -22,7 +22,7 @@ The iOS SwiftUI app is the canonical implementation. Future Android and Windows 
 
 ## macOS Finding
 
-There is now an initial macOS Debug build of G Timer. Treat it as a development milestone, not a shippable Mac release.
+There is now an initial macOS Debug build of gTimer. Treat it as a development milestone, not a shippable Mac release.
 
 Verified command:
 
@@ -189,7 +189,7 @@ Windows-specific substitutions:
 
 ## Retained Future Platform Assets
 
-Non-Apple icon assets from the September 2026 G Timer icon pack are checked in under `FuturePlatformAssets`.
+Non-Apple icon assets from the September 2026 gTimer icon pack are checked in under `FuturePlatformAssets`.
 
 - `FuturePlatformAssets/Android` preserves the supplied Android adaptive launcher, density-specific launcher PNGs, monochrome icon, and Play Store 512 image.
 - `FuturePlatformAssets/Windows` keeps a Windows `.ico` plus PNG source sizes derived from the supplied icon pack.

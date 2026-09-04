@@ -84,7 +84,7 @@ private enum AppTab: Int, CaseIterable, Identifiable {
 
   var title: String {
     switch self {
-    case .timer: "Timer"
+    case .timer: "gTimer"
     case .history: "History"
     case .health: "Health"
     case .settings: "Settings"

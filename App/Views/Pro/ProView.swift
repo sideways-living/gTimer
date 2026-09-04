@@ -50,7 +50,7 @@ struct ProView: View {
             .shadow(color: AppTheme.proAmber.opacity(0.4), radius: 20)
           Image(systemName: "star.fill").font(.system(size: 38)).foregroundStyle(.white)
         }
-        Text("G Timer Pro")
+        Text("gTimer Pro")
           .font(.system(size: 28, weight: .bold))
           .foregroundStyle(
             LinearGradient(colors: [AppTheme.proAmber, AppTheme.proOrange],
@@ -97,7 +97,7 @@ struct ProView: View {
           Circle().fill(AppTheme.proAmber.opacity(0.13)).frame(width: 84, height: 84)
           Image(systemName: "star.fill").font(.system(size: 38)).foregroundStyle(AppTheme.proAmber)
         }
-        Text("G Timer Pro")
+        Text("gTimer Pro")
           .font(.system(size: 28, weight: .bold)).foregroundStyle(AppTheme.textPrimary)
         Text("Beta Access")
           .font(.system(size: 16, weight: .medium)).foregroundStyle(AppTheme.proAmber)

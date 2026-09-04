@@ -42,7 +42,7 @@ struct PaywallSheet: View {
             }
             .padding(.top, 28)
 
-            Text("Unlock G Timer Pro")
+            Text("Unlock gTimer Pro")
               .font(.system(size: 22, weight: .bold))
               .foregroundStyle(AppTheme.textPrimary)
 

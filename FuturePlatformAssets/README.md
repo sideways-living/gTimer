@@ -1,6 +1,6 @@
 # Future Platform Icon Assets
 
-These assets are retained from `/Users/greenyer/Downloads/gTimer.zip` for future non-Apple versions of G Timer.
+These assets are retained from `/Users/greenyer/Downloads/gTimer.zip` for future non-Apple versions of gTimer.
 
 ## Android
 

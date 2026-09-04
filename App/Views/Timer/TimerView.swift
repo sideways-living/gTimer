@@ -59,7 +59,7 @@ struct TimerView: View {
   }
 
   private var statusLabel: String {
-    guard isActive else { return "No Active G Timer" }
+    guard isActive else { return "No Active gTimer" }
     if isSafe { return "Safe to redose" }
     let r = Int(intervalSeconds - elapsed)
     let h = r / 3600; let m = (r % 3600) / 60
@@ -117,7 +117,7 @@ struct TimerView: View {
           Image(systemName: "drop.fill")
             .font(.system(size: 17, weight: .bold))
             .foregroundStyle(AppTheme.accentBlue)
-          Text("G Timer")
+          Text("gTimer")
             .font(.system(size: 20, weight: .bold))
             .foregroundStyle(AppTheme.textPrimary)
         }
@@ -150,7 +150,7 @@ struct TimerView: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
-    .navigationTitle("Timer")
+    .navigationTitle("gTimer")
   }
   #endif
 

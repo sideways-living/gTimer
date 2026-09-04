@@ -3,7 +3,7 @@
     "Debug": "debug",
     "Release": "release"
   },
-  "name": "G Timer",
+  "name": "gTimer",
   "options": {
     "groupSortPosition": "bottom",
     "transitivelyLinkDependencies": false
@@ -12,11 +12,11 @@
     "CODE_SIGN_IDENTITY": "-"
   },
   "targets": {
-    "G Timer": {
+    "gTimer": {
       "dependencies": [
         {
           "embed": true,
-          "target": "G Timer Widget Extension",
+          "target": "gTimer Widget Extension",
           "destinationFilters": ["iOS"]
         }
       ],
@@ -37,13 +37,13 @@
       "info": {
         "path": "App/Info.plist",
         "properties": {
-          "CFBundleDisplayName": "G Timer",
+          "CFBundleDisplayName": "gTimer",
           "CFBundleShortVersionString": "1.0",
           "CFBundleVersion": "1",
           "ITSAppUsesNonExemptEncryption": false,
-          "NSLocationWhenInUseUsageDescription": "G Timer can optionally record your location with each dose log for your own reference.",
-          "NSPhotoLibraryUsageDescription": "G Timer uses your photo library to set a profile picture.",
-          "NSCameraUsageDescription": "G Timer uses the camera to take a profile picture when you choose that option.",
+          "NSLocationWhenInUseUsageDescription": "gTimer can optionally record your location with each dose log for your own reference.",
+          "NSPhotoLibraryUsageDescription": "gTimer uses your photo library to set a profile picture.",
+          "NSCameraUsageDescription": "gTimer uses the camera to take a profile picture when you choose that option.",
           "UILaunchScreen": {},
           "LSApplicationCategoryType": "public.app-category.healthcare-fitness",
           "UISupportedInterfaceOrientations": [
@@ -76,12 +76,12 @@
       "supportedDestinations": ["iOS", "macOS"],
       "type": "application"
     },
-    "G Timer Watch": {
+    "gTimer Watch": {
       "deploymentTarget": "10.0",
       "info": {
         "path": "Watch/Info.plist",
         "properties": {
-          "CFBundleDisplayName": "G Timer",
+          "CFBundleDisplayName": "gTimer",
           "CFBundleShortVersionString": "1.0",
           "CFBundleVersion": "1",
           "ITSAppUsesNonExemptEncryption": false,
@@ -106,7 +106,7 @@
       ],
       "type": "application"
     },
-    "G Timer Widget Extension": {
+    "gTimer Widget Extension": {
       "deploymentTarget": {
         "iOS": "17.0",
         "macOS": "14.0"
@@ -121,7 +121,7 @@
       "info": {
         "path": "Widget Extension/Info.plist",
         "properties": {
-          "CFBundleDisplayName": "G Timer Widget Extension",
+          "CFBundleDisplayName": "gTimer Widget Extension",
           "CFBundleShortVersionString": "1.0",
           "CFBundleVersion": "1",
           "ITSAppUsesNonExemptEncryption": false,

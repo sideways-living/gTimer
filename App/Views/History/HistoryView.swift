@@ -246,7 +246,7 @@ struct HistoryView: View {
         Text("No doses recorded yet")
           .font(.system(size: 19, weight: .semibold))
           .foregroundStyle(AppTheme.textSecondary)
-        Text("Tap \"I took…\" on the Timer tab to log your first dose.")
+        Text("Tap \"I took…\" on the gTimer tab to log your first dose.")
           .font(.system(size: 14))
           .foregroundStyle(AppTheme.textMuted)
           .multilineTextAlignment(.center)
