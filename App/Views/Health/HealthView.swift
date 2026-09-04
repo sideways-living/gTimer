@@ -161,122 +161,107 @@ struct HealthView: View {
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-          disclaimer
+        VStack(alignment: .leading, spacing: 18) {
+          header
 
-          section(title: "Harm Reduction Basics", icon: "shield.fill", color: AppTheme.statusGreen) {
-            bullets([
-              "Always measure your dose accurately with a syringe or pipette — never guess.",
-              "The difference between an expected effect and an overdose can be small, especially with unknown strength.",
-              "Never mix GHB or GBL with alcohol, benzodiazepines, opioids, or other depressants.",
-              "Do not use alone. Have a trusted person with you who knows what you've taken.",
-              "Keep a record of every dose and time using this app.",
-              "GBL is a prodrug — it converts to GHB in the body and is more potent by volume. Use lower doses.",
-              "Tolerance develops quickly. After a break, treat yourself as a new user.",
-              "Do not drive or operate machinery after dosing."
-            ])
-          }
+          emergencyCallPanel
 
-          section(title: "Safe Intervals", icon: "timer", color: AppTheme.accentBlue) {
-            VStack(alignment: .leading, spacing: 10) {
-              Text("Redosing too soon dramatically increases the risk of overdose. The recommended minimum interval between doses is **90 minutes** — however individual factors (body weight, tolerance, purity) mean longer is safer.")
-                .font(.system(size: 14))
-                .foregroundStyle(AppTheme.textSecondary)
-              infoRow("Never", rest: "redose if you can't remember your last dose clearly.")
-              infoRow("Never", rest: "combine with alcohol or other CNS depressants.")
-              infoRow("If in doubt,", rest: "don't take more.")
-            }
-          }
-
-          section(title: "Call Emergency Services If…", icon: "phone.fill", color: AppTheme.statusRed) {
-            VStack(alignment: .leading, spacing: 8) {
-              urgentTrigger("Person cannot be woken or is unconscious")
-              urgentTrigger("Breathing is slow, shallow, or irregular")
-              urgentTrigger("Lips or fingertips are turning blue (cyanosis)")
-              urgentTrigger("GHB/GBL was mixed with alcohol, benzodiazepines, or opioids")
-              urgentTrigger("Vomiting while not fully conscious")
-              urgentTrigger("Seizure or muscle twitching")
-              urgentTrigger("You are unsure — always call if in doubt")
-
-              Button {
-                if let phone = emergencyNumbers.first {
-                  openPhone(phone)
-                }
-              } label: {
-                Text(emergencyLabel)
-                  .font(.system(size: 16, weight: .bold))
-                  .foregroundStyle(.white)
-                  .frame(maxWidth: .infinity)
-                  .padding(.vertical, 13)
-                  .background(AppTheme.statusRed)
-                  .clipShape(RoundedRectangle(cornerRadius: 10))
-              }
-              .accessibilityLabel("Call emergency services")
-              .padding(.top, 6)
-            }
-          }
-
-          section(title: "Overdose Signs", icon: "exclamationmark.triangle.fill", color: AppTheme.statusAmber) {
-            bullets([
-              "Sudden extreme drowsiness or inability to stay awake",
-              "Vomiting, particularly while unconscious",
-              "Slow, shallow, or irregular breathing",
-              "Unresponsive to voice or painful stimuli",
-              "Muscle twitching or seizure-like movements",
-              "Blue-tinged lips or fingertips (cyanosis)"
-            ])
-          }
-
-          section(title: "Emergency Response Steps", icon: "cross.fill", color: AppTheme.statusRed) {
-            VStack(alignment: .leading, spacing: 10) {
-              emergencyStep("1", "Call emergency services immediately: \(emergencyLabel).")
-              emergencyStep("2", "Place the person in the recovery position (on their side).")
-              emergencyStep("3", "Stay with them and monitor breathing continuously.")
-              emergencyStep("4", "Tell paramedics exactly what was taken and when.")
-              emergencyStep("5", "Do NOT leave them to 'sleep it off' unsupervised.")
-              Text("There is no antidote to GHB/GBL overdose. Supportive medical care is the only treatment.")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(AppTheme.statusRed)
-                .padding(12)
-                .background(AppTheme.statusRed.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .padding(.top, 4)
-            }
-          }
-
-          section(title: "Dependency & Withdrawal", icon: "heart.slash.fill", color: AppTheme.proOrange) {
-            VStack(alignment: .leading, spacing: 8) {
-              Text("GHB/GBL can cause physical dependence with regular use. Withdrawal can be **life-threatening** and must be medically supervised.")
-                .font(.system(size: 14))
-                .foregroundStyle(AppTheme.textSecondary)
+          LazyVGrid(columns: sectionColumns, alignment: .leading, spacing: 16) {
+            section(title: "Harm Reduction Basics", icon: "shield.fill", color: AppTheme.statusGreen) {
               bullets([
-                "Symptoms include severe anxiety, tremors, insomnia, and seizures.",
-                "Do not attempt to quit abruptly without medical support.",
-                "Contact an addiction medicine specialist or call a drug helpline."
+                "Always measure your dose accurately with a syringe or pipette — never guess.",
+                "The difference between an expected effect and an overdose can be small, especially with unknown strength.",
+                "Never mix GHB or GBL with alcohol, benzodiazepines, opioids, or other depressants.",
+                "Do not use alone. Have a trusted person with you who knows what you've taken.",
+                "Keep a record of every dose and time using this app.",
+                "GBL is a prodrug — it converts to GHB in the body and is more potent by volume. Use lower doses.",
+                "Tolerance develops quickly. After a break, treat yourself as a new user.",
+                "Do not drive or operate machinery after dosing."
               ])
             }
-          }
 
-          section(title: "Support Resources — \(regionInfo.countryName)", icon: "phone.fill", color: AppTheme.accentBlue) {
-            VStack(alignment: .leading, spacing: 8) {
-              ForEach(regionInfo.supportResources) { resource in
-                resourceRow(resource)
+            section(title: "Safe Intervals", icon: "timer", color: AppTheme.accentBlue) {
+              VStack(alignment: .leading, spacing: 10) {
+                Text("Redosing too soon dramatically increases the risk of overdose. The recommended minimum interval between doses is **90 minutes** — however individual factors (body weight, tolerance, purity) mean longer is safer.")
+                  .font(.system(size: 14))
+                  .foregroundStyle(AppTheme.textSecondary)
+                infoRow("Never", rest: "redose if you can't remember your last dose clearly.")
+                infoRow("Never", rest: "combine with alcohol or other CNS depressants.")
+                infoRow("If in doubt,", rest: "don't take more.")
+              }
+            }
+
+            section(title: "Call Emergency Services If", icon: "phone.fill", color: AppTheme.statusRed) {
+              VStack(alignment: .leading, spacing: 8) {
+                urgentTrigger("Person cannot be woken or is unconscious")
+                urgentTrigger("Breathing is slow, shallow, or irregular")
+                urgentTrigger("Lips or fingertips are turning blue (cyanosis)")
+                urgentTrigger("GHB/GBL was mixed with alcohol, benzodiazepines, or opioids")
+                urgentTrigger("Vomiting while not fully conscious")
+                urgentTrigger("Seizure or muscle twitching")
+                urgentTrigger("You are unsure — always call if in doubt")
+              }
+            }
+
+            section(title: "Overdose Signs", icon: "exclamationmark.triangle.fill", color: AppTheme.statusAmber) {
+              bullets([
+                "Sudden extreme drowsiness or inability to stay awake",
+                "Vomiting, particularly while unconscious",
+                "Slow, shallow, or irregular breathing",
+                "Unresponsive to voice or painful stimuli",
+                "Muscle twitching or seizure-like movements",
+                "Blue-tinged lips or fingertips (cyanosis)"
+              ])
+            }
+
+            section(title: "Emergency Response Steps", icon: "cross.fill", color: AppTheme.statusRed) {
+              VStack(alignment: .leading, spacing: 10) {
+                emergencyStep("1", "Call emergency services immediately: \(emergencyLabel).")
+                emergencyStep("2", "Place the person in the recovery position (on their side).")
+                emergencyStep("3", "Stay with them and monitor breathing continuously.")
+                emergencyStep("4", "Tell paramedics exactly what was taken and when.")
+                emergencyStep("5", "Do NOT leave them to 'sleep it off' unsupervised.")
+                warningNote("There is no antidote to GHB/GBL overdose. Supportive medical care is the only treatment.")
+              }
+            }
+
+            section(title: "Dependency & Withdrawal", icon: "heart.slash.fill", color: AppTheme.proOrange) {
+              VStack(alignment: .leading, spacing: 8) {
+                Text("GHB/GBL can cause physical dependence with regular use. Withdrawal can be **life-threatening** and must be medically supervised.")
+                  .font(.system(size: 14))
+                  .foregroundStyle(AppTheme.textSecondary)
+                bullets([
+                  "Symptoms include severe anxiety, tremors, insomnia, and seizures.",
+                  "Do not attempt to quit abruptly without medical support.",
+                  "Contact an addiction medicine specialist or call a drug helpline."
+                ])
               }
             }
           }
 
-          section(title: "Sources", icon: "link", color: AppTheme.textMuted) {
-            VStack(alignment: .leading, spacing: 8) {
-              ForEach(regionInfo.sourceResources) { resource in
-                resourceRow(resource)
-              }
-            }
-          }
+          resourceSection(
+            title: "Support Resources",
+            subtitle: regionInfo.countryName,
+            icon: "phone.fill",
+            color: AppTheme.accentBlue,
+            resources: regionInfo.supportResources
+          )
 
-          disclaimer
+          resourceSection(
+            title: "Sources",
+            subtitle: "Health information references",
+            icon: "link",
+            color: AppTheme.textMuted,
+            resources: regionInfo.sourceResources
+          )
+
+          footerDisclaimer
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
+        .frame(maxWidth: 980, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, contentHorizontalPadding)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
       }
       .tabBarScrollClearance()
       .background(AppTheme.backgroundPrimary.ignoresSafeArea())
@@ -288,7 +273,99 @@ struct HealthView: View {
 
   // MARK: - Components
 
-  private var disclaimer: some View {
+  private var sectionColumns: [GridItem] {
+    #if os(macOS)
+    [GridItem(.adaptive(minimum: 320, maximum: 480), spacing: 16, alignment: .top)]
+    #else
+    [GridItem(.flexible(), spacing: 16, alignment: .top)]
+    #endif
+  }
+
+  private var contentHorizontalPadding: CGFloat {
+    #if os(macOS)
+    24
+    #else
+    16
+    #endif
+  }
+
+  private var header: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .top, spacing: 12) {
+        Image(systemName: "heart.text.square.fill")
+          .font(.system(size: 24, weight: .semibold))
+          .foregroundStyle(AppTheme.accentBlue)
+          .frame(width: 42, height: 42)
+          .background(AppTheme.accentBlue.opacity(0.12))
+          .clipShape(RoundedRectangle(cornerRadius: 10))
+
+        VStack(alignment: .leading, spacing: 5) {
+          Text("Health & Safety")
+            .font(.system(size: 26, weight: .bold))
+            .foregroundStyle(AppTheme.textPrimary)
+          Text("Localised harm-reduction guidance and support contacts for \(regionInfo.countryName).")
+            .font(.system(size: 14))
+            .foregroundStyle(AppTheme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+
+      disclaimerText
+    }
+  }
+
+  private var emergencyCallPanel: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack(alignment: .center, spacing: 12) {
+        Image(systemName: "phone.fill")
+          .font(.system(size: 18, weight: .semibold))
+          .foregroundStyle(.white)
+          .frame(width: 38, height: 38)
+          .background(AppTheme.statusRed)
+          .clipShape(Circle())
+
+        VStack(alignment: .leading, spacing: 3) {
+          Text("Emergency services")
+            .font(.system(size: 17, weight: .bold))
+            .foregroundStyle(AppTheme.textPrimary)
+          Text(regionInfo.countryName)
+            .font(.system(size: 13))
+            .foregroundStyle(AppTheme.textMuted)
+        }
+
+        Spacer(minLength: 12)
+
+        Button {
+          if let phone = emergencyNumbers.first {
+            openPhone(phone)
+          }
+        } label: {
+          Label(emergencyLabel, systemImage: "phone.fill")
+            .font(.system(size: 15, weight: .bold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .frame(minHeight: 40)
+            .background(AppTheme.statusRed)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Call emergency services")
+      }
+
+      Text("Call immediately if someone cannot be woken, is breathing abnormally, has blue lips or fingertips, is vomiting while not fully conscious, or may have mixed depressants.")
+        .font(.system(size: 14))
+        .foregroundStyle(AppTheme.textSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(16)
+    .background(AppTheme.statusRed.opacity(0.11))
+    .clipShape(RoundedRectangle(cornerRadius: 12))
+    .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.statusRed.opacity(0.35), lineWidth: 0.75))
+  }
+
+  private var disclaimerText: some View {
     HStack(alignment: .top, spacing: 10) {
       Image(systemName: "exclamationmark.shield.fill")
         .foregroundStyle(AppTheme.statusAmber)
@@ -303,26 +380,49 @@ struct HealthView: View {
     .clipShape(RoundedRectangle(cornerRadius: 10))
   }
 
+  private var footerDisclaimer: some View {
+    Text("Information is localised from the selected home country or current region where available.")
+      .font(.system(size: 12))
+      .foregroundStyle(AppTheme.textMuted)
+      .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
   private func section<Content: View>(title: String, icon: String, color: Color, @ViewBuilder content: () -> Content) -> some View {
     VStack(alignment: .leading, spacing: 12) {
-      HStack(spacing: 8) {
-        Image(systemName: icon).foregroundStyle(color).font(.system(size: 15))
-        Text(title).font(.system(size: 16, weight: .bold)).foregroundStyle(AppTheme.textPrimary)
+      HStack(alignment: .center, spacing: 8) {
+        Image(systemName: icon)
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundStyle(color)
+          .frame(width: 22, height: 22)
+          .background(color.opacity(0.12))
+          .clipShape(RoundedRectangle(cornerRadius: 6))
+        Text(title)
+          .font(.system(size: 16, weight: .bold))
+          .foregroundStyle(AppTheme.textPrimary)
+          .fixedSize(horizontal: false, vertical: true)
       }
       content()
+      Spacer(minLength: 0)
     }
     .padding(16)
+    .frame(maxWidth: .infinity, alignment: .topLeading)
     .background(AppTheme.backgroundCard)
-    .clipShape(RoundedRectangle(cornerRadius: 14))
-    .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
+    .clipShape(RoundedRectangle(cornerRadius: 12))
+    .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 0.5))
   }
 
   private func bullets(_ items: [String]) -> some View {
-    VStack(alignment: .leading, spacing: 7) {
+    VStack(alignment: .leading, spacing: 8) {
       ForEach(items, id: \.self) { item in
         HStack(alignment: .top, spacing: 8) {
-          Text("•").foregroundStyle(AppTheme.textMuted).font(.system(size: 14))
-          Text(item).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary)
+          Circle()
+            .fill(AppTheme.textMuted)
+            .frame(width: 4, height: 4)
+            .padding(.top, 7)
+          Text(item)
+            .font(.system(size: 14))
+            .foregroundStyle(AppTheme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
       }
     }
@@ -330,8 +430,13 @@ struct HealthView: View {
 
   private func infoRow(_ bold: String, rest: String) -> some View {
     HStack(alignment: .top, spacing: 4) {
-      Text(bold).font(.system(size: 14, weight: .semibold)).foregroundStyle(AppTheme.textPrimary)
-      Text(rest).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary)
+      Text(bold)
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundStyle(AppTheme.textPrimary)
+      Text(rest)
+        .font(.system(size: 14))
+        .foregroundStyle(AppTheme.textSecondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
   }
 
@@ -339,31 +444,110 @@ struct HealthView: View {
     HStack(alignment: .top, spacing: 8) {
       Image(systemName: "exclamationmark.circle.fill")
         .foregroundStyle(AppTheme.statusRed).font(.system(size: 13)).padding(.top, 1)
-      Text(text).font(.system(size: 14, weight: .medium)).foregroundStyle(AppTheme.textPrimary)
+      Text(text)
+        .font(.system(size: 14, weight: .medium))
+        .foregroundStyle(AppTheme.textPrimary)
+        .fixedSize(horizontal: false, vertical: true)
     }
   }
 
   private func emergencyStep(_ num: String, _ text: String) -> some View {
     HStack(alignment: .top, spacing: 10) {
       Text(num)
-        .font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
-        .frame(width: 22, height: 22).background(AppTheme.statusRed).clipShape(Circle())
-      Text(text).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary)
+        .font(.system(size: 13, weight: .bold))
+        .foregroundStyle(.white)
+        .frame(width: 22, height: 22)
+        .background(AppTheme.statusRed)
+        .clipShape(Circle())
+      Text(text)
+        .font(.system(size: 14))
+        .foregroundStyle(AppTheme.textSecondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
   }
 
-  private func resourceRow(_ resource: HealthSupportResource) -> some View {
-    HStack {
-      VStack(alignment: .leading, spacing: 2) {
-        Text(resource.name).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary)
-        Text(resource.detail).font(.system(size: 11)).foregroundStyle(AppTheme.textMuted)
+  private func warningNote(_ text: String) -> some View {
+    Text(text)
+      .font(.system(size: 13, weight: .medium))
+      .foregroundStyle(AppTheme.statusRed)
+      .fixedSize(horizontal: false, vertical: true)
+      .padding(12)
+      .background(AppTheme.statusRed.opacity(0.1))
+      .clipShape(RoundedRectangle(cornerRadius: 10))
+      .padding(.top, 4)
+  }
+
+  private func resourceSection(title: String, subtitle: String, icon: String, color: Color, resources: [HealthSupportResource]) -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        Image(systemName: icon)
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundStyle(color)
+        Text(title)
+          .font(.system(size: 17, weight: .bold))
+          .foregroundStyle(AppTheme.textPrimary)
+        Text(subtitle)
+          .font(.system(size: 13, weight: .medium))
+          .foregroundStyle(AppTheme.textMuted)
       }
-      Spacer()
+
+      VStack(alignment: .leading, spacing: 8) {
+        ForEach(resources) { resource in
+          resourceRow(resource)
+        }
+      }
+    }
+    .padding(16)
+    .background(AppTheme.backgroundCard)
+    .clipShape(RoundedRectangle(cornerRadius: 12))
+    .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 0.5))
+  }
+
+  private func resourceRow(_ resource: HealthSupportResource) -> some View {
+    ViewThatFits(in: .horizontal) {
+      HStack(alignment: .center, spacing: 12) {
+        resourceText(resource)
+        Spacer(minLength: 12)
+        resourceActions(resource)
+      }
+
+      VStack(alignment: .leading, spacing: 10) {
+        resourceText(resource)
+        resourceActions(resource)
+      }
+    }
+    .padding(12)
+    .background(AppTheme.backgroundElevated.opacity(0.55))
+    .clipShape(RoundedRectangle(cornerRadius: 10))
+  }
+
+  private func resourceText(_ resource: HealthSupportResource) -> some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text(resource.name)
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundStyle(AppTheme.textPrimary)
+        .fixedSize(horizontal: false, vertical: true)
+      Text(resource.detail)
+        .font(.system(size: 12))
+        .foregroundStyle(AppTheme.textMuted)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private func resourceActions(_ resource: HealthSupportResource) -> some View {
+    HStack(spacing: 8) {
       if let phone = resource.phone {
         Button {
           openPhone(phone)
         } label: {
-          Text(phone).font(.system(size: 14, weight: .semibold))
+          Label(phone, systemImage: "phone.fill")
+            .font(.system(size: 13, weight: .semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .padding(.horizontal, 10)
+            .frame(height: 30)
+            .background(AppTheme.accentBlue.opacity(0.13))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
         .foregroundStyle(AppTheme.accentBlue)
@@ -372,9 +556,12 @@ struct HealthView: View {
         Button {
           openURL(url)
         } label: {
-          Image(systemName: "safari")
-            .font(.system(size: 14, weight: .semibold))
-            .frame(width: 28, height: 28)
+          Label("Open", systemImage: "safari")
+            .font(.system(size: 13, weight: .semibold))
+            .labelStyle(.iconOnly)
+            .frame(width: 30, height: 30)
+            .background(AppTheme.accentBlue.opacity(0.13))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
         .foregroundStyle(AppTheme.accentBlue)
