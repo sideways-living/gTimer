@@ -137,6 +137,8 @@ private struct HealthRegionInfo {
 }
 
 struct HealthView: View {
+  private let recoveryPositionSourceURL = URL(string: "https://commons.wikimedia.org/wiki/File:Recovery_position_02.svg")
+
   @Environment(\.openURL) private var openURL
   @Environment(SettingsManager.self) private var settings
   @State private var locationManager = LocationManager.shared
@@ -218,6 +220,7 @@ struct HealthView: View {
               VStack(alignment: .leading, spacing: 10) {
                 emergencyStep("1", "Call emergency services immediately: \(emergencyLabel).")
                 emergencyStep("2", "Place the person in the recovery position (on their side).")
+                recoveryPositionFigure
                 emergencyStep("3", "Stay with them and monitor breathing continuously.")
                 emergencyStep("4", "Tell paramedics exactly what was taken and when.")
                 emergencyStep("5", "Do NOT leave them to 'sleep it off' unsupervised.")
@@ -464,6 +467,40 @@ struct HealthView: View {
         .foregroundStyle(AppTheme.textSecondary)
         .fixedSize(horizontal: false, vertical: true)
     }
+  }
+
+  private var recoveryPositionFigure: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Image("RecoveryPosition")
+        .resizable()
+        .scaledToFit()
+        .frame(maxWidth: .infinity)
+        .padding(12)
+        .background(Color.white.opacity(0.94))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .accessibilityLabel("Illustration of a person lying on their side in the recovery position")
+
+      HStack(spacing: 6) {
+        Text("Recovery position illustration")
+          .font(.system(size: 11))
+          .foregroundStyle(AppTheme.textMuted)
+
+        if let recoveryPositionSourceURL {
+          Button {
+            openURL(recoveryPositionSourceURL)
+          } label: {
+            Text("Wikimedia Commons CC0")
+              .font(.system(size: 11, weight: .semibold))
+          }
+          .buttonStyle(.plain)
+          .foregroundStyle(AppTheme.accentBlue)
+          .accessibilityLabel("Open recovery position image source")
+        }
+      }
+      .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(.leading, 32)
+    .padding(.vertical, 4)
   }
 
   private func warningNote(_ text: String) -> some View {
