@@ -5,6 +5,30 @@ import WidgetKit
 import UIKit
 #endif
 
+enum AppAppearanceMode: String, CaseIterable, Identifiable {
+  case auto
+  case day
+  case night
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .auto: "Auto"
+    case .day: "Day"
+    case .night: "Night"
+    }
+  }
+
+  var preferredColorScheme: ColorScheme? {
+    switch self {
+    case .auto: nil
+    case .day: .light
+    case .night: .dark
+    }
+  }
+}
+
 struct EmergencyCountry: Identifiable, Hashable {
   let code: String
   let name: String
@@ -333,6 +357,21 @@ final class SettingsManager {
   var homeLongitude: Double? {
     didSet { UserDefaults.standard.set(homeLongitude, forKey: "homeLongitude") }
   }
+  var appearanceMode: AppAppearanceMode {
+    didSet { UserDefaults.standard.set(appearanceMode.rawValue, forKey: "appearanceMode") }
+  }
+  var customAccentHex: String {
+    didSet { UserDefaults.standard.set(customAccentHex, forKey: "customAccentHex") }
+  }
+  var customPrimaryButtonHex: String {
+    didSet { UserDefaults.standard.set(customPrimaryButtonHex, forKey: "customPrimaryButtonHex") }
+  }
+  var customQuickButtonHex: String {
+    didSet { UserDefaults.standard.set(customQuickButtonHex, forKey: "customQuickButtonHex") }
+  }
+  var customBackgroundHex: String {
+    didSet { UserDefaults.standard.set(customBackgroundHex, forKey: "customBackgroundHex") }
+  }
 
   init() {
     let ud = UserDefaults.standard
@@ -359,6 +398,11 @@ final class SettingsManager {
     homeAddress = ud.string(forKey: "homeAddress") ?? ""
     homeLatitude = ud.object(forKey: "homeLatitude") as? Double
     homeLongitude = ud.object(forKey: "homeLongitude") as? Double
+    appearanceMode = AppAppearanceMode(rawValue: ud.string(forKey: "appearanceMode") ?? "") ?? .auto
+    customAccentHex = ud.string(forKey: "customAccentHex") ?? AppTheme.defaultAccentHex
+    customPrimaryButtonHex = ud.string(forKey: "customPrimaryButtonHex") ?? AppTheme.defaultPrimaryButtonHex
+    customQuickButtonHex = ud.string(forKey: "customQuickButtonHex") ?? AppTheme.defaultQuickButtonHex
+    customBackgroundHex = ud.string(forKey: "customBackgroundHex") ?? AppTheme.defaultBackgroundHex
 
     if let data = ud.data(forKey: "quickAmounts"),
        let decoded = try? JSONDecoder().decode([Double].self, from: data) {

@@ -294,7 +294,7 @@ struct TimerView: View {
         RoundedRectangle(cornerRadius: 24)
           .fill(
             LinearGradient(
-              colors: [AppTheme.accentBlue, AppTheme.accentBlueD],
+              colors: [AppTheme.primaryButton, AppTheme.primaryButtonD],
               startPoint: .topLeading,
               endPoint: .bottomTrailing
             )
@@ -371,13 +371,13 @@ struct TimerView: View {
         .background(
           RoundedRectangle(cornerRadius: 20)
             .fill(isDefault
-              ? AppTheme.accentBlue.opacity(0.25)
-              : AppTheme.backgroundElevated)
+              ? AppTheme.primaryButton.opacity(0.25)
+              : AppTheme.quickButton)
         )
         .overlay(
           RoundedRectangle(cornerRadius: 20)
             .strokeBorder(
-              isDefault ? AppTheme.accentBlue : AppTheme.border,
+              isDefault ? AppTheme.primaryButton : AppTheme.border,
               lineWidth: isDefault ? 1.5 : 0.5
             )
         )

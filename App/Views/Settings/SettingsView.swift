@@ -63,6 +63,7 @@ struct SettingsView: View {
             quickAmountsSection
               .id(SettingsScrollTarget.quickAmounts)
             displaySection
+            colourSection
             notificationsSection
             deviceSection
             locationSection
@@ -301,6 +302,18 @@ struct SettingsView: View {
   private var displaySection: some View {
     settingsCard(title: "Display") {
       VStack(spacing: 0) {
+        row(label: "Colour scheme") {
+          @Bindable var s = settings
+          Picker("Colour scheme", selection: $s.appearanceMode) {
+            ForEach(AppAppearanceMode.allCases) { mode in
+              Text(mode.title).tag(mode)
+            }
+          }
+          .pickerStyle(.segmented)
+          .frame(maxWidth: 230)
+          .onChange(of: settings.appearanceMode) { markUnsaved() }
+        }
+        cardDivider
         row(label: "Timer mode") {
           @Bindable var s = settings
           Picker("Timer mode", selection: $s.countdownMode) {
@@ -321,6 +334,42 @@ struct SettingsView: View {
           .pickerStyle(.menu)
           .tint(AppTheme.accentBlue)
           .onChange(of: settings.timeFormat) { markUnsaved() }
+        }
+      }
+    }
+  }
+
+  private var colourSection: some View {
+    settingsCard(title: "Colours") {
+      VStack(alignment: .leading, spacing: 12) {
+        if settings.proBetaAccepted {
+          colourPickerRow("Accent", hex: customAccentBinding, resetHex: AppTheme.defaultAccentHex)
+          cardDivider
+          colourPickerRow("Main dose button", hex: customPrimaryButtonBinding, resetHex: AppTheme.defaultPrimaryButtonHex)
+          cardDivider
+          colourPickerRow("Quick dose buttons", hex: customQuickButtonBinding, resetHex: AppTheme.defaultQuickButtonHex)
+          cardDivider
+          colourPickerRow("Background", hex: customBackgroundBinding, resetHex: AppTheme.defaultBackgroundHex)
+          Text("Uses the system colour picker, including crayons where available.")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textMuted)
+        } else {
+          HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "star.fill")
+              .font(.system(size: 14, weight: .semibold))
+              .foregroundStyle(AppTheme.proAmber)
+            Text("Pro users can customise app colours, button colours, and background colour.")
+              .font(.system(size: 13))
+              .foregroundStyle(AppTheme.textSecondary)
+              .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+            Button("Pro") {
+              paywallFeature = .fullHistory
+              showPaywall = true
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(AppTheme.proAmber)
+          }
         }
       }
     }
@@ -727,6 +776,68 @@ struct SettingsView: View {
       trailing()
     }
     .padding(.vertical, 2)
+  }
+
+  private func colourPickerRow(_ label: String, hex: Binding<String>, resetHex: String) -> some View {
+    HStack(spacing: 10) {
+      Text(label)
+        .font(.system(size: 15))
+        .foregroundStyle(AppTheme.textPrimary)
+      Spacer()
+      Text(hex.wrappedValue)
+        .font(.system(size: 12, design: .monospaced))
+        .foregroundStyle(AppTheme.textMuted)
+      ColorPicker(
+        label,
+        selection: Binding(
+          get: { AppTheme.color(hex: hex.wrappedValue) },
+          set: { newColor in
+            hex.wrappedValue = AppTheme.hexString(from: newColor)
+            markUnsaved()
+          }
+        )
+      )
+      .labelsHidden()
+      Button {
+        hex.wrappedValue = resetHex
+        markUnsaved()
+      } label: {
+        Image(systemName: "arrow.counterclockwise")
+          .font(.system(size: 13, weight: .semibold))
+          .frame(width: 28, height: 28)
+      }
+      .buttonStyle(.plain)
+      .foregroundStyle(AppTheme.textMuted)
+      .accessibilityLabel("Reset \(label) colour")
+    }
+  }
+
+  private var customAccentBinding: Binding<String> {
+    Binding(
+      get: { settings.customAccentHex },
+      set: { settings.customAccentHex = $0 }
+    )
+  }
+
+  private var customPrimaryButtonBinding: Binding<String> {
+    Binding(
+      get: { settings.customPrimaryButtonHex },
+      set: { settings.customPrimaryButtonHex = $0 }
+    )
+  }
+
+  private var customQuickButtonBinding: Binding<String> {
+    Binding(
+      get: { settings.customQuickButtonHex },
+      set: { settings.customQuickButtonHex = $0 }
+    )
+  }
+
+  private var customBackgroundBinding: Binding<String> {
+    Binding(
+      get: { settings.customBackgroundHex },
+      set: { settings.customBackgroundHex = $0 }
+    )
   }
 
   private func locationSuggestionRow(
