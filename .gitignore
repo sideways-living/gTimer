@@ -39,3 +39,5 @@ build/
 build-*/
 Dist/*
 !Dist/README.md
+!Dist/latest-gTimer.json
+!Dist/*.sha256.txt

@@ -1,11 +1,18 @@
 import SwiftUI
 import SwiftData
 
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
+
 @main
 struct GTimerApp: App {
   @State private var settings = SettingsManager.shared
   @State private var nav = AppNavigation.shared
   @State private var updates = AppUpdateManager.shared
+  @State private var upgrade = GitHubUpgradeManager.shared
 
   var body: some Scene {
     WindowGroup {
@@ -13,9 +20,29 @@ struct GTimerApp: App {
         .environment(settings)
         .environment(nav)
         .environment(updates)
+        .environment(upgrade)
         .modelContainer(for: DoseRecord.self)
         .preferredColorScheme(settings.appearanceMode.preferredColorScheme)
         .platformMainWindowFrame()
+        .alert("gTimer update available", isPresented: $upgrade.shouldShowUpgradeAlert) {
+          Button("Later", role: .cancel) {
+            upgrade.dismissCurrentUpgrade()
+          }
+          Button("Download") {
+            upgrade.openDownload()
+          }
+          if upgrade.availableRelease?.releaseNotesURL != nil {
+            Button("Release notes") {
+              upgrade.openReleaseNotes()
+            }
+          }
+        } message: {
+          if let release = upgrade.availableRelease {
+            Text("\(release.displayVersion) is available.\n\(release.summary)")
+          } else {
+            Text("A newer version of gTimer is available.")
+          }
+        }
         .sheet(isPresented: $updates.shouldShowUpdateNotes) {
           UpdateNotesSheet()
             .environment(updates)
@@ -23,6 +50,7 @@ struct GTimerApp: App {
         }
         .onAppear {
           updates.recordAppOpened()
+          upgrade.checkForUpdates()
         }
         .onOpenURL { url in
           if url.scheme == "gtimer" && url.host == "timer" {
@@ -61,6 +89,12 @@ final class AppUpdateManager {
   var shouldShowUpdateNotes = false
 
   let entries: [AppUpdateEntry] = [
+    AppUpdateEntry(
+      version: "0.9.5",
+      build: 95,
+      category: .newFeatures,
+      message: "Added GitHub-based update checks with release metadata for future downloadable versions."
+    ),
     AppUpdateEntry(
       version: "0.9.4",
       build: 94,
@@ -118,11 +152,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.4"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.5"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "94"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "95"
   }
 
   var displayVersion: String {
@@ -151,6 +185,170 @@ final class AppUpdateManager {
 
   private func compareVersion(_ lhs: String, isNewerThan rhs: String) -> Bool {
     lhs.compare(rhs, options: .numeric) == .orderedDescending
+  }
+}
+
+struct GitHubReleaseMetadata: Decodable {
+  let version: String
+  let build: Int
+  let platform: String?
+  let minimumOS: String?
+  let summary: String
+  let downloadURL: URL
+  let releaseNotesURL: URL?
+  let publishedAt: Date?
+  let changes: GitHubReleaseChanges?
+
+  enum CodingKeys: String, CodingKey {
+    case version
+    case build
+    case platform
+    case minimumOS = "minimum_os"
+    case summary
+    case downloadURL = "download_url"
+    case releaseNotesURL = "release_notes_url"
+    case publishedAt = "published_at"
+    case changes
+  }
+
+  var identifier: String {
+    "\(version)-\(build)"
+  }
+
+  var displayVersion: String {
+    "Version \(version) (\(build))"
+  }
+}
+
+struct GitHubReleaseChanges: Decodable {
+  let newFeatures: [String]
+  let minorImprovements: [String]
+  let bugFixes: [String]
+
+  enum CodingKeys: String, CodingKey {
+    case newFeatures = "new_features"
+    case minorImprovements = "minor_improvements"
+    case bugFixes = "bug_fixes"
+  }
+}
+
+@MainActor
+@Observable
+final class GitHubUpgradeManager {
+  static let shared = GitHubUpgradeManager()
+
+  private let defaults = UserDefaults.standard
+  private let lastDismissedReleaseKey = "lastDismissedGitHubRelease"
+  private var isChecking = false
+
+  var availableRelease: GitHubReleaseMetadata?
+  var shouldShowUpgradeAlert = false
+
+  private init() {}
+
+  func checkForUpdates() {
+    guard !isChecking, let feedURL = Self.updateFeedURL else { return }
+
+    isChecking = true
+    let currentVersion = currentVersion
+    let currentBuild = currentBuild
+    let lastDismissed = defaults.string(forKey: lastDismissedReleaseKey)
+
+    Task {
+      let release = await Self.fetchRelease(from: feedURL)
+      await MainActor.run {
+        self.isChecking = false
+
+        guard
+          let release,
+          Self.isNewer(remoteVersion: release.version, remoteBuild: release.build, currentVersion: currentVersion, currentBuild: currentBuild),
+          release.identifier != lastDismissed
+        else {
+          return
+        }
+
+        self.availableRelease = release
+        self.shouldShowUpgradeAlert = true
+      }
+    }
+  }
+
+  func dismissCurrentUpgrade() {
+    if let availableRelease {
+      defaults.set(availableRelease.identifier, forKey: lastDismissedReleaseKey)
+    }
+    shouldShowUpgradeAlert = false
+  }
+
+  func openDownload() {
+    guard let url = availableRelease?.downloadURL else { return }
+    open(url)
+  }
+
+  func openReleaseNotes() {
+    guard let url = availableRelease?.releaseNotesURL else { return }
+    open(url)
+  }
+
+  private var currentVersion: String {
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.5"
+  }
+
+  private var currentBuild: Int {
+    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "95") ?? 95
+  }
+
+  private static var updateFeedURL: URL? {
+    guard
+      let value = Bundle.main.object(forInfoDictionaryKey: "GTIMER_UPDATE_FEED_URL") as? String
+    else {
+      return nil
+    }
+
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, let url = URL(string: trimmed), url.scheme == "https" else {
+      return nil
+    }
+
+    return url
+  }
+
+  nonisolated private static func fetchRelease(from url: URL) async -> GitHubReleaseMetadata? {
+    do {
+      let (data, response) = try await URLSession.shared.data(from: url)
+      guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
+        return nil
+      }
+      let decoder = JSONDecoder()
+      decoder.dateDecodingStrategy = .iso8601
+      return try decoder.decode(GitHubReleaseMetadata.self, from: data)
+    } catch {
+      return nil
+    }
+  }
+
+  nonisolated private static func isNewer(
+    remoteVersion: String,
+    remoteBuild: Int,
+    currentVersion: String,
+    currentBuild: Int
+  ) -> Bool {
+    let versionComparison = remoteVersion.compare(currentVersion, options: .numeric)
+    if versionComparison == .orderedDescending {
+      return true
+    }
+    if versionComparison == .orderedSame {
+      return remoteBuild > currentBuild
+    }
+    return false
+  }
+
+  private func open(_ url: URL) {
+    #if os(iOS)
+    UIApplication.shared.open(url)
+    #elseif os(macOS)
+    NSWorkspace.shared.open(url)
+    #endif
   }
 }
 

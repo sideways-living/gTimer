@@ -1,0 +1,22 @@
+{
+  "app": "gTimer",
+  "platform": "macOS",
+  "version": "0.9.5",
+  "build": 95,
+  "minimum_os": "14.0",
+  "published_at": "2026-09-05T06:05:31Z",
+  "summary": "A newer gTimer build is available to download.",
+  "download_url": "https://github.com/OWNER/REPO/releases/download/v0.9.5/gTimer-macOS-0.9.5-95-local.pkg",
+  "sha256": "fa398fb040c60ab2dd9a1d05f2e4c11da0952f2aa5721e65755a7970dc7f521f",
+  "sha256_url": "https://github.com/OWNER/REPO/releases/download/v0.9.5/gTimer-macOS-0.9.5-95-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/OWNER/REPO/releases/tag/v0.9.5",
+  "changes": {
+    "new_features": [
+      "GitHub-based update alerts can now notify users when a newer build is available."
+    ],
+    "minor_improvements": [
+      "Release metadata and installer checksums are generated in a consistent format for future downloads."
+    ],
+    "bug_fixes": []
+  }
+}

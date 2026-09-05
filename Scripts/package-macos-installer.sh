@@ -51,3 +51,9 @@ COPYFILE_DISABLE=1 pkgbuild \
   "${pkg_path}"
 
 echo "Created ${pkg_path}"
+
+if [[ -n "${GITHUB_REPOSITORY:-}" || -n "${DOWNLOAD_BASE_URL:-}" ]]; then
+  Scripts/write-github-release-metadata.sh
+else
+  echo "Skipped GitHub release metadata. Set GITHUB_REPOSITORY=owner/repo or DOWNLOAD_BASE_URL=... to generate it."
+fi
