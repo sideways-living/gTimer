@@ -59,29 +59,11 @@ struct ArcGaugeView: View {
           .animation(.easeInOut(duration: 0.6), value: visibleProgress)
       }
 
-      // Glowing dot at the arc tip
-      if isActive && visibleProgress > 0 {
-        let tipTrim = countdownMode ? 0.9 - 0.8 * clampedProgress : 0.1 + 0.8 * visibleProgress
-        let tipAngle = Angle.degrees(90 + tipTrim * 360)
-        GeometryReader { geo in
-          let r  = geo.size.width / 2 - 9
-          let cx = geo.size.width / 2
-          let cy = geo.size.height / 2
-          Circle()
-            .fill(statusColor)
-            .frame(width: 14, height: 14)
-            .shadow(color: statusColor.opacity(0.9), radius: 6)
-            .position(
-              x: cx + r * cos(tipAngle.radians - .pi / 2),
-              y: cy + r * sin(tipAngle.radians - .pi / 2)
-            )
-        }
-      }
-
       // Centre content — droplet icon above the digits
       VStack(spacing: 6) {
         Image(systemName: "drop.fill")
           .font(.system(size: 22, weight: .bold))
+          .scaleEffect(3, anchor: .bottom)
           .foregroundStyle(isActive ? statusColor : AppTheme.textMuted)
 
         Text(timeString)

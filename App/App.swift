@@ -62,6 +62,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.2",
+      build: 92,
+      category: .minorImprovements,
+      message: "Adjusted the timer face by enlarging the centre drop icon and removing the extra arc-tip marker."
+    ),
+    AppUpdateEntry(
       version: "0.9.1",
       build: 91,
       category: .bugFixes,
@@ -100,11 +106,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.1"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.2"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "91"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "92"
   }
 
   var displayVersion: String {
