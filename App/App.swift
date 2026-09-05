@@ -62,6 +62,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.3",
+      build: 93,
+      category: .minorImprovements,
+      message: "Refined the macOS timer panel spacing and matched the centre drop colour to the main dose button."
+    ),
+    AppUpdateEntry(
       version: "0.9.2",
       build: 92,
       category: .minorImprovements,
@@ -106,11 +112,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.2"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.3"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "92"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "93"
   }
 
   var displayVersion: String {

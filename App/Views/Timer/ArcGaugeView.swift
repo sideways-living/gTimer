@@ -64,7 +64,7 @@ struct ArcGaugeView: View {
         Image(systemName: "drop.fill")
           .font(.system(size: 22, weight: .bold))
           .scaleEffect(3, anchor: .bottom)
-          .foregroundStyle(isActive ? statusColor : AppTheme.textMuted)
+          .foregroundStyle(AppTheme.primaryButton)
 
         Text(timeString)
           .font(.system(size: 40, weight: .bold, design: .monospaced))

@@ -66,6 +66,10 @@ struct TimerView: View {
     return h > 0 ? "Wait \(h)h \(m)min" : "Wait \(m)min"
   }
 
+  #if os(macOS)
+  private let macBottomBarReservedHeight: CGFloat = 116
+  #endif
+
   var body: some View {
     NavigationStack {
       #if os(macOS)
@@ -130,15 +134,13 @@ struct TimerView: View {
   private var macTimerLayout: some View {
     GeometryReader { geo in
       let showsHistory = geo.size.width >= 860
+      let timerPanelHeight = max(geo.size.height - macBottomBarReservedHeight, 520)
       HStack(alignment: .top, spacing: 0) {
-        ScrollView {
-          timerStack(includeLastDose: !showsHistory)
-            .frame(maxWidth: 460)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, showsHistory ? 28 : 20)
-            .padding(.vertical, 24)
-        }
-        .tabBarScrollClearance()
+        macTimerPanel(includeLastDose: !showsHistory)
+          .frame(maxWidth: 460)
+          .frame(maxWidth: .infinity)
+          .frame(height: timerPanelHeight)
+          .padding(.horizontal, showsHistory ? 28 : 20)
         .background(AppTheme.backgroundPrimary)
 
         if showsHistory {
@@ -151,6 +153,24 @@ struct TimerView: View {
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
     .navigationTitle("gTimer")
+  }
+  #endif
+
+  #if os(macOS)
+  private func macTimerPanel(includeLastDose: Bool) -> some View {
+    VStack(spacing: 0) {
+      Spacer(minLength: 16)
+      gaugeSection
+      Spacer(minLength: 12)
+      statusBadge
+      Spacer(minLength: 12)
+      actionButtons
+      if includeLastDose, let d = lastDose, isActive {
+        Spacer(minLength: 8)
+        lastDoseCard(d)
+      }
+      Spacer(minLength: 16)
+    }
   }
   #endif
 
