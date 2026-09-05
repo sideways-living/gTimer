@@ -62,6 +62,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.4",
+      build: 94,
+      category: .minorImprovements,
+      message: "Refined timer button styling so the button areas render as solid rounded rectangles."
+    ),
+    AppUpdateEntry(
       version: "0.9.3",
       build: 93,
       category: .minorImprovements,
@@ -112,11 +118,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.3"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.4"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "93"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "94"
   }
 
   var displayVersion: String {

@@ -341,6 +341,7 @@ struct TimerView: View {
       .frame(maxHeight: .infinity)
     }
     .accessibilityLabel("Log \(settings.standardDose.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
+    .buttonStyle(.plain)
   }
 
   private var quickAmountsGrid: some View {
@@ -389,13 +390,13 @@ struct TimerView: View {
         .lineLimit(1)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
-          RoundedRectangle(cornerRadius: 20)
+          RoundedRectangle(cornerRadius: 12)
             .fill(isDefault
               ? AppTheme.primaryButton.opacity(0.25)
               : AppTheme.quickButton)
         )
         .overlay(
-          RoundedRectangle(cornerRadius: 20)
+          RoundedRectangle(cornerRadius: 12)
             .strokeBorder(
               isDefault ? AppTheme.primaryButton : AppTheme.border,
               lineWidth: isDefault ? 1.5 : 0.5
@@ -403,6 +404,7 @@ struct TimerView: View {
         )
     }
     .accessibilityLabel("Log \(amount.formatted(.number.precision(.fractionLength(1))))\(settings.unit)")
+    .buttonStyle(.plain)
   }
 
   private var quickAmountSettingsButton: some View {
@@ -421,10 +423,11 @@ struct TimerView: View {
       .foregroundStyle(AppTheme.accentBlue)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .background(AppTheme.accentBlue.opacity(0.10))
-      .clipShape(RoundedRectangle(cornerRadius: 20))
-      .overlay(RoundedRectangle(cornerRadius: 20).stroke(AppTheme.accentBlue.opacity(0.25), lineWidth: 0.75))
+      .clipShape(RoundedRectangle(cornerRadius: 12))
+      .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.accentBlue.opacity(0.25), lineWidth: 0.75))
     }
     .accessibilityLabel("Open quick dose settings")
+    .buttonStyle(.plain)
   }
 
   private var customDoseButton: some View {
@@ -440,10 +443,11 @@ struct TimerView: View {
       .frame(maxWidth: .infinity)
       .frame(height: 48)
       .background(AppTheme.backgroundElevated)
-      .clipShape(RoundedRectangle(cornerRadius: 14))
-      .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
+      .clipShape(RoundedRectangle(cornerRadius: 12))
+      .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 0.5))
     }
     .accessibilityLabel("Log custom amount")
+    .buttonStyle(.plain)
   }
 
   private var missedDoseButton: some View {
@@ -469,9 +473,9 @@ struct TimerView: View {
         .background(settings.proBetaAccepted
           ? AppTheme.proAmber.opacity(0.10)
           : AppTheme.backgroundElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
-          RoundedRectangle(cornerRadius: 14)
+          RoundedRectangle(cornerRadius: 12)
             .stroke(settings.proBetaAccepted
               ? AppTheme.proAmber.opacity(0.3)
               : AppTheme.border,
@@ -479,6 +483,7 @@ struct TimerView: View {
         )
       }
       .accessibilityLabel("Log missed dose")
+      .buttonStyle(.plain)
 
       if !settings.proBetaAccepted {
         Text("PRO")
