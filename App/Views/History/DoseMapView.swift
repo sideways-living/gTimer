@@ -9,6 +9,7 @@ struct DoseMapView: View {
 
   @State private var position: MapCameraPosition = .automatic
   @State private var selectedDose: DoseRecord? = nil
+  @State private var highlightedDoseID: UUID? = nil
 
   private var locatedDoses: [DoseRecord] { allDoses.filter { $0.hasLocation } }
 
@@ -77,19 +78,7 @@ struct DoseMapView: View {
       Map(position: $position) {
         ForEach(locatedDoses) { dose in
           Annotation("", coordinate: dose.coordinate, anchor: .bottom) {
-            Button { selectedDose = dose } label: {
-              ZStack {
-                Circle()
-                  .fill(pinColor(for: dose))
-                  .frame(width: 24, height: 24)
-                  .shadow(color: pinColor(for: dose).opacity(0.5), radius: 4)
-                Image(systemName: "drop.fill")
-                  .font(.system(size: 11, weight: .bold))
-                  .foregroundStyle(.white)
-              }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(dose.amount.formatted(.number.precision(.fractionLength(1))))\(dose.unit) at \(dose.time.formatted(date: .abbreviated, time: .shortened))")
+            doseMarker(for: dose)
           }
         }
       }
@@ -98,6 +87,90 @@ struct DoseMapView: View {
 
       summaryBar
     }
+  }
+
+  private func doseMarker(for dose: DoseRecord) -> some View {
+    let color = pinColor(for: dose)
+    let isHighlighted = highlightedDoseID == dose.id
+
+    return ZStack(alignment: .bottomLeading) {
+      if isHighlighted {
+        doseBubble(for: dose, color: color)
+          .offset(x: 28, y: -18)
+          .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottomLeading)))
+          .zIndex(1)
+      }
+
+      ZStack {
+        Circle()
+          .fill(color)
+          .frame(width: isHighlighted ? 30 : 24, height: isHighlighted ? 30 : 24)
+          .shadow(color: color.opacity(0.5), radius: 4)
+        Image(systemName: "drop.fill")
+          .font(.system(size: isHighlighted ? 13 : 11, weight: .bold))
+          .foregroundStyle(.white)
+      }
+      .contentShape(Circle())
+      .onTapGesture {
+        withAnimation(.snappy) {
+          highlightedDoseID = dose.id
+        }
+      }
+      .onHover { hovering in
+        withAnimation(.snappy) {
+          highlightedDoseID = hovering ? dose.id : (highlightedDoseID == dose.id ? nil : highlightedDoseID)
+        }
+      }
+      .accessibilityAddTraits(.isButton)
+      .accessibilityLabel("\(dose.amount.formatted(.number.precision(.fractionLength(1))))\(dose.unit) at \(dose.time.formatted(date: .abbreviated, time: .shortened))")
+    }
+  }
+
+  private func doseBubble(for dose: DoseRecord, color: Color) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 8) {
+        Circle()
+          .fill(color)
+          .frame(width: 8, height: 8)
+        Text("\(dose.amount.formatted(.number.precision(.fractionLength(1))))\(dose.unit)")
+          .font(.system(size: 15, weight: .bold))
+          .foregroundStyle(AppTheme.textPrimary)
+        Spacer(minLength: 10)
+        Button {
+          selectedDose = dose
+        } label: {
+          Image(systemName: "info.circle.fill")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(AppTheme.accentBlue)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Open dose location details")
+      }
+
+      Text(dose.time.formatted(date: .abbreviated, time: .shortened))
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(AppTheme.textSecondary)
+
+      if let location = dose.displayLocation(approximate: settings.locationApproximate) {
+        Label(location, systemImage: "location.fill")
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
+          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+
+      if let earlyBy = dose.formattedEarlyBy {
+        Label("Early by \(earlyBy)", systemImage: "exclamationmark.triangle.fill")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundStyle(AppTheme.statusAmber)
+      }
+    }
+    .padding(12)
+    .frame(width: 230, alignment: .leading)
+    .background(AppTheme.backgroundCard.opacity(0.96))
+    .clipShape(RoundedRectangle(cornerRadius: 12))
+    .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 0.5))
+    .shadow(color: .black.opacity(0.28), radius: 14, x: 0, y: 8)
   }
 
   // MARK: - Summary bar

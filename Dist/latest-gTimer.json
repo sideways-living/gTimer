@@ -1,21 +1,21 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.5",
-  "build": 95,
+  "version": "0.9.6",
+  "build": 96,
   "minimum_os": "14.0",
-  "published_at": "2026-09-05T07:34:15Z",
-  "summary": "A newer gTimer build is available to download.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.5/gTimer-macOS-0.9.5-95-local.pkg",
-  "sha256": "c9100c0586961eba1d61214c61168271acaafbf62b3c289d3c0fd35c280de835",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.5/gTimer-macOS-0.9.5-95-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.5",
+  "published_at": "2026-09-05T09:57:57Z",
+  "summary": "The dose map now opens in a larger presentation and shows marker details in map bubbles.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.6/gTimer-macOS-0.9.6-96-local.pkg",
+  "sha256": "99dda202789f6fbdf336c306e1c93f53b8fe23601c322e44e677b8b710569152",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.6/gTimer-macOS-0.9.6-96-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.6",
   "changes": {
     "new_features": [
-      "GitHub-based update alerts can now notify users when a newer build is available."
+      "Dose map markers now show dose details in a bubble when hovered with a pointer or tapped."
     ],
     "minor_improvements": [
-      "Release metadata and installer checksums are generated in a consistent format for future downloads."
+      "The full dose map now uses a full-screen presentation on iPhone and iPad, and a large app-sized presentation on macOS."
     ],
     "bug_fixes": []
   }

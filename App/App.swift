@@ -90,6 +90,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.6",
+      build: 96,
+      category: .minorImprovements,
+      message: "Improved the dose map presentation with a full-screen layout and marker info bubbles."
+    ),
+    AppUpdateEntry(
       version: "0.9.5",
       build: 95,
       category: .newFeatures,
@@ -152,11 +158,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.5"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.6"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "95"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "96"
   }
 
   var displayVersion: String {
@@ -291,11 +297,11 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.5"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.6"
   }
 
   private var currentBuild: Int {
-    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "95") ?? 95
+    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "96") ?? 96
   }
 
   private static var updateFeedURL: URL? {

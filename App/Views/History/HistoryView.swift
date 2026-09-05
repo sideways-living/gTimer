@@ -90,7 +90,7 @@ struct HistoryView: View {
         ShareSheet(items: [csvContent()])
       }
       .sheet(item: $editingDose) { EditDoseSheet(dose: $0) }
-      .sheet(isPresented: $showMapView) { DoseMapView() }
+      .platformDoseMapPresentation(isPresented: $showMapView)
       .sheet(isPresented: $showPaywall) { PaywallSheet(feature: paywallFeature) }
     }
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
@@ -333,5 +333,21 @@ struct HistoryView: View {
       lines.append(row)
     }
     return lines.joined(separator: "\n")
+  }
+}
+
+private extension View {
+  @ViewBuilder
+  func platformDoseMapPresentation(isPresented: Binding<Bool>) -> some View {
+    #if os(macOS)
+    self.sheet(isPresented: isPresented) {
+      DoseMapView()
+        .frame(minWidth: 920, idealWidth: 1040, minHeight: 680, idealHeight: 760)
+    }
+    #else
+    self.fullScreenCover(isPresented: isPresented) {
+      DoseMapView()
+    }
+    #endif
   }
 }
