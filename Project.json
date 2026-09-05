@@ -40,7 +40,7 @@
           "CFBundleDisplayName": "gTimer",
           "CFBundleShortVersionString": "$(MARKETING_VERSION)",
           "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
-          "GTIMER_UPDATE_FEED_URL": "https://raw.githubusercontent.com/sideways-living/gTimer/main/Dist/latest-gTimer.json",
+          "GTIMER_UPDATE_FEED_URL": "https://github.com/sideways-living/gTimer/releases/latest/download/latest-gTimer.json",
           "ITSAppUsesNonExemptEncryption": false,
           "NSLocationWhenInUseUsageDescription": "gTimer can optionally record your location with each dose log for your own reference.",
           "NSPhotoLibraryUsageDescription": "gTimer uses your photo library to set a profile picture.",

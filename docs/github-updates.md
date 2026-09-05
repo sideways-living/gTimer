@@ -6,10 +6,10 @@ gTimer can check a GitHub-hosted JSON feed at launch and alert the user when a n
 
 The app reads `GTIMER_UPDATE_FEED_URL` from `App/Info.plist`. Leave it blank for local builds that should not check for updates.
 
-When the GitHub repository is ready, set it to the raw GitHub URL for the tracked release feed, for example:
+When the GitHub repository is ready, set it to the latest-release download URL for the feed:
 
 ```text
-https://raw.githubusercontent.com/OWNER/REPO/main/Dist/latest-gTimer.json
+https://github.com/OWNER/REPO/releases/latest/download/latest-gTimer.json
 ```
 
 ## Release Metadata
@@ -17,6 +17,7 @@ https://raw.githubusercontent.com/OWNER/REPO/main/Dist/latest-gTimer.json
 Each public macOS release should include:
 
 - `Dist/latest-gTimer.json`, committed to GitHub so installed apps can read the current version.
+- `latest-gTimer.json`, uploaded as a GitHub Release asset so installed apps can follow the latest release without relying on raw-file cache timing.
 - `gTimer-macOS-<version>-<build>-local.pkg`, uploaded as a GitHub Release asset.
 - `gTimer-macOS-<version>-<build>-local.pkg.sha256.txt`, uploaded as a GitHub Release asset.
 
@@ -44,7 +45,7 @@ The installer package itself stays ignored by Git because binary release assets 
 
 4. Commit `Dist/latest-gTimer.json` and the `.sha256.txt` file.
 
-5. Create the GitHub release tag, then upload the `.pkg` and `.sha256.txt` as release assets.
+5. Create the GitHub release tag, then upload `latest-gTimer.json`, the `.pkg`, and `.sha256.txt` as release assets.
 
 ## Runtime Behaviour
 

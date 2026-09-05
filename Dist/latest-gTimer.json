@@ -4,10 +4,10 @@
   "version": "0.9.5",
   "build": 95,
   "minimum_os": "14.0",
-  "published_at": "2026-09-05T07:32:57Z",
+  "published_at": "2026-09-05T07:34:15Z",
   "summary": "A newer gTimer build is available to download.",
   "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.5/gTimer-macOS-0.9.5-95-local.pkg",
-  "sha256": "557aaa6e76620062c98de7cd41caa2dd26417551ea5629e879531471a727fae9",
+  "sha256": "c9100c0586961eba1d61214c61168271acaafbf62b3c289d3c0fd35c280de835",
   "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.5/gTimer-macOS-0.9.5-95-local.pkg.sha256.txt",
   "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.5",
   "changes": {
