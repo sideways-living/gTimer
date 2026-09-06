@@ -69,6 +69,12 @@ struct TimerView: View {
   #if os(macOS)
   private let macBottomBarReservedHeight: CGFloat = 116
   #endif
+  private let quickDoseButtonHeight: CGFloat = 52
+  private let quickDoseGridSpacing: CGFloat = 8
+  private let doseButtonGroupSpacing: CGFloat = 10
+  private var quickDoseGridHeight: CGFloat {
+    quickDoseButtonHeight * 2 + quickDoseGridSpacing
+  }
 
   var body: some View {
     NavigationStack {
@@ -159,17 +165,21 @@ struct TimerView: View {
   #if os(macOS)
   private func macTimerPanel(includeLastDose: Bool) -> some View {
     VStack(spacing: 0) {
-      Spacer(minLength: 16)
+      Spacer(minLength: 8)
+      Spacer(minLength: 8)
+      Spacer(minLength: 8)
       gaugeSection
-      Spacer(minLength: 12)
+      Spacer(minLength: 8)
+      Spacer(minLength: 8)
       statusBadge
-      Spacer(minLength: 12)
+      Spacer(minLength: 8)
+      Spacer(minLength: 8)
       actionButtons
       if includeLastDose, let d = lastDose, isActive {
         Spacer(minLength: 8)
         lastDoseCard(d)
       }
-      Spacer(minLength: 16)
+      Spacer(minLength: 8)
     }
   }
   #endif
@@ -283,11 +293,14 @@ struct TimerView: View {
   // MARK: - Action buttons
 
   private var actionButtons: some View {
-    VStack(spacing: 10) {
+    VStack(spacing: doseButtonGroupSpacing) {
       HStack(alignment: .top, spacing: 10) {
         primaryDoseButton
+          .frame(height: quickDoseGridHeight)
         quickAmountsGrid
+          .frame(height: quickDoseGridHeight)
       }
+      .frame(height: quickDoseGridHeight)
       .padding(.horizontal, 20)
 
       // Bottom row: widths derived from the top row's column geometry.
@@ -307,7 +320,7 @@ struct TimerView: View {
     }
   }
 
-  // Large primary button — stretches to match quick grid height
+  // Large primary button is constrained by the shared top control-group height.
   private var primaryDoseButton: some View {
     Button { attemptLog(amount: settings.standardDose) } label: {
       ZStack(alignment: .leading) {
@@ -346,35 +359,35 @@ struct TimerView: View {
 
   private var quickAmountsGrid: some View {
     let amounts = Array(settings.quickAmounts.prefix(4))
-    return VStack(spacing: 8) {
+    return VStack(spacing: quickDoseGridSpacing) {
       switch amounts.count {
       case 0:
         quickAmountSettingsButton
-          .frame(height: 112)
+          .frame(height: quickDoseGridHeight)
       case 1:
         quickDoseButton(amounts[0])
-          .frame(height: 112)
+          .frame(height: quickDoseGridHeight)
       case 2:
         quickDoseButton(amounts[0])
-          .frame(height: 52)
+          .frame(height: quickDoseButtonHeight)
         quickDoseButton(amounts[1])
-          .frame(height: 52)
+          .frame(height: quickDoseButtonHeight)
       case 3:
         quickDoseButton(amounts[0])
-          .frame(height: 52)
-        HStack(spacing: 8) {
+          .frame(height: quickDoseButtonHeight)
+        HStack(spacing: quickDoseGridSpacing) {
           quickDoseButton(amounts[1])
           quickDoseButton(amounts[2])
         }
-        .frame(height: 52)
+        .frame(height: quickDoseButtonHeight)
       default:
         ForEach(0..<2, id: \.self) { row in
-          HStack(spacing: 8) {
+          HStack(spacing: quickDoseGridSpacing) {
             ForEach(0..<2, id: \.self) { col in
               quickDoseButton(amounts[row * 2 + col])
             }
           }
-          .frame(height: 52)
+          .frame(height: quickDoseButtonHeight)
         }
       }
     }
