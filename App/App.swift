@@ -90,6 +90,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.7",
+      build: 97,
+      category: .minorImprovements,
+      message: "Expanded missed-dose logging with no location, current location, saved home location, and searched or manually entered location options."
+    ),
+    AppUpdateEntry(
       version: "0.9.6",
       build: 96,
       category: .minorImprovements,
@@ -158,11 +164,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.6"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.7"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "96"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "97"
   }
 
   var displayVersion: String {
@@ -297,11 +303,11 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.6"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.7"
   }
 
   private var currentBuild: Int {
-    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "96") ?? 96
+    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "97") ?? 97
   }
 
   private static var updateFeedURL: URL? {

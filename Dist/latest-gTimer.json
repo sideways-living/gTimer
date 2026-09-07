@@ -1,21 +1,20 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.6",
-  "build": 96,
+  "version": "0.9.7",
+  "build": 97,
   "minimum_os": "14.0",
-  "published_at": "2026-09-05T09:57:57Z",
-  "summary": "The dose map now opens in a larger presentation and shows marker details in map bubbles.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.6/gTimer-macOS-0.9.6-96-local.pkg",
-  "sha256": "99dda202789f6fbdf336c306e1c93f53b8fe23601c322e44e677b8b710569152",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.6/gTimer-macOS-0.9.6-96-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.6",
+  "published_at": "2026-09-07T11:57:39Z",
+  "summary": "Missed-dose logging now has clearer location choices.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.7/gTimer-macOS-0.9.7-97-local.pkg",
+  "sha256": "25dc7d456cb54dde5cfa8c8d3db45842bcfdd450d851084333eb7b7e93bc2e61",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.7/gTimer-macOS-0.9.7-97-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.7",
   "changes": {
-    "new_features": [
-      "Dose map markers now show dose details in a bubble when hovered with a pointer or tapped."
-    ],
+    "new_features": [],
     "minor_improvements": [
-      "The full dose map now uses a full-screen presentation on iPhone and iPad, and a large app-sized presentation on macOS."
+      "Missed-dose logging now supports no location, current location, saved home location, and searched or manually entered locations.",
+      "Manual missed-dose locations can be filled from saved places, looked up by place or address, or populated from the current location."
     ],
     "bug_fixes": []
   }
