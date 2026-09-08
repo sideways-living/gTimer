@@ -94,7 +94,7 @@ Future Android and Windows versions should match these features:
 | Location | Pro-gated optional location recording; current setting named "Show approximate location" rounds display only, not saved coordinates. |
 | Map/insights | Pro-gated dose map and location summary behavior. |
 | Widgets | Companion widgets show current timer status, last dose amount/time, safe interval progress, and an open-app action. Widgets must match countdown/count-up visual semantics. Widgets should not directly write dose history unless the platform implementation writes through the canonical dose store and triggers the same notification/update flow. |
-| Export/print | Pro-gated export window supports date range, field selection, location/map inclusion, PDF export, and print output. Desktop platforms should expose keyboard commands for these flows. |
+| Export/print | Pro-gated export window supports date range, field selection, location/map inclusion, PDF export, and print output. When map output is selected, include a full-page rendered visual map with dose markers. Desktop platforms should expose keyboard commands for these flows. |
 
 ### Shared Dose Form Pattern
 

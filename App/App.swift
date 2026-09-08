@@ -87,6 +87,8 @@ struct GTimerApp: App {
           .keyboardShortcut("4", modifiers: .command)
         Button("gTimer Pro") { nav.openPro() }
           .keyboardShortcut("5", modifiers: .command)
+        Button("Map") { nav.requestDoseMap() }
+          .keyboardShortcut("6", modifiers: .command)
       }
 
       CommandGroup(replacing: .newItem) {
@@ -148,6 +150,12 @@ final class AppUpdateManager {
   var shouldShowUpdateNotes = false
 
   let entries: [AppUpdateEntry] = [
+    AppUpdateEntry(
+      version: "0.9.12",
+      build: 102,
+      category: .minorImprovements,
+      message: "Added Command-6 for the dose map and made history PDF export include a full-page rendered map when map output is selected."
+    ),
     AppUpdateEntry(
       version: "0.9.11",
       build: 101,
@@ -247,11 +255,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.11"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.12"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "101"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "102"
   }
 
   var displayVersion: String {
@@ -386,7 +394,7 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.11"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.12"
   }
 
   private var currentBuild: Int {

@@ -1,24 +1,25 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.11",
-  "build": 101,
+  "version": "0.9.12",
+  "build": 102,
   "minimum_os": "14.0",
-  "published_at": "2026-09-08T11:45:41Z",
-  "summary": "Dose entry windows now share a wider map-based location form.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.11/gTimer-macOS-0.9.11-101-local.pkg",
-  "sha256": "8d5198ef2d5f2a07fbc4d286d380af79ce623f9fbf1d9539cf2a5294cdb8a91d",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.11/gTimer-macOS-0.9.11-101-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.11",
+  "published_at": "2026-09-08T11:51:50Z",
+  "summary": "Adds Command-6 map navigation and full-page map output for history exports.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.12/gTimer-macOS-0.9.12-102-local.pkg",
+  "sha256": "8c305ba9992a025d5b025e1cf3b0e0fcfa75e8ec160c87c54e1d42d9d5f8f3be",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.12/gTimer-macOS-0.9.12-102-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.12",
   "changes": {
-    "new_features": [],
+    "new_features": [
+      "Command-6 now opens the dose map from the Open Tabs menu."
+    ],
     "minor_improvements": [
-      "Add dose, missed dose, and edit dose windows now use a shared two-column form on desktop.",
-      "Dose locations can be selected from search suggestions, current location, saved home location, or by dropping a pin on the map.",
-      "Phone-sized sheets keep the same controls in a scrollable single-column layout."
+      "History PDF export and print can include a full-page rendered visual map with dose markers.",
+      "Map-only exports are now supported when location output is selected."
     ],
     "bug_fixes": [
-      "Manually selected map locations no longer store invalid location accuracy values."
+      "The include-map export option now produces a visual map page instead of only listing location text."
     ]
   }
 }

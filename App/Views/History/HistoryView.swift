@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 import CoreText
+import MapKit
+import PDFKit
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
@@ -21,6 +23,7 @@ struct HistoryView: View {
   @State private var showHistoryExport = false
   @State private var exportOutcome: HistoryExportOutcome = .export
   @State private var handledExportRequestID = 0
+  @State private var handledDoseMapRequestID = 0
 
   private var visibleDoses: [DoseRecord] {
     if settings.proBetaAccepted { return allDoses }
@@ -102,9 +105,13 @@ struct HistoryView: View {
     .onAppear {
       DoseStore.backfillMissingEarlyDoseTiming(context: context, settings: settings)
       handlePendingExportRequest()
+      handlePendingDoseMapRequest()
     }
     .onChange(of: nav.historyExportRequestID) { _, _ in
       handlePendingExportRequest()
+    }
+    .onChange(of: nav.doseMapRequestID) { _, _ in
+      handlePendingDoseMapRequest()
     }
   }
 
@@ -326,6 +333,17 @@ struct HistoryView: View {
     exportOutcome = nav.historyExportOutcome
     showHistoryExport = true
   }
+
+  private func handlePendingDoseMapRequest() {
+    guard nav.doseMapRequestID != handledDoseMapRequestID else { return }
+    handledDoseMapRequestID = nav.doseMapRequestID
+    if settings.proBetaAccepted {
+      showMapView = true
+    } else {
+      paywallFeature = .doseMap
+      showPaywall = true
+    }
+  }
 }
 
 private enum HistoryExportField: String, CaseIterable, Identifiable {
@@ -358,6 +376,7 @@ private struct HistoryExportSheet: View {
   @State private var startDate: Date
   @State private var endDate: Date
   @State private var shareItem: HistoryExportShareItem?
+  @State private var isWorking = false
 
   init(doses: [DoseRecord], locationApproximate: Bool, initialOutcome: HistoryExportOutcome) {
     self.doses = doses
@@ -403,8 +422,8 @@ private struct HistoryExportSheet: View {
         }
 
         Section("Map") {
-          Toggle("Include map/location section", isOn: $includeMap)
-          Text("The PDF includes location names and coordinates for mapped doses in the selected range.")
+          Toggle("Include full-page map", isOn: $includeMap)
+          Text("The PDF includes a rendered map page with dose markers for mapped doses in the selected range.")
             .font(.footnote)
             .foregroundStyle(AppTheme.textMuted)
         }
@@ -426,10 +445,10 @@ private struct HistoryExportSheet: View {
           Button("Cancel") { dismiss() }
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button(actionTitle) {
+          Button(isWorking ? "Working..." : actionTitle) {
             performAction()
           }
-          .disabled(filteredDoses.isEmpty || selectedFields.isEmpty || startDate > endDate)
+          .disabled(isWorking || filteredDoses.isEmpty || (selectedFields.isEmpty && !includeMap) || startDate > endDate)
         }
       }
       .sheet(item: $shareItem) { item in
@@ -453,6 +472,7 @@ private struct HistoryExportSheet: View {
   }
 
   private func performAction() {
+    isWorking = true
     let document = HistoryExportDocument(
       doses: filteredDoses,
       fields: HistoryExportField.allCases.filter { selectedFields.contains($0) },
@@ -462,16 +482,20 @@ private struct HistoryExportSheet: View {
       endDate: endDate
     )
 
-    switch initialOutcome {
-    case .export:
-      do {
-        shareItem = try HistoryExportShareItem(url: document.writePDF())
-      } catch {
-        return
+    Task { @MainActor in
+      defer { isWorking = false }
+      switch initialOutcome {
+      case .export:
+        do {
+          let url = try await document.writePDF()
+          shareItem = HistoryExportShareItem(url: url)
+        } catch {
+          return
+        }
+      case .print:
+        await document.print()
+        dismiss()
       }
-    case .print:
-      document.print()
-      dismiss()
     }
   }
 }
@@ -496,8 +520,10 @@ private struct HistoryExportDocument {
     lines.append("Records: \(doses.count)")
     lines.append("")
 
-    for dose in doses {
-      lines.append(rowText(for: dose))
+    if !fields.isEmpty {
+      for dose in doses {
+        lines.append(rowText(for: dose))
+      }
     }
 
     if includeMap {
@@ -518,30 +544,26 @@ private struct HistoryExportDocument {
     return lines.joined(separator: "\n")
   }
 
-  func writePDF() throws -> URL {
+  func writePDF() async throws -> URL {
     let url = FileManager.default.temporaryDirectory
       .appendingPathComponent("gTimer History \(Self.fileStamp()).pdf")
-    let data = makePDFData()
+    let data = await makePDFData()
     try data.write(to: url, options: .atomic)
     return url
   }
 
-  func print() {
-    let text = bodyText
+  func print() async {
+    let data = await makePDFData()
     #if os(macOS)
-    let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 612, height: 792))
-    textView.string = text
-    textView.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
-    textView.textContainerInset = NSSize(width: 36, height: 36)
-    NSPrintOperation(view: textView).run()
+    await printPDFDataOnMac(data)
     #elseif os(iOS)
     let controller = UIPrintInteractionController.shared
-    controller.printingItem = makePDFData()
+    controller.printingItem = data
     controller.present(animated: true)
     #endif
   }
 
-  private func makePDFData() -> Data {
+  private func makePDFData() async -> Data {
     let output = NSMutableData()
     guard let consumer = CGDataConsumer(data: output as CFMutableData) else { return Data() }
     var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
@@ -575,8 +597,121 @@ private struct HistoryExportDocument {
       context.endPDFPage()
     } while currentRange.location < attributed.length
 
+    if includeMap, !mappedDoses.isEmpty {
+      await drawMapPage(in: context, mediaBox: mediaBox)
+    }
+
     context.closePDF()
     return output as Data
+  }
+
+  private var mappedDoses: [DoseRecord] {
+    doses.filter(\.hasLocation)
+  }
+
+  private func drawMapPage(in context: CGContext, mediaBox: CGRect) async {
+    let titleRect = CGRect(x: 42, y: 42, width: mediaBox.width - 84, height: 50)
+    let mapRect = CGRect(x: 42, y: 104, width: mediaBox.width - 84, height: mediaBox.height - 146)
+    let snapshotSize = CGSize(width: mapRect.width, height: mapRect.height)
+
+    guard let snapshot = await makeMapSnapshot(size: snapshotSize) else { return }
+
+    context.beginPDFPage(nil)
+    context.setFillColor(CGColor(gray: 1, alpha: 1))
+    context.fill(mediaBox)
+
+    drawPDFText(
+      "Dose Map\n\(dateTime(startDate)) to \(dateTime(endDate))",
+      in: titleRect,
+      context: context,
+      fontSize: 16,
+      isBold: true,
+      mediaBox: mediaBox
+    )
+
+    if let image = snapshot.cgImage {
+      context.draw(image, in: mapRect)
+    }
+
+    context.setStrokeColor(PlatformExportColor.white.cgColor)
+    context.setLineWidth(2)
+    for (index, dose) in mappedDoses.enumerated() {
+      let coordinate = dose.coordinate
+      let point = snapshot.point(for: coordinate)
+      guard point.x.isFinite, point.y.isFinite else { continue }
+      let markerCenter = CGPoint(
+        x: mapRect.minX + point.x,
+        y: mapRect.maxY - point.y
+      )
+      let markerRect = CGRect(
+        x: markerCenter.x - 8,
+        y: markerCenter.y - 8,
+        width: 16,
+        height: 16
+      )
+      context.setFillColor(PlatformExportColor.systemRed.cgColor)
+      context.fillEllipse(in: markerRect)
+      context.strokeEllipse(in: markerRect)
+      drawPDFText(
+        "\(index + 1)",
+        in: CGRect(x: markerCenter.x - 6, y: mediaBox.height - markerCenter.y - 7, width: 12, height: 14),
+        context: context,
+        fontSize: 7,
+        isBold: true,
+        color: .white,
+        alignment: .center,
+        mediaBox: mediaBox
+      )
+    }
+
+    drawPDFText(
+      "\(mappedDoses.count) mapped dose record\(mappedDoses.count == 1 ? "" : "s")",
+      in: CGRect(x: 42, y: mediaBox.height - 34, width: mediaBox.width - 84, height: 18),
+      context: context,
+      fontSize: 9,
+      isBold: false,
+      color: .darkGray,
+      mediaBox: mediaBox
+    )
+    context.endPDFPage()
+  }
+
+  private func makeMapSnapshot(size: CGSize) async -> MKMapSnapshotter.Snapshot? {
+    let options = MKMapSnapshotter.Options()
+    options.size = size
+    options.mapType = .mutedStandard
+    options.region = mapRegion
+    options.showsBuildings = true
+    options.pointOfInterestFilter = .includingAll
+
+    return await withCheckedContinuation { continuation in
+      MKMapSnapshotter(options: options).start { snapshot, _ in
+        continuation.resume(returning: snapshot)
+      }
+    }
+  }
+
+  private var mapRegion: MKCoordinateRegion {
+    let coordinates = mappedDoses.compactMap(\.coordinate)
+    guard let first = coordinates.first else {
+      return MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+        latitudinalMeters: 10_000,
+        longitudinalMeters: 10_000
+      )
+    }
+    guard coordinates.count > 1 else {
+      return MKCoordinateRegion(center: first, latitudinalMeters: 1_500, longitudinalMeters: 1_500)
+    }
+
+    var mapRect = MKMapRect(origin: MKMapPoint(first), size: MKMapSize(width: 1, height: 1))
+    for coordinate in coordinates.dropFirst() {
+      let point = MKMapPoint(coordinate)
+      let rect = MKMapRect(origin: point, size: MKMapSize(width: 1, height: 1))
+      mapRect = mapRect.union(rect)
+    }
+    let padded = mapRect.insetBy(dx: -max(mapRect.width * 0.25, 700), dy: -max(mapRect.height * 0.25, 700))
+    return MKCoordinateRegion(padded)
   }
 
   private func rowText(for dose: DoseRecord) -> String {
@@ -645,6 +780,54 @@ private struct HistoryExportDocument {
     formatter.dateFormat = "yyyy-MM-dd HH-mm-ss"
     return formatter.string(from: Date())
   }
+
+  #if os(macOS)
+  @MainActor
+  private func printPDFDataOnMac(_ data: Data) {
+    guard let pdf = PDFDocument(data: data) else { return }
+    let pdfView = PDFView(frame: NSRect(x: 0, y: 0, width: 612, height: 792))
+    pdfView.document = pdf
+    NSPrintOperation(view: pdfView).run()
+  }
+  #endif
+
+  private func drawPDFText(
+    _ text: String,
+    in rect: CGRect,
+    context: CGContext,
+    fontSize: CGFloat,
+    isBold: Bool,
+    color: PlatformExportColor = .black,
+    alignment: NSTextAlignment = .left,
+    mediaBox: CGRect
+  ) {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.alignment = alignment
+    paragraph.lineBreakMode = .byWordWrapping
+    let attributed = NSAttributedString(
+      string: text,
+      attributes: [
+        .font: CTFontCreateWithName((isBold ? "Menlo-Bold" : "Menlo") as CFString, fontSize, nil),
+        .foregroundColor: color,
+        .paragraphStyle: paragraph
+      ]
+    )
+    let path = CGMutablePath()
+    path.addRect(rect)
+    let frame = CTFramesetterCreateFrame(
+      CTFramesetterCreateWithAttributedString(attributed),
+      CFRange(location: 0, length: attributed.length),
+      path,
+      nil
+    )
+
+    context.saveGState()
+    context.textMatrix = .identity
+    context.translateBy(x: 0, y: mediaBox.height)
+    context.scaleBy(x: 1.0, y: -1.0)
+    CTFrameDraw(frame, context)
+    context.restoreGState()
+  }
 }
 
 #if os(macOS)
@@ -652,6 +835,16 @@ private typealias PlatformExportColor = NSColor
 #else
 private typealias PlatformExportColor = UIColor
 #endif
+
+private extension MKMapSnapshotter.Snapshot {
+  var cgImage: CGImage? {
+    #if os(macOS)
+    return image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    #else
+    return image.cgImage
+    #endif
+  }
+}
 
 private extension View {
   @ViewBuilder

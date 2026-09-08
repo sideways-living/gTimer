@@ -17,6 +17,7 @@ final class AppNavigation {
   var newDoseRequestID = 0
   var historyExportRequestID = 0
   var historyExportOutcome: HistoryExportOutcome = .export
+  var doseMapRequestID = 0
   var shouldShowQuitWarning = false
 
   func openTimer() {
@@ -48,6 +49,11 @@ final class AppNavigation {
     selectedTab = 1
     historyExportOutcome = outcome
     historyExportRequestID += 1
+  }
+
+  func requestDoseMap() {
+    selectedTab = 1
+    doseMapRequestID += 1
   }
 
   func requestQuitConfirmation() {
