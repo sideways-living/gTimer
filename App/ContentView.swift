@@ -76,6 +76,9 @@ struct ContentView: View {
   }
 
   private func tabForeground(for tab: AppTab) -> Color {
+    if tab == .pro && nav.selectedTab != tab.rawValue {
+      return .white
+    }
     if tab == .pro {
       return AppTheme.proAmber
     }
@@ -83,6 +86,9 @@ struct ContentView: View {
   }
 
   private func tabBackground(for tab: AppTab) -> Color {
+    if tab == .pro && nav.selectedTab != tab.rawValue {
+      return AppTheme.proAmber
+    }
     guard nav.selectedTab == tab.rawValue else {
       return AppTheme.backgroundPrimary.opacity(0.58)
     }
