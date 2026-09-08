@@ -149,6 +149,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.11",
+      build: 101,
+      category: .minorImprovements,
+      message: "Made add dose, missed dose, and edit dose windows use a shared location-aware form with a wider layout, map pin selection, location search suggestions, and current/home location shortcuts."
+    ),
+    AppUpdateEntry(
       version: "0.9.10",
       build: 100,
       category: .minorImprovements,
@@ -241,11 +247,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.10"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.11"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "100"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "101"
   }
 
   var displayVersion: String {
@@ -380,7 +386,7 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.10"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.11"
   }
 
   private var currentBuild: Int {

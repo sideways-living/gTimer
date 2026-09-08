@@ -20,8 +20,11 @@ final class DoseStore {
   ) {
     let lat = capturedLocation?.coordinate.latitude
     let lon = capturedLocation?.coordinate.longitude
-    let accuracy = capturedLocation?.horizontalAccuracy
+    let rawAccuracy = capturedLocation?.horizontalAccuracy
+    let accuracy = rawAccuracy.flatMap { $0 >= 0 ? $0 : nil }
     let capturedAt = capturedLocation != nil ? Date() : nil
+    let cleanLocationName = locationName?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let hasNamedLocation = cleanLocationName?.isEmpty == false
 
     let record = DoseRecord(
       amount: amount,
@@ -33,10 +36,10 @@ final class DoseStore {
       earlyBySeconds: earlyBySeconds,
       latitude: lat,
       longitude: lon,
-      locationName: locationName,
+      locationName: hasNamedLocation ? cleanLocationName : nil,
       locationAccuracyMeters: accuracy,
       locationCapturedAt: capturedAt,
-      locationSource: capturedLocation != nil ? locationSource : "none"
+      locationSource: capturedLocation != nil || hasNamedLocation ? locationSource : "none"
     )
     context.insert(record)
     try? context.save()

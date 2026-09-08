@@ -81,11 +81,11 @@ Future Android and Windows versions should match these features:
 | Timer | Start from logged dose time; support countdown and count-up modes; apply configured interval; show active/inactive state; keep six-hour active window. |
 | Countdown mode | Display remaining time; arc starts fully coloured and empties from the right as time elapses. |
 | Count-up mode | Display elapsed time; arc starts empty and fills from the left as time elapses. |
-| Dose logging | Standard-dose button, 0-4 quick-dose buttons, custom amount, early-log warning before interval has elapsed. |
+| Dose logging | Standard-dose button, 0-4 quick-dose buttons, custom amount, early-log warning before interval has elapsed. Custom/add-dose entry uses the shared dose form pattern below. |
 | Quick doses | Settings use four individual optional values. Main timer shows 4, 3, 2, 1, or setup-link states depending on saved values. |
 | History | Reverse chronological dose records; delete; delete all; free mode limits visible history; Pro unlocks full history. |
-| Missed doses | Pro-gated backdated dose entry with optional notes and optional location. |
-| Edit dose | Pro-gated correction of amount, time, notes, and location fields. |
+| Missed doses | Pro-gated backdated dose entry using the shared dose form pattern below. |
+| Edit dose | Pro-gated correction of amount, time, notes, and location fields using the shared dose form pattern below. |
 | Export | Pro-gated CSV export; warn clearly before exporting location data. |
 | Health content | Harm-reduction information and emergency guidance. Avoid medical certainty. |
 | Settings | Dose defaults, unit, substance, interval presets/custom interval, quick doses, timer mode, time format, notifications, device name, Pro profile, and location options. |
@@ -95,6 +95,18 @@ Future Android and Windows versions should match these features:
 | Map/insights | Pro-gated dose map and location summary behavior. |
 | Widgets | Companion widgets show current timer status, last dose amount/time, safe interval progress, and an open-app action. Widgets must match countdown/count-up visual semantics. Widgets should not directly write dose history unless the platform implementation writes through the canonical dose store and triggers the same notification/update flow. |
 | Export/print | Pro-gated export window supports date range, field selection, location/map inclusion, PDF export, and print output. Desktop platforms should expose keyboard commands for these flows. |
+
+### Shared Dose Form Pattern
+
+Add dose, missed dose, and edit dose should present the same core flow on every platform:
+
+- Desktop and large tablet layouts: wide modal or window, close button in the top-right of the header row, input column on the left, interactive local map on the right.
+- Phone layouts: same controls in a scrollable single-column sheet, with the map below the input fields.
+- Input column: amount and date/time controls together at the top, followed by one location text field for address, suburb, venue, hotel, or typed place name.
+- Location field: autocomplete from saved user/history locations and platform geocoder/place search; bias search near saved home location and current location when available.
+- Location shortcuts: current-location and home-location icon buttons at the end of the location field, with accessible labels/tooltips.
+- Map: pan/zoom, tap/click to drop a pin, reverse geocode the pin, and fill the location text field from the selected pin.
+- Submit button: label must match the flow, for example `Log Dose`, `Save Changes`, or `Log Missed Dose`.
 
 ## Data Model Parity
 

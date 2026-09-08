@@ -14,8 +14,7 @@ struct TimerView: View {
   @State private var showPaywall = false
   @State private var paywallFeature: ProFeature = .missedDose
   @State private var showWarning = false
-  @State private var pendingAmount: Double = 0
-  @State private var pendingNotes: String = ""
+  @State private var pendingDoseResult: DoseFormResult?
   @State private var pendingEarlyBySeconds: TimeInterval?
   @State private var ticker: Timer?
   @State private var editingDose: DoseRecord?
@@ -100,7 +99,7 @@ struct TimerView: View {
     }
     .onDisappear { ticker?.invalidate() }
     .sheet(isPresented: $showCustomSheet) {
-      CustomDoseSheet { amount, notes in attemptLog(amount: amount, notes: notes) }
+      CustomDoseSheet { result in attemptLog(result: result) }
     }
     .sheet(isPresented: $showMissedSheet) {
       MissedDoseSheet()
@@ -110,9 +109,14 @@ struct TimerView: View {
     }
     .sheet(item: $editingDose) { EditDoseSheet(dose: $0) }
     .alert("Log Early?", isPresented: $showWarning) {
-      Button("Cancel", role: .cancel) { pendingEarlyBySeconds = nil }
+      Button("Cancel", role: .cancel) {
+        pendingDoseResult = nil
+        pendingEarlyBySeconds = nil
+      }
       Button("Log Anyway", role: .destructive) {
-        confirmLog(amount: pendingAmount, notes: pendingNotes, earlyBySeconds: pendingEarlyBySeconds)
+        if let pendingDoseResult {
+          confirmLog(result: pendingDoseResult, earlyBySeconds: pendingEarlyBySeconds)
+        }
       }
     } message: {
       Text("The safe interval hasn't passed yet. This would be logged as \(formattedEarlyBy(pendingEarlyBySeconds)) early.")
@@ -676,22 +680,52 @@ struct TimerView: View {
   }
 
   private func attemptLog(amount: Double, notes: String = "") {
+    attemptLog(
+      result: DoseFormResult(
+        amount: amount,
+        time: Date(),
+        notes: notes,
+        location: DoseFormLocationSelection(
+          name: "",
+          coordinate: nil,
+          source: "none",
+          accuracyMeters: nil,
+          capturedAt: nil
+        )
+      )
+    )
+  }
+
+  private func attemptLog(result: DoseFormResult) {
     if isActive && !isSafe {
-      pendingAmount = amount
-      pendingNotes = notes
+      pendingDoseResult = result
       pendingEarlyBySeconds = max(intervalSeconds - elapsed, 0)
       showWarning = true
     } else {
-      confirmLog(amount: amount, notes: notes)
+      confirmLog(result: result)
     }
   }
 
-  private func confirmLog(amount: Double, notes: String = "", earlyBySeconds: TimeInterval? = nil) {
+  private func confirmLog(result: DoseFormResult, earlyBySeconds: TimeInterval? = nil) {
     let loc = LocationManager.shared
     let captureLocation = settings.proBetaAccepted && settings.attachLocationToDoses
     let earlyBySeconds = earlyBySeconds.flatMap { $0 > 0 ? $0 : nil }
 
-    if captureLocation {
+    if !result.location.isEmpty {
+      DoseStore.logDose(
+        amount: result.amount,
+        unit: settings.unit,
+        time: result.time,
+        notes: result.notes,
+        earlyBySeconds: earlyBySeconds,
+        capturedLocation: result.location.clLocation,
+        locationName: result.location.name.isEmpty ? nil : result.location.name,
+        locationSource: result.location.source,
+        deviceName: settings.deviceName,
+        context: context,
+        settings: settings
+      )
+    } else if captureLocation {
       Task { @MainActor in
         let captured = await loc.captureForDose()
         #if os(macOS)
@@ -705,9 +739,10 @@ struct TimerView: View {
         let doseLocationSource = "automatic"
         #endif
         DoseStore.logDose(
-          amount: amount,
+          amount: result.amount,
           unit: settings.unit,
-          notes: notes,
+          time: result.time,
+          notes: result.notes,
           earlyBySeconds: earlyBySeconds,
           capturedLocation: doseLocation,
           locationName: doseLocationName,
@@ -719,15 +754,17 @@ struct TimerView: View {
       }
     } else {
       DoseStore.logDose(
-        amount: amount,
+        amount: result.amount,
         unit: settings.unit,
-        notes: notes,
+        time: result.time,
+        notes: result.notes,
         earlyBySeconds: earlyBySeconds,
         deviceName: settings.deviceName,
         context: context,
         settings: settings
       )
     }
+    pendingDoseResult = nil
     pendingEarlyBySeconds = nil
   }
 

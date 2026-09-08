@@ -1,23 +1,24 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.10",
-  "build": 100,
+  "version": "0.9.11",
+  "build": 101,
   "minimum_os": "14.0",
-  "published_at": "2026-09-08T11:36:08Z",
-  "summary": "macOS menu commands and history export controls are now available.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.10/gTimer-macOS-0.9.10-100-local.pkg",
-  "sha256": "30bb9714c7b6865b4465222cea479f433994fcbf49f4e3b54668cbf37f0c486c",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.10/gTimer-macOS-0.9.10-100-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.10",
+  "published_at": "2026-09-08T11:45:41Z",
+  "summary": "Dose entry windows now share a wider map-based location form.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.11/gTimer-macOS-0.9.11-101-local.pkg",
+  "sha256": "8d5198ef2d5f2a07fbc4d286d380af79ce623f9fbf1d9539cf2a5294cdb8a91d",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.11/gTimer-macOS-0.9.11-101-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.11",
   "changes": {
-    "new_features": [
-      "Added macOS menu commands for opening gTimer, History, Health, Settings, and gTimer Pro.",
-      "Added keyboard commands for new dose, PDF export, print, Settings, and quit confirmation."
-    ],
+    "new_features": [],
     "minor_improvements": [
-      "History export now opens an options window with date range, field selection, and map/location inclusion before exporting or printing."
+      "Add dose, missed dose, and edit dose windows now use a shared two-column form on desktop.",
+      "Dose locations can be selected from search suggestions, current location, saved home location, or by dropping a pin on the map.",
+      "Phone-sized sheets keep the same controls in a scrollable single-column layout."
     ],
-    "bug_fixes": []
+    "bug_fixes": [
+      "Manually selected map locations no longer store invalid location accuracy values."
+    ]
   }
 }
