@@ -90,6 +90,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.9",
+      build: 99,
+      category: .newFeatures,
+      message: "Added embedded iOS and macOS widgets with small, medium, and large layouts that show timer status, last dose details, interval progress, and open gTimer from the widget."
+    ),
+    AppUpdateEntry(
       version: "0.9.8",
       build: 98,
       category: .minorImprovements,
@@ -170,11 +176,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.8"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.9"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "98"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "99"
   }
 
   var displayVersion: String {
@@ -309,11 +315,11 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.8"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.9"
   }
 
   private var currentBuild: Int {
-    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "98") ?? 98
+    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "99") ?? 99
   }
 
   private static var updateFeedURL: URL? {

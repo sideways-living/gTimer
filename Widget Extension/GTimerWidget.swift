@@ -103,6 +103,7 @@ private struct TimerState {
   let isActive: Bool
   let isSafe: Bool
   let progress: Double         // 0…1
+  let visualProgress: Double   // 0…1, adjusted for countdown/count-up display
   let phase: Phase
   let timeLabel: String        // e.g. "35m", "1h 20m", "< 1m"
   let timeSuffix: String       // "left", "elapsed", or ""
@@ -118,6 +119,7 @@ private struct TimerState {
     let intervalSecs = Double(entry.safeIntervalMinutes) * 60
     let isSafe   = elapsed >= intervalSecs
     let progress = min(elapsed / intervalSecs, 1.0)
+    let visualProgress = entry.countdownMode && !isSafe ? max(1.0 - progress, 0) : progress
     let phase: Phase = isSafe ? .safe : (progress >= 0.70 ? .almostSafe : .unsafe)
 
     // Time label: countdown mode shows remaining until safe; count-up shows elapsed.
@@ -153,12 +155,14 @@ private struct TimerState {
     }
 
     return TimerState(isActive: true, isSafe: isSafe, progress: progress,
+                      visualProgress: visualProgress,
                       phase: phase, timeLabel: timeLabel, timeSuffix: timeSuffix,
                       statusLabel: statusLabel)
   }
 
   private static var inactive: TimerState {
     TimerState(isActive: false, isSafe: false, progress: 0,
+               visualProgress: 0,
                phase: .inactive, timeLabel: "--:--", timeSuffix: "",
                statusLabel: "No active timer")
   }
@@ -219,7 +223,7 @@ private struct SmallWidgetView: View {
         // Fill
         if state.isActive {
           Circle()
-            .trim(from: 0.1, to: 0.1 + 0.8 * state.progress)
+            .trim(from: 0.1, to: 0.1 + 0.8 * state.visualProgress)
             .stroke(state.color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
             .rotationEffect(.degrees(90))
         }
@@ -339,7 +343,7 @@ private struct MediumWidgetView: View {
           if state.isActive {
             Capsule()
               .fill(state.color)
-              .frame(width: max(geo.size.width * state.progress, 0), height: 5)
+              .frame(width: max(geo.size.width * state.visualProgress, 0), height: 5)
           }
         }
       }
@@ -410,6 +414,120 @@ private struct MediumWidgetView: View {
   }
 }
 
+// MARK: - Large widget
+
+private struct LargeWidgetView: View {
+  let entry: GTimerEntry
+  private var state: TimerState { TimerState.from(entry: entry) }
+
+  private var lastDoseLine: String {
+    guard let doseTime = entry.lastDoseTime, state.isActive else {
+      return "Log a dose in gTimer to start the widget timer."
+    }
+    let amount = entry.lastDoseAmount.formatted(.number.precision(.fractionLength(1)))
+    let time = doseTime.formatted(date: .abbreviated, time: .shortened)
+    return "Last dose: \(amount)\(entry.lastDoseUnit) at \(time)"
+  }
+
+  private var intervalLine: String {
+    "Minimum interval: \(entry.safeIntervalMinutes) minutes"
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      HStack {
+        HStack(spacing: 7) {
+          Image(systemName: "drop.fill")
+            .font(.system(size: 15, weight: .bold))
+            .foregroundStyle(WT.accentBlue)
+          Text("gTimer")
+            .font(.system(size: 16, weight: .bold))
+            .foregroundStyle(WT.textPrimary)
+        }
+        Spacer()
+        Text(state.isActive ? (entry.countdownMode ? "Countdown" : "Count up") : "Ready")
+          .font(.system(size: 11, weight: .bold))
+          .foregroundStyle(WT.textSecondary)
+          .padding(.horizontal, 9)
+          .padding(.vertical, 5)
+          .background(WT.trackFill)
+          .clipShape(Capsule())
+      }
+
+      HStack(spacing: 16) {
+        ZStack {
+          Circle()
+            .trim(from: 0.1, to: 0.9)
+            .stroke(WT.trackFill, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+            .rotationEffect(.degrees(90))
+          if state.isActive {
+            Circle()
+              .trim(from: 0.1, to: 0.1 + 0.8 * state.visualProgress)
+              .stroke(state.color, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+              .rotationEffect(.degrees(90))
+          }
+          VStack(spacing: 4) {
+            Text(state.timeLabel)
+              .font(.system(size: 26, weight: .bold, design: .monospaced))
+              .foregroundStyle(state.isActive ? state.color : WT.textMuted)
+              .lineLimit(1)
+              .minimumScaleFactor(0.62)
+            if state.isActive && !state.timeSuffix.isEmpty {
+              Text(state.timeSuffix)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(WT.textSecondary)
+            }
+          }
+          .padding(.horizontal, 14)
+        }
+        .frame(width: 128, height: 128)
+
+        VStack(alignment: .leading, spacing: 10) {
+          HStack(spacing: 6) {
+            Circle()
+              .fill(state.color)
+              .frame(width: 8, height: 8)
+            Text(state.statusLabel)
+              .font(.system(size: 16, weight: .bold))
+              .foregroundStyle(state.color)
+              .lineLimit(1)
+              .minimumScaleFactor(0.75)
+          }
+
+          Text(lastDoseLine)
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(WT.textSecondary)
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
+
+          Text(intervalLine)
+            .font(.system(size: 12))
+            .foregroundStyle(WT.textMuted)
+
+          Spacer(minLength: 0)
+
+          Link(destination: URL(string: "gtimer://timer")!) {
+            HStack(spacing: 7) {
+              Image(systemName: state.isActive ? "timer" : "plus.circle.fill")
+              Text(state.isActive ? "Open gTimer" : "Log a dose")
+            }
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(WT.accentBlue)
+            .clipShape(Capsule())
+          }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+      }
+    }
+    .padding(16)
+    .containerBackground(WT.bg, for: .widget)
+    .widgetURL(URL(string: "gtimer://timer"))
+  }
+}
+
 // MARK: - Entry view dispatcher
 
 struct GTimerWidgetView: View {
@@ -418,6 +536,8 @@ struct GTimerWidgetView: View {
 
   var body: some View {
     switch family {
+    case .systemLarge:
+      LargeWidgetView(entry: entry)
     case .systemMedium:
       MediumWidgetView(entry: entry)
     default:
@@ -439,6 +559,6 @@ struct GTimerWidget: Widget {
     }
     .configurationDisplayName("gTimer")
     .description("Track your GHB/GBL dosing interval.")
-    .supportedFamilies([.systemSmall, .systemMedium])
+    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
   }
 }

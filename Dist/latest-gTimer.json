@@ -1,21 +1,22 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.8",
-  "build": 98,
+  "version": "0.9.9",
+  "build": 99,
   "minimum_os": "14.0",
-  "published_at": "2026-09-08T04:24:15Z",
-  "summary": "The desktop menu has clearer button targets and stronger contrast.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.8/gTimer-macOS-0.9.8-98-local.pkg",
-  "sha256": "2912b189206b48426b78b15631cc4b6bc040842c75c815405fc8947ae5fdb563",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.8/gTimer-macOS-0.9.8-98-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.8",
+  "published_at": "2026-09-08T11:29:16Z",
+  "summary": "Embedded iOS and macOS widgets are now available.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.9/gTimer-macOS-0.9.9-99-local.pkg",
+  "sha256": "c9f154efe7145370d2fd5d9c2a70e76c541cb4c5fc0d7f8a91fe68e88f32b2a8",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.9/gTimer-macOS-0.9.9-99-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.9",
   "changes": {
-    "new_features": [],
+    "new_features": [
+      "Added embedded iOS and macOS WidgetKit widgets in small, medium, and large sizes.",
+      "Widgets show current timer status, last dose details, safe interval progress, and open gTimer from the widget."
+    ],
     "minor_improvements": [
-      "Renamed the Pro menu item to gTimer Pro and coloured its star and text gold.",
-      "Made each desktop menu item use the full rounded button as its clickable target.",
-      "Increased the contrast between the desktop menu bar and the main app background."
+      "Widget progress now matches countdown and count-up timer semantics."
     ],
     "bug_fixes": []
   }

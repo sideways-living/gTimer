@@ -36,7 +36,7 @@
 		AD9471D3AD59025DB4AF11DE /* SharedDoseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0CA2DE082569DFB7FB3F5D /* SharedDoseData.swift */; };
 		B6AD1ACEA70FA80E9BF33DF4 /* DoseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC4BD0039F6966DA9B18844F /* DoseStore.swift */; };
 		BC5FB7C31E4DE436E24B451D /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3446F25387A6D1411B41B36 /* ShareSheet.swift */; };
-		C2345557B5156BD20F7DDF03 /* G Timer Widget Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5F7B86708E304BA28ABB83BC /* G Timer Widget Extension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C2345557B5156BD20F7DDF03 /* G Timer Widget Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5F7B86708E304BA28ABB83BC /* G Timer Widget Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C39D1F539DFE6DF4DDCC57D6 /* DoseRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3758643DB3E58984DD446264 /* DoseRowView.swift */; };
 		CDE70C6A1DEC759CB42925EA /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3DE4C0276F0C373BC006329 /* App.swift */; };
 		E09A6487A499DEC06665200F /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F64F7FF34708FF5B2C063937 /* AppGroup.swift */; };
@@ -319,10 +319,12 @@
 			buildPhases = (
 				328792BEF7E9EACB2C4524F4 /* Sources */,
 				387E9530AAD601676538EB50 /* Resources */,
+				B8CBA07BCEB2EDE37430B0DE /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				BABD617BCA08F03B3D862A60 /* PBXTargetDependency */,
 			);
 			name = "G Timer";
 			packageProductDependencies = (
@@ -486,7 +488,6 @@
 		};
 		BABD617BCA08F03B3D862A60 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilter = ios;
 			target = E5DC0626A0C5615CAA60D578 /* G Timer Widget Extension */;
 			targetProxy = 851FCFEAE371BA03C51358A1 /* PBXContainerItemProxy */;
 		};
@@ -500,9 +501,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 98;
+				CURRENT_PROJECT_VERSION = 99;
 				INFOPLIST_FILE = Watch/Info.plist;
-				MARKETING_VERSION = 0.9.8;
+				MARKETING_VERSION = 0.9.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01.watchkitapp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -587,7 +588,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Widget Extension/Widget.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 98;
+				CURRENT_PROJECT_VERSION = 99;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Widget Extension/Info.plist";
@@ -596,7 +597,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.9.8;
+				MARKETING_VERSION = 0.9.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01.widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -619,7 +620,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Widget Extension/Widget.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 98;
+				CURRENT_PROJECT_VERSION = 99;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = "Widget Extension/Info.plist";
@@ -628,7 +629,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.9.8;
+				MARKETING_VERSION = 0.9.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01.widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -652,7 +653,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 98;
+				CURRENT_PROJECT_VERSION = 99;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = App/Info.plist;
@@ -660,7 +661,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.9.8;
+				MARKETING_VERSION = 0.9.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -741,9 +742,9 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 98;
+				CURRENT_PROJECT_VERSION = 99;
 				INFOPLIST_FILE = Watch/Info.plist;
-				MARKETING_VERSION = 0.9.8;
+				MARKETING_VERSION = 0.9.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01.watchkitapp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -763,7 +764,7 @@
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 98;
+				CURRENT_PROJECT_VERSION = 99;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = App/Info.plist;
@@ -771,7 +772,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.9.8;
+				MARKETING_VERSION = 0.9.9;
 				PRODUCT_BUNDLE_IDENTIFIER = "app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

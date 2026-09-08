@@ -1,6 +1,6 @@
 # Future Platform Parity Plan
 
-Last updated: 2026-08-29
+Last updated: 2026-09-08
 
 ## Scope
 
@@ -13,9 +13,10 @@ The iOS SwiftUI app is the canonical implementation. Future Android and Windows 
 | Platform | Current status | Notes |
 | --- | --- | --- |
 | iOS | Active canonical app | Main app builds for iPhone Simulator. Physical-device/App Store builds still need Apple Developer provisioning. |
-| iOS Widget | Present but disabled from the interim app Run path | Widget target exists, but embedding is temporarily disabled to avoid Simulator install failures before proper Developer provisioning. |
+| iOS Widget | Buildable and embedded in app | WidgetKit extension embeds with the host app, reads shared App Group timer data, supports small/medium/large widgets, and opens gTimer through `gtimer://timer`. Physical-device/App Store use still needs Apple Developer provisioning and App Group registration. |
 | watchOS | Debug simulator build passing | Standalone watch app target builds, but it is not embedded in the current app-only iPhone Run path. Feature parity is partial. |
-| macOS | Initial Debug build passing | App builds for `My Mac` with a Mac sidebar shell and responsive timer/history layout; packaging, store readiness, and Mac-specific QA still need work. |
+| macOS | Debug build and installer flow passing | App builds for `My Mac` with a Mac sidebar shell, responsive timer/history layout, GitHub update metadata, and package output; store readiness and Mac-specific QA still need work. |
+| macOS Widget | Buildable and embedded in app | WidgetKit extension embeds in the Mac app bundle, reads the same App Group timer data, supports small/medium/large widgets, and opens gTimer through `gtimer://timer`. |
 | tvOS | No target | Not configured in the Xcode project. Would be a new platform port with limited feature fit. |
 | Android | Future planned | No implementation started. |
 | Windows | Future planned | No implementation started. |
@@ -92,6 +93,7 @@ Future Android and Windows versions should match these features:
 | Notifications | Optional local reminder when the configured timing interval elapses. Notification copy must not imply medical safety. |
 | Location | Pro-gated optional location recording; current setting named "Show approximate location" rounds display only, not saved coordinates. |
 | Map/insights | Pro-gated dose map and location summary behavior. |
+| Widgets | Companion widgets show current timer status, last dose amount/time, safe interval progress, and an open-app action. Widgets must match countdown/count-up visual semantics. Widgets should not directly write dose history unless the platform implementation writes through the canonical dose store and triggers the same notification/update flow. |
 
 ## Data Model Parity
 
@@ -112,7 +114,7 @@ All future platforms should preserve these fields:
 | `locationName` | String nullable | Optional place label. |
 | `locationAccuracyMeters` | Decimal/double nullable | Optional accuracy metadata. |
 | `locationCapturedAt` | Date/time nullable | Optional location capture time. |
-| `locationSource` | String nullable | `automatic`, `manual`, `none`; nil should be treated as `none`. |
+| `locationSource` | String nullable | `automatic`, `current`, `manual`, `home-fallback`, `none`; nil should be treated as `none`. |
 
 CSV exports/imports should use the same field names unless a migration map is explicitly documented.
 
@@ -135,6 +137,14 @@ CSV exports/imports should use the same field names unless a migration map is ex
 | Show approximate location | Display rounding only | If future privacy-preserving storage is added, update all platforms together. |
 
 ## Apple Companion Platform Notes
+
+WidgetKit:
+
+- iOS and macOS widgets read `SharedDoseData` from the App Group container.
+- Widgets are display/open-app surfaces, not autonomous dose writers.
+- Support small, medium, and large widget families.
+- Match countdown/count-up gauge semantics: countdown starts full and empties; count-up starts empty and fills.
+- Reload timelines after dose records or timer settings change.
 
 watchOS:
 
@@ -166,7 +176,7 @@ Android-specific substitutions:
 
 - Replace iOS local notifications with Android notification channels and runtime notification permission.
 - Replace iOS location permission flow with Android foreground location permission.
-- Replace WidgetKit with Android widgets.
+- Replace WidgetKit with Android Glance/AppWidget widgets that show timer status, last dose amount/time, safe interval progress, and open the app to the timer. Direct widget logging is only parity-complete if it writes the canonical history record and triggers the same update/notification flow.
 - If cross-platform sync is needed, do not use an Android-only sync backend unless the product decision explicitly allows it.
 - Use the retained launcher and Play Store icon assets in `FuturePlatformAssets/Android` so the Android release matches the Apple app icon.
 
@@ -179,10 +189,12 @@ Recommended stack:
 - Windows app settings or SQLite-backed preferences.
 - Windows notifications for interval reminders.
 - Native map control or web map view for dose map.
+- Windows Widgets, tray, taskbar, or live-tile equivalent for timer widget parity.
 
 Windows-specific substitutions:
 
-- If Windows Widgets are not suitable, document a tray/live-tile/taskbar equivalent before claiming widget parity.
+- If Windows Widgets are not suitable, document a tray/live-tile/taskbar equivalent before claiming widget parity. The equivalent must show timer status, last dose amount/time, safe interval progress, and open the app to the timer.
+- Direct widget/tray logging is only parity-complete if it writes the canonical history record and triggers the same update/notification flow.
 - Location capture depends on Windows device/location permissions and hardware availability.
 - Do not silently omit Pro, export, location, or history behavior; mark unsupported items as product decisions.
 - Use the retained Windows icon source files in `FuturePlatformAssets/Windows` for `.ico`, MSIX, Start menu, taskbar, and store packaging.
