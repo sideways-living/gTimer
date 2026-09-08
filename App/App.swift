@@ -90,6 +90,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.8",
+      build: 98,
+      category: .minorImprovements,
+      message: "Improved the desktop bottom menu with stronger contrast, full-button click targets, and a gold gTimer Pro item."
+    ),
+    AppUpdateEntry(
       version: "0.9.7",
       build: 97,
       category: .minorImprovements,
@@ -164,11 +170,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.7"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.8"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "97"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "98"
   }
 
   var displayVersion: String {
@@ -303,11 +309,11 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.7"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.8"
   }
 
   private var currentBuild: Int {
-    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "97") ?? 97
+    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "98") ?? 98
   }
 
   private static var updateFeedURL: URL? {

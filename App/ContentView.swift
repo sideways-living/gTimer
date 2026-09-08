@@ -49,26 +49,47 @@ struct ContentView: View {
         Button {
           nav.selectedTab = tab.rawValue
         } label: {
-          Label(tab.title, systemImage: tab.systemImage)
-            .labelStyle(.titleAndIcon)
-            .font(.system(size: 13, weight: .semibold))
-            .lineLimit(1)
-            .padding(.horizontal, 13)
-            .frame(height: 38)
-            .foregroundStyle(nav.selectedTab == tab.rawValue ? .white : AppTheme.textSecondary)
-            .background(
-              Capsule()
-                .fill(nav.selectedTab == tab.rawValue ? AppTheme.accentBlue : Color.clear)
-            )
+          HStack(spacing: 7) {
+            Image(systemName: tab.systemImage)
+              .font(.system(size: 13, weight: .semibold))
+            Text(tab.title)
+              .font(.system(size: 13, weight: .semibold))
+              .lineLimit(1)
+          }
+          .foregroundStyle(tabForeground(for: tab))
+          .frame(minWidth: tab == .pro ? 104 : 82, minHeight: 40)
+          .padding(.horizontal, 4)
+          .background(
+            Capsule()
+              .fill(tabBackground(for: tab))
+          )
+          .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(tab.title)
       }
     }
-    .padding(6)
-    .background(.ultraThinMaterial, in: Capsule())
-    .overlay(Capsule().stroke(AppTheme.border.opacity(0.8), lineWidth: 0.75))
-    .shadow(color: Color.black.opacity(0.24), radius: 18, x: 0, y: 10)
+    .padding(7)
+    .background(AppTheme.backgroundElevated.opacity(0.98), in: Capsule())
+    .overlay(Capsule().stroke(AppTheme.border.opacity(0.95), lineWidth: 1))
+    .shadow(color: Color.black.opacity(0.34), radius: 18, x: 0, y: 10)
+  }
+
+  private func tabForeground(for tab: AppTab) -> Color {
+    if tab == .pro {
+      return AppTheme.proAmber
+    }
+    return nav.selectedTab == tab.rawValue ? .white : AppTheme.textSecondary
+  }
+
+  private func tabBackground(for tab: AppTab) -> Color {
+    guard nav.selectedTab == tab.rawValue else {
+      return AppTheme.backgroundPrimary.opacity(0.58)
+    }
+    if tab == .pro {
+      return AppTheme.proAmber.opacity(0.18)
+    }
+    return AppTheme.accentBlue
   }
   #endif
 }
@@ -88,7 +109,7 @@ private enum AppTab: Int, CaseIterable, Identifiable {
     case .history: "History"
     case .health: "Health"
     case .settings: "Settings"
-    case .pro: "Pro"
+    case .pro: "gTimer Pro"
     }
   }
 

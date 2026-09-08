@@ -1,20 +1,21 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.7",
-  "build": 97,
+  "version": "0.9.8",
+  "build": 98,
   "minimum_os": "14.0",
-  "published_at": "2026-09-07T11:57:39Z",
-  "summary": "Missed-dose logging now has clearer location choices.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.7/gTimer-macOS-0.9.7-97-local.pkg",
-  "sha256": "25dc7d456cb54dde5cfa8c8d3db45842bcfdd450d851084333eb7b7e93bc2e61",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.7/gTimer-macOS-0.9.7-97-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.7",
+  "published_at": "2026-09-08T04:24:15Z",
+  "summary": "The desktop menu has clearer button targets and stronger contrast.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.8/gTimer-macOS-0.9.8-98-local.pkg",
+  "sha256": "2912b189206b48426b78b15631cc4b6bc040842c75c815405fc8947ae5fdb563",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.8/gTimer-macOS-0.9.8-98-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.8",
   "changes": {
     "new_features": [],
     "minor_improvements": [
-      "Missed-dose logging now supports no location, current location, saved home location, and searched or manually entered locations.",
-      "Manual missed-dose locations can be filled from saved places, looked up by place or address, or populated from the current location."
+      "Renamed the Pro menu item to gTimer Pro and coloured its star and text gold.",
+      "Made each desktop menu item use the full rounded button as its clickable target.",
+      "Increased the contrast between the desktop menu bar and the main app background."
     ],
     "bug_fixes": []
   }
