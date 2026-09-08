@@ -1,25 +1,20 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.12",
-  "build": 102,
+  "version": "0.9.13",
+  "build": 103,
   "minimum_os": "14.0",
-  "published_at": "2026-09-08T11:51:50Z",
-  "summary": "Adds Command-6 map navigation and full-page map output for history exports.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.12/gTimer-macOS-0.9.12-102-local.pkg",
-  "sha256": "8c305ba9992a025d5b025e1cf3b0e0fcfa75e8ec160c87c54e1d42d9d5f8f3be",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.12/gTimer-macOS-0.9.12-102-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.12",
+  "published_at": "2026-09-08T13:31:41Z",
+  "summary": "Keeps the gTimer Pro menu button gold with white star and text.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.13/gTimer-macOS-0.9.13-103-local.pkg",
+  "sha256": "c011de35c77c90d3bc37599e3b22c28bf8f1fc37b78215fe9bf6a9dd8c4cdf76",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.13/gTimer-macOS-0.9.13-103-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.13",
   "changes": {
-    "new_features": [
-      "Command-6 now opens the dose map from the Open Tabs menu."
-    ],
+    "new_features": [],
     "minor_improvements": [
-      "History PDF export and print can include a full-page rendered visual map with dose markers.",
-      "Map-only exports are now supported when location output is selected."
+      "The gTimer Pro button in the desktop bottom menu now stays gold with white star and text in every navigation state."
     ],
-    "bug_fixes": [
-      "The include-map export option now produces a visual map page instead of only listing location text."
-    ]
+    "bug_fixes": []
   }
 }

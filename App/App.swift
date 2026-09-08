@@ -151,6 +151,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.13",
+      build: 103,
+      category: .minorImprovements,
+      message: "Kept the gTimer Pro menu button as a gold button with white star and text in every navigation state."
+    ),
+    AppUpdateEntry(
       version: "0.9.12",
       build: 102,
       category: .minorImprovements,
@@ -255,11 +261,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.12"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.13"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "102"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "103"
   }
 
   var displayVersion: String {
@@ -394,7 +400,7 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.12"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.13"
   }
 
   private var currentBuild: Int {
