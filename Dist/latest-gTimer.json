@@ -1,22 +1,22 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.9",
-  "build": 99,
+  "version": "0.9.10",
+  "build": 100,
   "minimum_os": "14.0",
-  "published_at": "2026-09-08T11:29:16Z",
-  "summary": "Embedded iOS and macOS widgets are now available.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.9/gTimer-macOS-0.9.9-99-local.pkg",
-  "sha256": "c9f154efe7145370d2fd5d9c2a70e76c541cb4c5fc0d7f8a91fe68e88f32b2a8",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.9/gTimer-macOS-0.9.9-99-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.9",
+  "published_at": "2026-09-08T11:36:08Z",
+  "summary": "macOS menu commands and history export controls are now available.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.10/gTimer-macOS-0.9.10-100-local.pkg",
+  "sha256": "30bb9714c7b6865b4465222cea479f433994fcbf49f4e3b54668cbf37f0c486c",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.10/gTimer-macOS-0.9.10-100-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.10",
   "changes": {
     "new_features": [
-      "Added embedded iOS and macOS WidgetKit widgets in small, medium, and large sizes.",
-      "Widgets show current timer status, last dose details, safe interval progress, and open gTimer from the widget."
+      "Added macOS menu commands for opening gTimer, History, Health, Settings, and gTimer Pro.",
+      "Added keyboard commands for new dose, PDF export, print, Settings, and quit confirmation."
     ],
     "minor_improvements": [
-      "Widget progress now matches countdown and count-up timer semantics."
+      "History export now opens an options window with date range, field selection, and map/location inclusion before exporting or printing."
     ],
     "bug_fixes": []
   }

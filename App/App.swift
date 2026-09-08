@@ -43,6 +43,16 @@ struct GTimerApp: App {
             Text("A newer version of gTimer is available.")
           }
         }
+        .alert("Quit gTimer?", isPresented: $nav.shouldShowQuitWarning) {
+          Button("Cancel", role: .cancel) {}
+          Button("Quit", role: .destructive) {
+            #if os(macOS)
+            NSApp.terminate(nil)
+            #endif
+          }
+        } message: {
+          Text("Any open sheets or unfinished edits will be closed.")
+        }
         .sheet(isPresented: $updates.shouldShowUpdateNotes) {
           UpdateNotesSheet()
             .environment(updates)
@@ -57,6 +67,55 @@ struct GTimerApp: App {
             nav.selectedTab = 0
           }
         }
+    }
+    .commands {
+      CommandGroup(after: .appInfo) {
+        Button("Settings") {
+          nav.openSettings()
+        }
+        .keyboardShortcut(",", modifiers: .command)
+      }
+
+      CommandMenu("Open Tabs") {
+        Button("gTimer") { nav.openTimer() }
+          .keyboardShortcut("1", modifiers: .command)
+        Button("History") { nav.openHistory() }
+          .keyboardShortcut("2", modifiers: .command)
+        Button("Health") { nav.openHealth() }
+          .keyboardShortcut("3", modifiers: .command)
+        Button("Settings") { nav.openSettings() }
+          .keyboardShortcut("4", modifiers: .command)
+        Button("gTimer Pro") { nav.openPro() }
+          .keyboardShortcut("5", modifiers: .command)
+      }
+
+      CommandGroup(replacing: .newItem) {
+        Button("New Dose") {
+          nav.requestNewDose()
+        }
+        .keyboardShortcut("n", modifiers: .command)
+      }
+
+      CommandGroup(replacing: .saveItem) {
+        Button("Export History to PDF") {
+          nav.requestHistoryExport(outcome: .export)
+        }
+        .keyboardShortcut("s", modifiers: .command)
+      }
+
+      CommandGroup(replacing: .printItem) {
+        Button("Print History") {
+          nav.requestHistoryExport(outcome: .print)
+        }
+        .keyboardShortcut("p", modifiers: .command)
+      }
+
+      CommandGroup(replacing: .appTermination) {
+        Button("Quit gTimer") {
+          nav.requestQuitConfirmation()
+        }
+        .keyboardShortcut("q", modifiers: .command)
+      }
     }
   }
 }
@@ -89,6 +148,12 @@ final class AppUpdateManager {
   var shouldShowUpdateNotes = false
 
   let entries: [AppUpdateEntry] = [
+    AppUpdateEntry(
+      version: "0.9.10",
+      build: 100,
+      category: .minorImprovements,
+      message: "Added macOS menu commands for opening app sections, logging a new dose, exporting or printing history, opening Settings from the app menu, and confirming before quit."
+    ),
     AppUpdateEntry(
       version: "0.9.9",
       build: 99,
@@ -176,11 +241,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.9"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.10"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "99"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "100"
   }
 
   var displayVersion: String {
@@ -315,11 +380,11 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.9"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.10"
   }
 
   private var currentBuild: Int {
-    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "99") ?? 99
+    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "100") ?? 100
   }
 
   private static var updateFeedURL: URL? {

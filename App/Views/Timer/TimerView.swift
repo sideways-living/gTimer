@@ -19,6 +19,7 @@ struct TimerView: View {
   @State private var pendingEarlyBySeconds: TimeInterval?
   @State private var ticker: Timer?
   @State private var editingDose: DoseRecord?
+  @State private var handledNewDoseRequestID = 0
 
   private var lastDose: DoseRecord? { doses.first }
   private var visibleDoses: [DoseRecord] {
@@ -88,10 +89,14 @@ struct TimerView: View {
     .onAppear {
       startTicker()
       DoseStore.backfillMissingEarlyDoseTiming(context: context, settings: settings)
+      handlePendingNewDoseRequest()
       // Warm up a location fix if Pro location recording is enabled
       if settings.proBetaAccepted && settings.attachLocationToDoses {
         LocationManager.shared.requestLocationInBackground()
       }
+    }
+    .onChange(of: nav.newDoseRequestID) { _, _ in
+      handlePendingNewDoseRequest()
     }
     .onDisappear { ticker?.invalidate() }
     .sheet(isPresented: $showCustomSheet) {
@@ -662,6 +667,12 @@ struct TimerView: View {
   private func startTicker() {
     ticker?.invalidate()
     ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in now = Date() }
+  }
+
+  private func handlePendingNewDoseRequest() {
+    guard nav.newDoseRequestID != handledNewDoseRequestID else { return }
+    handledNewDoseRequestID = nav.newDoseRequestID
+    showCustomSheet = true
   }
 
   private func attemptLog(amount: Double, notes: String = "") {

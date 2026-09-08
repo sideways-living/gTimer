@@ -1,5 +1,11 @@
 import SwiftUI
 import SwiftData
+import CoreText
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 struct HistoryView: View {
   @Environment(SettingsManager.self) private var settings
@@ -12,8 +18,9 @@ struct HistoryView: View {
   @State private var showMapView = false
   @State private var showPaywall = false
   @State private var paywallFeature: ProFeature = .fullHistory
-  @State private var showExportLocationWarning = false
-  @State private var showExportShare = false
+  @State private var showHistoryExport = false
+  @State private var exportOutcome: HistoryExportOutcome = .export
+  @State private var handledExportRequestID = 0
 
   private var visibleDoses: [DoseRecord] {
     if settings.proBetaAccepted { return allDoses }
@@ -80,14 +87,12 @@ struct HistoryView: View {
       } message: {
         Text("This cannot be undone.")
       }
-      .alert("Export includes location data", isPresented: $showExportLocationWarning) {
-        Button("Export") { showExportShare = true }
-        Button("Cancel", role: .cancel) {}
-      } message: {
-        Text("Your export will include GPS coordinates and location names for \(locatedCount) dose\(locatedCount == 1 ? "" : "s"). Make sure you trust the recipient.")
-      }
-      .sheet(isPresented: $showExportShare) {
-        ShareSheet(items: [csvContent()])
+      .sheet(isPresented: $showHistoryExport) {
+        HistoryExportSheet(
+          doses: allDoses,
+          locationApproximate: settings.locationApproximate,
+          initialOutcome: exportOutcome
+        )
       }
       .sheet(item: $editingDose) { EditDoseSheet(dose: $0) }
       .platformDoseMapPresentation(isPresented: $showMapView)
@@ -96,6 +101,10 @@ struct HistoryView: View {
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
     .onAppear {
       DoseStore.backfillMissingEarlyDoseTiming(context: context, settings: settings)
+      handlePendingExportRequest()
+    }
+    .onChange(of: nav.historyExportRequestID) { _, _ in
+      handlePendingExportRequest()
     }
   }
 
@@ -297,44 +306,352 @@ struct HistoryView: View {
         showPaywall = true
         return
       }
-      if locatedCount > 0 {
-        showExportLocationWarning = true
-      } else {
-        showExportShare = true
-      }
+      exportOutcome = .export
+      showHistoryExport = true
     } label: {
       Image(systemName: "square.and.arrow.up")
         .foregroundStyle(settings.proBetaAccepted ? AppTheme.accentBlue : AppTheme.textMuted)
     }
-    .accessibilityLabel(settings.proBetaAccepted ? "Export CSV" : "Export CSV — Pro feature")
+    .accessibilityLabel(settings.proBetaAccepted ? "Export history" : "Export history — Pro feature")
   }
 
-  private func csvContent() -> String {
-    var lines = ["Date,Time,Amount,Unit,Missed,Edited,EarlyByMinutes,Notes,Device,Latitude,Longitude,LocationName,AccuracyMeters,LocationSource"]
-    let fmt = DateFormatter(); fmt.dateStyle = .short
-    let tfmt = DateFormatter(); tfmt.timeStyle = .short
-    for d in allDoses {
-      let row = [
-        fmt.string(from: d.time),
-        tfmt.string(from: d.time),
-        String(d.amount),
-        d.unit,
-        d.missed ? "Yes" : "No",
-        d.edited ? "Yes" : "No",
-        d.earlyBySeconds.map { String(Int(($0 / 60).rounded())) } ?? "",
-        "\"\(d.notes.replacingOccurrences(of: "\"", with: "\"\""))\"",
-        d.deviceName,
-        d.latitude.map { String(format: "%.6f", $0) } ?? "",
-        d.longitude.map { String(format: "%.6f", $0) } ?? "",
-        "\"\((d.locationName ?? "").replacingOccurrences(of: "\"", with: "\"\""))\"",
-        d.locationAccuracyMeters.map { String(Int($0)) } ?? "",
-        d.resolvedLocationSource
-      ].joined(separator: ",")
-      lines.append(row)
+  private func handlePendingExportRequest() {
+    guard nav.historyExportRequestID != handledExportRequestID else { return }
+    handledExportRequestID = nav.historyExportRequestID
+    guard settings.proBetaAccepted else {
+      paywallFeature = .exportHistory
+      showPaywall = true
+      return
     }
-    return lines.joined(separator: "\n")
+    exportOutcome = nav.historyExportOutcome
+    showHistoryExport = true
   }
 }
+
+private enum HistoryExportField: String, CaseIterable, Identifiable {
+  case date = "Date"
+  case time = "Time"
+  case amount = "Amount"
+  case unit = "Unit"
+  case missed = "Missed"
+  case edited = "Edited"
+  case earlyBy = "Early by"
+  case notes = "Notes"
+  case device = "Device"
+  case locationName = "Location"
+  case coordinates = "Coordinates"
+  case accuracy = "Accuracy"
+  case locationSource = "Location source"
+
+  var id: String { rawValue }
+}
+
+private struct HistoryExportSheet: View {
+  @Environment(\.dismiss) private var dismiss
+
+  let doses: [DoseRecord]
+  let locationApproximate: Bool
+  let initialOutcome: HistoryExportOutcome
+
+  @State private var selectedFields = Set(HistoryExportField.allCases)
+  @State private var includeMap = false
+  @State private var startDate: Date
+  @State private var endDate: Date
+  @State private var shareItem: HistoryExportShareItem?
+
+  init(doses: [DoseRecord], locationApproximate: Bool, initialOutcome: HistoryExportOutcome) {
+    self.doses = doses
+    self.locationApproximate = locationApproximate
+    self.initialOutcome = initialOutcome
+    let sorted = doses.sorted { $0.time < $1.time }
+    _startDate = State(initialValue: sorted.first?.time ?? Date())
+    _endDate = State(initialValue: sorted.last?.time ?? Date())
+  }
+
+  private var filteredDoses: [DoseRecord] {
+    doses
+      .filter { $0.time >= startDate && $0.time <= endDate }
+      .sorted { $0.time > $1.time }
+  }
+
+  private var hasLocationFieldsSelected: Bool {
+    selectedFields.contains(.locationName)
+      || selectedFields.contains(.coordinates)
+      || selectedFields.contains(.accuracy)
+      || selectedFields.contains(.locationSource)
+      || includeMap
+  }
+
+  private var actionTitle: String {
+    initialOutcome == .print ? "Print" : "Export PDF"
+  }
+
+  var body: some View {
+    NavigationStack {
+      Form {
+        Section("Date range") {
+          DatePicker("From", selection: $startDate, displayedComponents: [.date, .hourAndMinute])
+          DatePicker("To", selection: $endDate, displayedComponents: [.date, .hourAndMinute])
+          Text("\(filteredDoses.count) dose record\(filteredDoses.count == 1 ? "" : "s") selected")
+            .foregroundStyle(AppTheme.textMuted)
+        }
+
+        Section("Fields") {
+          ForEach(HistoryExportField.allCases) { field in
+            Toggle(field.rawValue, isOn: fieldBinding(field))
+          }
+        }
+
+        Section("Map") {
+          Toggle("Include map/location section", isOn: $includeMap)
+          Text("The PDF includes location names and coordinates for mapped doses in the selected range.")
+            .font(.footnote)
+            .foregroundStyle(AppTheme.textMuted)
+        }
+
+        if hasLocationFieldsSelected && filteredDoses.contains(where: \.hasLocation) {
+          Section {
+            Text("This export includes saved location data. Only export or print it somewhere you trust.")
+              .font(.footnote)
+              .foregroundStyle(AppTheme.statusAmber)
+          }
+        }
+      }
+      .scrollContentBackground(.hidden)
+      .background(AppTheme.backgroundPrimary)
+      .navigationTitle(initialOutcome == .print ? "Print History" : "Export History")
+      .platformInlineNavigationTitle()
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Cancel") { dismiss() }
+        }
+        ToolbarItem(placement: .confirmationAction) {
+          Button(actionTitle) {
+            performAction()
+          }
+          .disabled(filteredDoses.isEmpty || selectedFields.isEmpty || startDate > endDate)
+        }
+      }
+      .sheet(item: $shareItem) { item in
+        ShareSheet(items: [item.url])
+      }
+    }
+    .frame(minWidth: 460, minHeight: 560)
+    .presentationBackground(AppTheme.backgroundPrimary)
+  }
+
+  private func fieldBinding(_ field: HistoryExportField) -> Binding<Bool> {
+    Binding {
+      selectedFields.contains(field)
+    } set: { isSelected in
+      if isSelected {
+        selectedFields.insert(field)
+      } else {
+        selectedFields.remove(field)
+      }
+    }
+  }
+
+  private func performAction() {
+    let document = HistoryExportDocument(
+      doses: filteredDoses,
+      fields: HistoryExportField.allCases.filter { selectedFields.contains($0) },
+      includeMap: includeMap,
+      locationApproximate: locationApproximate,
+      startDate: startDate,
+      endDate: endDate
+    )
+
+    switch initialOutcome {
+    case .export:
+      do {
+        shareItem = try HistoryExportShareItem(url: document.writePDF())
+      } catch {
+        return
+      }
+    case .print:
+      document.print()
+      dismiss()
+    }
+  }
+}
+
+private struct HistoryExportShareItem: Identifiable {
+  let id = UUID()
+  let url: URL
+}
+
+private struct HistoryExportDocument {
+  let doses: [DoseRecord]
+  let fields: [HistoryExportField]
+  let includeMap: Bool
+  let locationApproximate: Bool
+  let startDate: Date
+  let endDate: Date
+
+  private var bodyText: String {
+    var lines: [String] = []
+    lines.append("gTimer History")
+    lines.append("Date range: \(dateTime(startDate)) to \(dateTime(endDate))")
+    lines.append("Records: \(doses.count)")
+    lines.append("")
+
+    for dose in doses {
+      lines.append(rowText(for: dose))
+    }
+
+    if includeMap {
+      let mapped = doses.filter(\.hasLocation)
+      lines.append("")
+      lines.append("Map/location section")
+      if mapped.isEmpty {
+        lines.append("No mapped doses in this date range.")
+      } else {
+        for dose in mapped {
+          let location = dose.displayLocation(approximate: locationApproximate) ?? "Unnamed location"
+          let coords = coordinates(for: dose)
+          lines.append("\(dateTime(dose.time)) - \(location) - \(coords)")
+        }
+      }
+    }
+
+    return lines.joined(separator: "\n")
+  }
+
+  func writePDF() throws -> URL {
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent("gTimer History \(Self.fileStamp()).pdf")
+    let data = makePDFData()
+    try data.write(to: url, options: .atomic)
+    return url
+  }
+
+  func print() {
+    let text = bodyText
+    #if os(macOS)
+    let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 612, height: 792))
+    textView.string = text
+    textView.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+    textView.textContainerInset = NSSize(width: 36, height: 36)
+    NSPrintOperation(view: textView).run()
+    #elseif os(iOS)
+    let controller = UIPrintInteractionController.shared
+    controller.printingItem = makePDFData()
+    controller.present(animated: true)
+    #endif
+  }
+
+  private func makePDFData() -> Data {
+    let output = NSMutableData()
+    guard let consumer = CGDataConsumer(data: output as CFMutableData) else { return Data() }
+    var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+    guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else { return Data() }
+
+    let font = CTFontCreateWithName("Menlo" as CFString, 10, nil)
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.lineBreakMode = .byWordWrapping
+    let attributes: [NSAttributedString.Key: Any] = [
+      .font: font,
+      .foregroundColor: PlatformExportColor.black,
+      .paragraphStyle: paragraph
+    ]
+    let attributed = NSAttributedString(string: bodyText, attributes: attributes)
+    let framesetter = CTFramesetterCreateWithAttributedString(attributed)
+    var currentRange = CFRange(location: 0, length: 0)
+    let pageRect = mediaBox.insetBy(dx: 42, dy: 42)
+
+    repeat {
+      context.beginPDFPage(nil)
+      context.textMatrix = .identity
+      context.translateBy(x: 0, y: mediaBox.height)
+      context.scaleBy(x: 1.0, y: -1.0)
+
+      let path = CGMutablePath()
+      path.addRect(pageRect)
+      let frame = CTFramesetterCreateFrame(framesetter, currentRange, path, nil)
+      CTFrameDraw(frame, context)
+      let visibleRange = CTFrameGetVisibleStringRange(frame)
+      currentRange.location += visibleRange.length
+      context.endPDFPage()
+    } while currentRange.location < attributed.length
+
+    context.closePDF()
+    return output as Data
+  }
+
+  private func rowText(for dose: DoseRecord) -> String {
+    fields.map { value(for: $0, dose: dose) }.joined(separator: " | ")
+  }
+
+  private func value(for field: HistoryExportField, dose: DoseRecord) -> String {
+    switch field {
+    case .date:
+      return "Date: \(date(dose.time))"
+    case .time:
+      return "Time: \(time(dose.time))"
+    case .amount:
+      return "Amount: \(dose.amount.formatted(.number.precision(.fractionLength(0...3))))"
+    case .unit:
+      return "Unit: \(dose.unit)"
+    case .missed:
+      return "Missed: \(dose.missed ? "Yes" : "No")"
+    case .edited:
+      return "Edited: \(dose.edited ? "Yes" : "No")"
+    case .earlyBy:
+      return "Early by: \(dose.formattedEarlyBy ?? "")"
+    case .notes:
+      return "Notes: \(dose.notes)"
+    case .device:
+      return "Device: \(dose.deviceName)"
+    case .locationName:
+      return "Location: \(dose.displayLocation(approximate: locationApproximate) ?? "")"
+    case .coordinates:
+      return "Coordinates: \(dose.hasLocation ? coordinates(for: dose) : "")"
+    case .accuracy:
+      return "Accuracy: \(dose.locationAccuracyMeters.map { "\(Int($0.rounded()))m" } ?? "")"
+    case .locationSource:
+      return "Location source: \(dose.resolvedLocationSource)"
+    }
+  }
+
+  private func date(_ value: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .none
+    return formatter.string(from: value)
+  }
+
+  private func time(_ value: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .none
+    formatter.timeStyle = .short
+    return formatter.string(from: value)
+  }
+
+  private func dateTime(_ value: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .short
+    return formatter.string(from: value)
+  }
+
+  private func coordinates(for dose: DoseRecord) -> String {
+    guard let lat = dose.latitude, let lon = dose.longitude else { return "" }
+    return String(format: "%.6f, %.6f", lat, lon)
+  }
+
+  private static func fileStamp() -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd HH-mm-ss"
+    return formatter.string(from: Date())
+  }
+}
+
+#if os(macOS)
+private typealias PlatformExportColor = NSColor
+#else
+private typealias PlatformExportColor = UIColor
+#endif
 
 private extension View {
   @ViewBuilder

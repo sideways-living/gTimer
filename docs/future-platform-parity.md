@@ -94,6 +94,7 @@ Future Android and Windows versions should match these features:
 | Location | Pro-gated optional location recording; current setting named "Show approximate location" rounds display only, not saved coordinates. |
 | Map/insights | Pro-gated dose map and location summary behavior. |
 | Widgets | Companion widgets show current timer status, last dose amount/time, safe interval progress, and an open-app action. Widgets must match countdown/count-up visual semantics. Widgets should not directly write dose history unless the platform implementation writes through the canonical dose store and triggers the same notification/update flow. |
+| Export/print | Pro-gated export window supports date range, field selection, location/map inclusion, PDF export, and print output. Desktop platforms should expose keyboard commands for these flows. |
 
 ## Data Model Parity
 
@@ -146,6 +147,12 @@ WidgetKit:
 - Match countdown/count-up gauge semantics: countdown starts full and empties; count-up starts empty and fills.
 - Reload timelines after dose records or timer settings change.
 
+macOS:
+
+- Provide menu commands for opening gTimer, History, Health, Settings, and gTimer Pro.
+- Provide menu commands for new dose, export history to PDF, print history, and quit with confirmation.
+- Keep desktop export/print controls aligned with future Windows desktop behavior.
+
 watchOS:
 
 - Keep as a companion timer/status surface.
@@ -177,6 +184,7 @@ Android-specific substitutions:
 - Replace iOS local notifications with Android notification channels and runtime notification permission.
 - Replace iOS location permission flow with Android foreground location permission.
 - Replace WidgetKit with Android Glance/AppWidget widgets that show timer status, last dose amount/time, safe interval progress, and open the app to the timer. Direct widget logging is only parity-complete if it writes the canonical history record and triggers the same update/notification flow.
+- On keyboard-capable Android devices, expose equivalent shortcuts where practical. On touch-only devices, preserve the same export options through visible controls rather than relying on keyboard commands.
 - If cross-platform sync is needed, do not use an Android-only sync backend unless the product decision explicitly allows it.
 - Use the retained launcher and Play Store icon assets in `FuturePlatformAssets/Android` so the Android release matches the Apple app icon.
 
@@ -195,6 +203,7 @@ Windows-specific substitutions:
 
 - If Windows Widgets are not suitable, document a tray/live-tile/taskbar equivalent before claiming widget parity. The equivalent must show timer status, last dose amount/time, safe interval progress, and open the app to the timer.
 - Direct widget/tray logging is only parity-complete if it writes the canonical history record and triggers the same update/notification flow.
+- Match the macOS desktop command set with Windows menu/ribbon/keyboard equivalents: open app sections, new dose, export PDF, print, settings, and quit confirmation.
 - Location capture depends on Windows device/location permissions and hardware availability.
 - Do not silently omit Pro, export, location, or history behavior; mark unsupported items as product decisions.
 - Use the retained Windows icon source files in `FuturePlatformAssets/Windows` for `.ico`, MSIX, Start menu, taskbar, and store packaging.
