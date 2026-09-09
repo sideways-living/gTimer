@@ -205,17 +205,24 @@ struct DoseFormSheet: View {
         .font(.system(size: 13, weight: .medium))
         .foregroundStyle(AppTheme.textSecondary)
 
-      HStack(spacing: 8) {
-        TextField("Amount", text: $amountText)
-          .platformKeyboardType(.decimalPad)
-          .font(.system(size: 16, weight: .semibold))
-          .foregroundStyle(AppTheme.textPrimary)
-          .frame(width: 88)
-          .padding(10)
-          .background(AppTheme.backgroundCard)
-          .clipShape(RoundedRectangle(cornerRadius: 10))
-          .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border))
-          .accessibilityLabel("Dose amount")
+      HStack(spacing: 10) {
+        HStack(spacing: 6) {
+          TextField("Amount", text: $amountText)
+            .platformKeyboardType(.decimalPad)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(AppTheme.textPrimary)
+            .textFieldStyle(.plain)
+            .accessibilityLabel("Dose amount")
+
+          Text("ml")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(AppTheme.textSecondary)
+        }
+        .padding(10)
+        .background(AppTheme.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border))
+        .frame(maxWidth: .infinity)
 
         DatePicker("", selection: $selectedTime, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
           .labelsHidden()
@@ -224,8 +231,10 @@ struct DoseFormSheet: View {
           .background(AppTheme.backgroundCard)
           .clipShape(RoundedRectangle(cornerRadius: 10))
           .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border))
+          .frame(maxWidth: .infinity)
           .accessibilityLabel("Dose date and time")
       }
+      .frame(maxWidth: .infinity)
     }
   }
 

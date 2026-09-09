@@ -151,6 +151,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.15",
+      build: 105,
+      category: .minorImprovements,
+      message: "Spread the shared dose amount and date/time controls across the dose details row and added an ml label after the amount field."
+    ),
+    AppUpdateEntry(
       version: "0.9.14",
       build: 104,
       category: .minorImprovements,
@@ -267,11 +273,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.14"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.15"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "104"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "105"
   }
 
   var displayVersion: String {
@@ -406,7 +412,7 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.14"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.15"
   }
 
   private var currentBuild: Int {
