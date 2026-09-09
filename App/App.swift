@@ -151,6 +151,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.14",
+      build: 104,
+      category: .minorImprovements,
+      message: "Moved the shared dose location field below notes, made it full width, and kept location suggestions directly underneath it."
+    ),
+    AppUpdateEntry(
       version: "0.9.13",
       build: 103,
       category: .minorImprovements,
@@ -261,11 +267,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.13"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.14"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "103"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "104"
   }
 
   var displayVersion: String {
@@ -400,7 +406,7 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.13"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.14"
   }
 
   private var currentBuild: Int {

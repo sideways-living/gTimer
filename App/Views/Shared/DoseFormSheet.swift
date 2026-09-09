@@ -158,7 +158,6 @@ struct DoseFormSheet: View {
   private var formColumn: some View {
     VStack(alignment: .leading, spacing: 14) {
       compactEntryRow
-      suggestionsList
 
       VStack(alignment: .leading, spacing: 8) {
         Text("Notes")
@@ -173,6 +172,8 @@ struct DoseFormSheet: View {
           .clipShape(RoundedRectangle(cornerRadius: 10))
           .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border))
       }
+
+      locationSection
 
       if let locationError {
         Text(locationError)
@@ -224,9 +225,20 @@ struct DoseFormSheet: View {
           .clipShape(RoundedRectangle(cornerRadius: 10))
           .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border))
           .accessibilityLabel("Dose date and time")
-
-        locationInput
       }
+    }
+  }
+
+  private var locationSection: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Location")
+        .font(.system(size: 13, weight: .medium))
+        .foregroundStyle(AppTheme.textSecondary)
+
+      locationInput
+        .frame(maxWidth: .infinity)
+
+      suggestionsList
     }
   }
 
@@ -268,6 +280,7 @@ struct DoseFormSheet: View {
     .background(AppTheme.backgroundCard)
     .clipShape(RoundedRectangle(cornerRadius: 10))
     .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border))
+    .frame(maxWidth: .infinity)
   }
 
   @ViewBuilder
