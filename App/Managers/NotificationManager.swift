@@ -13,12 +13,20 @@ final class NotificationManager {
     "Ask yourself 'Do I need another dose right now?'"
   ]
 
-  func requestPermission() async {
+  func requestPermission(lockScreenDelivery: Bool = false) async {
+    var options: UNAuthorizationOptions = [.alert, .sound, .badge]
+    #if os(iOS)
+    if lockScreenDelivery {
+      if #available(iOS 15.0, *) {
+        options.insert(.timeSensitive)
+      }
+    }
+    #endif
     _ = try? await UNUserNotificationCenter.current()
-      .requestAuthorization(options: [.alert, .sound, .badge])
+      .requestAuthorization(options: options)
   }
 
-  func scheduleRedoseReminder(after doseTime: Date, intervalMinutes: Int) {
+  func scheduleRedoseReminder(after doseTime: Date, intervalMinutes: Int, lockScreenDelivery: Bool = false) {
     cancelRedoseReminder()
     let fireDate = doseTime.addingTimeInterval(Double(intervalMinutes) * 60)
     guard fireDate > Date() else { return }
@@ -27,6 +35,13 @@ final class NotificationManager {
     content.title = "Your minimum time between doses has passed"
     content.body = nextHarmReductionMessage()
     content.sound = .default
+    #if os(iOS)
+    if lockScreenDelivery {
+      if #available(iOS 15.0, *) {
+        content.interruptionLevel = .timeSensitive
+      }
+    }
+    #endif
 
     let interval = fireDate.timeIntervalSinceNow
     guard interval > 0 else { return }

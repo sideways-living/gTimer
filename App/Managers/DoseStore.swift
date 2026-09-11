@@ -48,7 +48,8 @@ final class DoseStore {
     if settings.notificationsEnabled {
       NotificationManager.shared.scheduleRedoseReminder(
         after: time,
-        intervalMinutes: settings.safeIntervalMinutes
+        intervalMinutes: settings.safeIntervalMinutes,
+        lockScreenDelivery: settings.lockScreenNotificationsEnabled
       )
     }
     WidgetCenter.shared.reloadAllTimelines()

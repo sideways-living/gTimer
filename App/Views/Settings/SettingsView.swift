@@ -387,7 +387,11 @@ struct SettingsView: View {
             .onChange(of: settings.notificationsEnabled) {
               markUnsaved()
               if settings.notificationsEnabled {
-                Task { await NotificationManager.shared.requestPermission() }
+                Task {
+                  await NotificationManager.shared.requestPermission(
+                    lockScreenDelivery: settings.lockScreenNotificationsEnabled
+                  )
+                }
               }
             }
         }
@@ -396,6 +400,28 @@ struct SettingsView: View {
             .font(.system(size: 12))
             .foregroundStyle(AppTheme.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
+          #if os(iOS)
+          cardDivider
+          row(label: "Lock Screen reminder") {
+            @Bindable var s = settings
+            Toggle("Lock Screen reminder", isOn: $s.lockScreenNotificationsEnabled)
+              .labelsHidden()
+              .tint(AppTheme.accentBlue)
+              .accessibilityLabel("Lock Screen reminder")
+              .onChange(of: settings.lockScreenNotificationsEnabled) {
+                markUnsaved()
+                if settings.lockScreenNotificationsEnabled {
+                  Task {
+                    await NotificationManager.shared.requestPermission(lockScreenDelivery: true)
+                  }
+                }
+              }
+          }
+          Text("Uses iPhone notification permissions for Lock Screen delivery. iOS settings and Focus can still hide it.")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+          #endif
         }
       }
     }

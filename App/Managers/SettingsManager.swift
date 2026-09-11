@@ -308,6 +308,9 @@ final class SettingsManager {
   var notificationsEnabled: Bool {
     didSet { UserDefaults.standard.set(notificationsEnabled, forKey: "notificationsEnabled") }
   }
+  var lockScreenNotificationsEnabled: Bool {
+    didSet { UserDefaults.standard.set(lockScreenNotificationsEnabled, forKey: "lockScreenNotificationsEnabled") }
+  }
   var countdownMode: Bool {
     didSet {
       UserDefaults.standard.set(countdownMode, forKey: "countdownMode")
@@ -380,6 +383,7 @@ final class SettingsManager {
     safeIntervalMinutes = ud.object(forKey: "safeIntervalMinutes") as? Int ?? 90
     substance         = ud.string(forKey: "substance") ?? "GHB"
     notificationsEnabled = ud.bool(forKey: "notificationsEnabled")
+    lockScreenNotificationsEnabled = ud.bool(forKey: "lockScreenNotificationsEnabled")
     countdownMode     = ud.object(forKey: "countdownMode") as? Bool ?? true
     timeFormat        = ud.string(forKey: "timeFormat") ?? "hours"
     syncEnabled       = ud.bool(forKey: "syncEnabled")
