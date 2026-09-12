@@ -151,6 +151,24 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.16",
+      build: 106,
+      category: .newFeatures,
+      message: "Added an optional lock-screen reminder that can keep the redose timing reminder visible until the app is opened."
+    ),
+    AppUpdateEntry(
+      version: "0.9.16",
+      build: 106,
+      category: .minorImprovements,
+      message: "Recent History on the timer screen now loads 10 more records at a time up to 30, then shows a clear link to the full History page."
+    ),
+    AppUpdateEntry(
+      version: "0.9.16",
+      build: 106,
+      category: .minorImprovements,
+      message: "Expanded the future Android and Windows parity plan with a cross-platform dose-sync model."
+    ),
+    AppUpdateEntry(
       version: "0.9.15",
       build: 105,
       category: .minorImprovements,
@@ -273,11 +291,11 @@ final class AppUpdateManager {
   ]
 
   var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.15"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.16"
   }
 
   var currentBuild: String {
-    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "105"
+    Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "106"
   }
 
   var displayVersion: String {
@@ -412,11 +430,11 @@ final class GitHubUpgradeManager {
   }
 
   private var currentVersion: String {
-    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.15"
+    Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.9.16"
   }
 
   private var currentBuild: Int {
-    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "100") ?? 100
+    Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "106") ?? 106
   }
 
   private static var updateFeedURL: URL? {

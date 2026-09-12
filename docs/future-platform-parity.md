@@ -232,6 +232,8 @@ Non-Apple icon assets from the September 2026 gTimer icon pack are checked in un
 
 The current Apple implementation can use Apple-only storage patterns. Android and Windows will not get parity from iCloud alone.
 
+Recommended long-term direction: build a cross-platform sync backend for dose history, settings, Pro entitlements, profile data, and saved locations. Apple-only iCloud sync can be useful for iPhone, iPad, Mac, Watch, and Widget handoff, but it must not be treated as the parity solution for Android or Windows.
+
 Before Android or Windows implementation begins, choose one:
 
 1. Apple-only sync for iOS/watchOS/widget, with Android/Windows local-only.
@@ -239,6 +241,27 @@ Before Android or Windows implementation begins, choose one:
 3. No sync for any store release until a later version.
 
 Record the decision here before writing platform code.
+
+### Preferred Cross-Platform Sync Model
+
+Use a small account-backed API with an encrypted local store on every device:
+
+- Local-first operation: the app must keep logging doses offline and sync when a connection returns.
+- Per-user account identity: sync records belong to the signed-in user, not the device.
+- Stable record ids: every dose, settings row, saved location, and profile record needs a stable id generated before upload.
+- Changed-at timestamps: every synced object should carry `createdAt`, `updatedAt`, and `deletedAt` for conflict handling.
+- Soft deletes: deleting a dose should sync as a tombstone first, then be compacted later.
+- Conflict policy: dose history should preserve both conflicting edits where data loss is possible, while settings can use last-write-wins with visible review if an important setting changes on another device.
+- Privacy: location coordinates and notes are sensitive data. If server sync is used, design for encryption at rest, transport security, export/delete account controls, and minimal logging.
+- Migration: iCloud/local Apple data must have a one-time migration path into the cross-platform sync store if backend sync is added after Apple beta releases.
+
+Recommended backend options to assess before implementation:
+
+- CloudKit/iCloud only: fastest for Apple platforms, not suitable for Android/Windows parity.
+- Firebase or Supabase: practical cross-platform account, database, and offline-sync foundation, but requires careful health-data privacy review.
+- Custom API plus Postgres: strongest control over privacy, auditability, exports, and future entitlement logic, but more implementation and operations work.
+
+For future feature parity, do not ship two independent sync systems. If Apple iCloud sync ships first, label Android/Windows sync as pending until the shared backend exists or a deliberate local-only product decision is recorded.
 
 ## Feature Gate Parity
 

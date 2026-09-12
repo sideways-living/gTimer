@@ -1,20 +1,23 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.15",
-  "build": 105,
+  "version": "0.9.16",
+  "build": 106,
   "minimum_os": "14.0",
-  "published_at": "2026-09-09T05:08:58Z",
-  "summary": "Improves the shared dose amount/date/time row layout.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.15/gTimer-macOS-0.9.15-105-local.pkg",
-  "sha256": "bdffa0fb8e6adf627dd48b393c389dd823638ba4adbca77934abaef06b7eda5e",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.15/gTimer-macOS-0.9.15-105-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.15",
+  "published_at": "2026-09-12T17:11:44Z",
+  "summary": "Recent History now loads in batches, lock-screen reminders can stay visible, and the future Android/Windows parity plan includes cross-platform sync.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.16/gTimer-macOS-0.9.16-106-local.pkg",
+  "sha256": "84f415ef0eeb345fb0d0a0ce804409b04700dcab01c8b5a0a277b87dfa41ea0b",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.16/gTimer-macOS-0.9.16-106-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.16",
   "changes": {
-    "new_features": [],
+    "new_features": [
+      "Added an optional lock-screen reminder that can keep the redose timing reminder visible until gTimer is opened."
+    ],
     "minor_improvements": [
-      "The shared dose amount and date/time controls now spread across the dose details row.",
-      "The dose amount field now shows an ml label immediately after the entered amount."
+      "Recent History on the timer screen now loads 10 more records at a time up to 30.",
+      "A full History button appears at the end of the recent list and scrolls clear of the bottom menu.",
+      "The future Android and Windows parity plan now includes a preferred cross-platform dose-sync model."
     ],
     "bug_fixes": []
   }

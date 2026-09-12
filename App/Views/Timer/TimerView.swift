@@ -19,12 +19,19 @@ struct TimerView: View {
   @State private var ticker: Timer?
   @State private var editingDose: DoseRecord?
   @State private var handledNewDoseRequestID = 0
+  @State private var recentHistoryLimit = 10
 
   private var lastDose: DoseRecord? { doses.first }
   private var visibleDoses: [DoseRecord] {
     if settings.proBetaAccepted { return doses }
     let cutoff = Date().addingTimeInterval(-24 * 3600)
     return doses.filter { $0.time >= cutoff }
+  }
+  private var displayedRecentHistoryDoses: [DoseRecord] {
+    Array(visibleDoses.prefix(min(recentHistoryLimit, 30)))
+  }
+  private var canLoadMoreRecentHistory: Bool {
+    displayedRecentHistoryDoses.count < min(visibleDoses.count, 30)
   }
 
   private var isActive: Bool {
@@ -246,7 +253,7 @@ struct TimerView: View {
       } else {
         ScrollView {
           LazyVStack(spacing: 8) {
-            ForEach(Array(visibleDoses.prefix(8))) { dose in
+            ForEach(displayedRecentHistoryDoses) { dose in
               DoseRowView(
                 dose: dose,
                 isPro: settings.proBetaAccepted,
@@ -257,8 +264,40 @@ struct TimerView: View {
                 DoseStore.delete(dose, context: context)
               }
             }
+
+            if canLoadMoreRecentHistory {
+              ProgressView()
+                .progressViewStyle(.circular)
+                .tint(AppTheme.accentBlue)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .onAppear {
+                  loadMoreRecentHistory()
+                }
+                .accessibilityLabel("Loading more recent history")
+            } else {
+              Button {
+                nav.openHistory()
+              } label: {
+                HStack(spacing: 8) {
+                  Text("View full history")
+                    .font(.system(size: 13, weight: .semibold))
+                  Image(systemName: "arrow.right")
+                    .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(AppTheme.accentBlue)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(AppTheme.accentBlue.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.accentBlue.opacity(0.25), lineWidth: 0.75))
+              }
+              .buttonStyle(.plain)
+              .accessibilityLabel("Open full history")
+              .padding(.top, 6)
+            }
           }
-          .padding(.bottom, 96)
+          .padding(.bottom, macBottomBarReservedHeight + 28)
         }
       }
     }
@@ -671,6 +710,12 @@ struct TimerView: View {
   private func startTicker() {
     ticker?.invalidate()
     ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in now = Date() }
+  }
+
+  private func loadMoreRecentHistory() {
+    let nextLimit = min(recentHistoryLimit + 10, 30, visibleDoses.count)
+    guard nextLimit > recentHistoryLimit else { return }
+    recentHistoryLimit = nextLimit
   }
 
   private func handlePendingNewDoseRequest() {
