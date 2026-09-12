@@ -234,6 +234,8 @@ The current Apple implementation can use Apple-only storage patterns. Android an
 
 Recommended long-term direction: build a cross-platform sync backend for dose history, settings, Pro entitlements, profile data, and saved locations. Apple-only iCloud sync can be useful for iPhone, iPad, Mac, Watch, and Widget handoff, but it must not be treated as the parity solution for Android or Windows.
 
+Initial API scaffold: `SyncAPI` contains a runnable local-development HTTP API for the preferred cross-platform sync contract. Treat it as the protocol starting point; replace its JSON file store with production storage before public release.
+
 Before Android or Windows implementation begins, choose one:
 
 1. Apple-only sync for iOS/watchOS/widget, with Android/Windows local-only.
