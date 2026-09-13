@@ -1,22 +1,24 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.21",
-  "build": 111,
+  "version": "0.9.22",
+  "build": 112,
   "minimum_os": "14.0",
-  "published_at": "2026-09-13T08:31:46Z",
-  "summary": "Improves Dose Map navigation order and marker hover callouts.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.21/gTimer-macOS-0.9.21-111-local.pkg",
-  "sha256": "acf0d4263dfcbfa8e2a3728c2e3c08e43ab4a82666dbc6e695998e0341575e76",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.21/gTimer-macOS-0.9.21-111-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.21",
+  "published_at": "2026-09-13T11:07:09Z",
+  "summary": "Fixes redose reminder scheduling and foreground notification delivery.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.22/gTimer-macOS-0.9.22-112-local.pkg",
+  "sha256": "a99dabeceb4dcb2e716d4256daad7c1fc733a6d8ea8a86965773bb1a9b595ab6",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.22/gTimer-macOS-0.9.22-112-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.22",
   "changes": {
     "new_features": [],
     "minor_improvements": [
-      "Moved Map between History and Health in the navigation menu.",
-      "Dose Map marker details now open without resizing or moving the dose marker.",
-      "Dose Map detail bubbles now point back to the selected dose marker based on its position on the map."
+      "Settings now shows whether notifications are allowed, blocked, or not yet requested."
     ],
-    "bug_fixes": []
+    "bug_fixes": [
+      "Fixed redose reminders not appearing while gTimer is open.",
+      "Redose reminders now reschedule from the most recent active dose after missed, edited, deleted, or synced dose changes.",
+      "Turning notifications on now requests permission and schedules a reminder for the current latest dose when one is pending."
+    ]
   }
 }
