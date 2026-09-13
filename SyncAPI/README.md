@@ -47,6 +47,15 @@ This development server maps bearer tokens to user ids through `GTIMER_SYNC_TOKE
 
 If the environment variable is omitted, `dev-token` maps to `dev-user` for local development only.
 
+The server also reads `SyncAPI/.env` before startup. This is useful on hosts where the Node.js site panel does not expose an environment-variable editor:
+
+```sh
+PORT=8787
+GTIMER_SYNC_TOKENS={"replace-with-a-long-random-token":"dan"}
+```
+
+Do not commit `.env`. It is ignored by Git.
+
 ## Endpoints
 
 ### `GET /health`

@@ -1,7 +1,10 @@
 import http from "node:http";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { FileSyncStore } from "./store.js";
 import { httpError, normalizePullQuery, normalizePushBody } from "./validation.js";
+
+loadDotEnv();
 
 const port = Number(process.env.PORT ?? 8787);
 const tokens = loadTokenMap();
@@ -111,6 +114,36 @@ function loadTokenMap() {
     console.error(`Invalid GTIMER_SYNC_TOKENS: ${error.message}`);
     process.exit(1);
   }
+}
+
+function loadDotEnv() {
+  const envPath = new URL("../.env", import.meta.url);
+  if (!existsSync(envPath)) return;
+
+  const lines = readFileSync(envPath, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const separator = trimmed.indexOf("=");
+    if (separator <= 0) continue;
+
+    const key = trimmed.slice(0, separator).trim();
+    const value = trimmed.slice(separator + 1).trim();
+    if (!key || process.env[key] != null) continue;
+
+    process.env[key] = unquoteEnvValue(value);
+  }
+}
+
+function unquoteEnvValue(value) {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
 }
 
 if (fileURLToPath(import.meta.url) === process.argv[1]) {
