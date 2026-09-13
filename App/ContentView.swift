@@ -5,7 +5,9 @@ struct ContentView: View {
   @Environment(AppNavigation.self) private var nav
   @Environment(SettingsManager.self) private var settings
   @Environment(\.modelContext) private var context
-  private let tabs = AppTab.allCases
+  private var tabs: [AppTab] {
+    AppTab.allCases.filter { $0 != .map || settings.proBetaAccepted }
+  }
 
   var body: some View {
     #if os(macOS)
@@ -45,7 +47,8 @@ struct ContentView: View {
   }
 
   private var selectedTab: AppTab {
-    AppTab(rawValue: nav.selectedTab) ?? .timer
+    let tab = AppTab(rawValue: nav.selectedTab) ?? .timer
+    return tab == .map && !settings.proBetaAccepted ? .timer : tab
   }
 
   private var macBottomBar: some View {
@@ -62,7 +65,7 @@ struct ContentView: View {
               .lineLimit(1)
           }
           .foregroundStyle(tabForeground(for: tab))
-          .frame(minWidth: tab == .pro ? 104 : 82, minHeight: 40)
+          .frame(minWidth: tabMinimumWidth(tab), minHeight: 40)
           .padding(.horizontal, 4)
           .background(
             Capsule()
@@ -96,6 +99,14 @@ struct ContentView: View {
     }
     return AppTheme.accentBlue
   }
+
+  private func tabMinimumWidth(_ tab: AppTab) -> CGFloat {
+    switch tab {
+    case .pro: 104
+    case .map: 78
+    default: 82
+    }
+  }
   #endif
 
   private func syncOnOpen() {
@@ -110,6 +121,7 @@ private enum AppTab: Int, CaseIterable, Identifiable {
   case health
   case settings
   case pro
+  case map
 
   var id: Int { rawValue }
 
@@ -120,6 +132,7 @@ private enum AppTab: Int, CaseIterable, Identifiable {
     case .health: "Health"
     case .settings: "Settings"
     case .pro: "gTimer Pro"
+    case .map: "Map"
     }
   }
 
@@ -130,6 +143,7 @@ private enum AppTab: Int, CaseIterable, Identifiable {
     case .health: "heart.text.square"
     case .settings: "gearshape"
     case .pro: "star.fill"
+    case .map: "map.fill"
     }
   }
 
@@ -146,6 +160,12 @@ private enum AppTab: Int, CaseIterable, Identifiable {
       SettingsView()
     case .pro:
       ProView()
+    case .map:
+      #if os(macOS)
+      DoseMapView(showsDismissButton: false, bottomBarClearance: 96)
+      #else
+      DoseMapView(showsDismissButton: false)
+      #endif
     }
   }
 }

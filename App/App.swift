@@ -151,6 +151,18 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.18",
+      build: 108,
+      category: .minorImprovements,
+      message: "Removed the duplicate in-window Dose Map header so the native page or window title is used instead."
+    ),
+    AppUpdateEntry(
+      version: "0.9.18",
+      build: 108,
+      category: .minorImprovements,
+      message: "Added a Pro-only Map button to the main navigation menu."
+    ),
+    AppUpdateEntry(
       version: "0.9.17",
       build: 107,
       category: .newFeatures,

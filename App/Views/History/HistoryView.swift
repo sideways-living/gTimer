@@ -852,7 +852,7 @@ private extension View {
   func platformDoseMapPresentation(isPresented: Binding<Bool>) -> some View {
     #if os(macOS)
     self.sheet(isPresented: isPresented) {
-      DoseMapView()
+      DoseMapView(showsDismissButton: false)
         .frame(minWidth: 920, idealWidth: 1040, minHeight: 680, idealHeight: 760)
     }
     #else

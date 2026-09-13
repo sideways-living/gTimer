@@ -7,6 +7,9 @@ struct DoseMapView: View {
   @Environment(\.dismiss) private var dismiss
   @Query(sort: \DoseRecord.time, order: .reverse) private var allDoses: [DoseRecord]
 
+  var showsDismissButton = true
+  var bottomBarClearance: CGFloat = 0
+
   @State private var position: MapCameraPosition = .automatic
   @State private var selectedDose: DoseRecord? = nil
   @State private var highlightedDoseID: UUID? = nil
@@ -35,26 +38,6 @@ struct DoseMapView: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 0) {
-        HStack {
-          Text("Dose Map")
-            .font(.system(size: 20, weight: .bold))
-            .foregroundStyle(AppTheme.textPrimary)
-          Spacer()
-          Button {
-            dismiss()
-          } label: {
-            Image(systemName: "xmark")
-              .font(.system(size: 13, weight: .bold))
-              .foregroundStyle(AppTheme.textSecondary)
-              .frame(width: 32, height: 32)
-              .background(AppTheme.backgroundCard)
-              .clipShape(Circle())
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel("Close")
-        }
-        .padding(16)
-
         if locatedDoses.isEmpty {
           emptyState
         } else {
@@ -65,6 +48,13 @@ struct DoseMapView: View {
       .navigationTitle("Dose Map")
       .platformInlineNavigationTitle()
       .platformNavigationBarStyle()
+      .toolbar {
+        if showsDismissButton {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("Close") { dismiss() }
+          }
+        }
+      }
     }
     .preferredColorScheme(.dark)
     .sheet(item: $selectedDose) { dose in
@@ -87,6 +77,7 @@ struct DoseMapView: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
       summaryBar
+        .padding(.bottom, bottomBarClearance)
     }
   }
 
