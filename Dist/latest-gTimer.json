@@ -1,24 +1,25 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.16",
-  "build": 106,
+  "version": "0.9.17",
+  "build": 107,
   "minimum_os": "14.0",
-  "published_at": "2026-09-12T17:11:44Z",
-  "summary": "Recent History now loads in batches, lock-screen reminders can stay visible, and the future Android/Windows parity plan includes cross-platform sync.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.16/gTimer-macOS-0.9.16-106-local.pkg",
-  "sha256": "84f415ef0eeb345fb0d0a0ce804409b04700dcab01c8b5a0a277b87dfa41ea0b",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.16/gTimer-macOS-0.9.16-106-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.16",
+  "published_at": "2026-09-13T03:54:43Z",
+  "summary": "Adds beta cross-device sync for dose history using your gTimer sync server.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.17/gTimer-macOS-0.9.17-107-local.pkg",
+  "sha256": "39cfbade965507a09f493ce4f21c689a78f6d64b4db92d1e8f3950547cf75256",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.17/gTimer-macOS-0.9.17-107-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.17",
   "changes": {
     "new_features": [
-      "Added an optional lock-screen reminder that can keep the redose timing reminder visible until gTimer is opened."
+      "Added beta cross-device dose history sync using your own gTimer sync server."
     ],
     "minor_improvements": [
-      "Recent History on the timer screen now loads 10 more records at a time up to 30.",
-      "A full History button appears at the end of the recent list and scrolls clear of the bottom menu.",
-      "The future Android and Windows parity plan now includes a preferred cross-platform dose-sync model."
+      "Added Settings controls for sync server URL, private sync token, sync status, and manual Sync Now.",
+      "Updated the Android and Windows parity plan to use the custom sync API as the shared future direction."
     ],
-    "bug_fixes": []
+    "bug_fixes": [
+      "Deleted dose records are now hidden locally while preserving sync tombstones for other devices."
+    ]
   }
 }
