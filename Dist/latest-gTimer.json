@@ -1,24 +1,22 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.20",
-  "build": 110,
+  "version": "0.9.21",
+  "build": 111,
   "minimum_os": "14.0",
-  "published_at": "2026-09-13T04:12:37Z",
-  "summary": "Makes device sync optional, adds a free trial, and positions ongoing sync as a gTimer Pro benefit.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.20/gTimer-macOS-0.9.20-110-local.pkg",
-  "sha256": "44504d53670e4a887240c069c264699a425db36655f6644b6c39b34618b74b38",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.20/gTimer-macOS-0.9.20-110-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.20",
+  "published_at": "2026-09-13T08:31:46Z",
+  "summary": "Improves Dose Map navigation order and marker hover callouts.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.21/gTimer-macOS-0.9.21-111-local.pkg",
+  "sha256": "acf0d4263dfcbfa8e2a3728c2e3c08e43ab4a82666dbc6e695998e0341575e76",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.21/gTimer-macOS-0.9.21-111-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.21",
   "changes": {
-    "new_features": [
-      "Added a 14-day free trial for cross-device sync."
-    ],
+    "new_features": [],
     "minor_improvements": [
-      "Device sync is now clearly positioned as an optional gTimer Pro benefit."
+      "Moved Map between History and Health in the navigation menu.",
+      "Dose Map marker details now open without resizing or moving the dose marker.",
+      "Dose Map detail bubbles now point back to the selected dose marker based on its position on the map."
     ],
-    "bug_fixes": [
-      "Sync now stops cleanly when neither Pro nor an active sync trial is available."
-    ]
+    "bug_fixes": []
   }
 }
