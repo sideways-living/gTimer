@@ -1,23 +1,24 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.19",
-  "build": 109,
+  "version": "0.9.20",
+  "build": 110,
   "minimum_os": "14.0",
-  "published_at": "2026-09-13T04:05:50Z",
-  "summary": "Adds beta account login and removable device access for gTimer sync.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.19/gTimer-macOS-0.9.19-109-local.pkg",
-  "sha256": "947574dff8e512b4275dbc430ad0280b07ec1e2d2a206f0547b746631e6aab3e",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.19/gTimer-macOS-0.9.19-109-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.19",
+  "published_at": "2026-09-13T04:12:37Z",
+  "summary": "Makes device sync optional, adds a free trial, and positions ongoing sync as a gTimer Pro benefit.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.20/gTimer-macOS-0.9.20-110-local.pkg",
+  "sha256": "44504d53670e4a887240c069c264699a425db36655f6644b6c39b34618b74b38",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.20/gTimer-macOS-0.9.20-110-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.20",
   "changes": {
     "new_features": [
-      "Added beta email and password accounts for gTimer sync.",
-      "Added per-device sync tokens and a device list so signed-in users can remove devices."
+      "Added a 14-day free trial for cross-device sync."
     ],
     "minor_improvements": [
-      "The Sync settings screen now supports creating an account, signing in, and syncing immediately after login."
+      "Device sync is now clearly positioned as an optional gTimer Pro benefit."
     ],
-    "bug_fixes": []
+    "bug_fixes": [
+      "Sync now stops cleanly when neither Pro nor an active sync trial is available."
+    ]
   }
 }
