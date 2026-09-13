@@ -22,6 +22,10 @@ final class DoseRecord {
   var locationCapturedAt: Date?
   // "automatic" | "manual" | "none" — nil means legacy record (treat as "none")
   var locationSource: String?
+  var createdAt: Date?
+  var updatedAt: Date?
+  var deletedAt: Date?
+  var lastSyncedAt: Date?
 
   init(
     id: UUID = UUID(),
@@ -38,7 +42,11 @@ final class DoseRecord {
     locationName: String? = nil,
     locationAccuracyMeters: Double? = nil,
     locationCapturedAt: Date? = nil,
-    locationSource: String? = nil
+    locationSource: String? = nil,
+    createdAt: Date? = nil,
+    updatedAt: Date? = nil,
+    deletedAt: Date? = nil,
+    lastSyncedAt: Date? = nil
   ) {
     self.id = id
     self.amount = amount
@@ -55,9 +63,14 @@ final class DoseRecord {
     self.locationAccuracyMeters = locationAccuracyMeters
     self.locationCapturedAt = locationCapturedAt
     self.locationSource = locationSource
+    self.createdAt = createdAt
+    self.updatedAt = updatedAt
+    self.deletedAt = deletedAt
+    self.lastSyncedAt = lastSyncedAt
   }
 
   var hasLocation: Bool { latitude != nil && longitude != nil }
+  var isDeletedForSync: Bool { deletedAt != nil }
 
   var coordinate: CLLocationCoordinate2D {
     CLLocationCoordinate2D(latitude: latitude ?? 0, longitude: longitude ?? 0)

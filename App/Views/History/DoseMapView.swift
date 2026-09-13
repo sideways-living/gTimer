@@ -11,11 +11,12 @@ struct DoseMapView: View {
   @State private var selectedDose: DoseRecord? = nil
   @State private var highlightedDoseID: UUID? = nil
 
-  private var locatedDoses: [DoseRecord] { allDoses.filter { $0.hasLocation } }
+  private var activeDoses: [DoseRecord] { allDoses.filter { !$0.isDeletedForSync } }
+  private var locatedDoses: [DoseRecord] { activeDoses.filter { $0.hasLocation } }
 
   // Determines pin color: red = logged before safe interval elapsed, blue = normal
   private func pinColor(for dose: DoseRecord) -> Color {
-    guard let prev = allDoses.first(where: { $0.time < dose.time }) else {
+    guard let prev = activeDoses.first(where: { $0.time < dose.time }) else {
       return AppTheme.accentBlue
     }
     let elapsed = dose.time.timeIntervalSince(prev.time)

@@ -234,15 +234,13 @@ The current Apple implementation can use Apple-only storage patterns. Android an
 
 Recommended long-term direction: build a cross-platform sync backend for dose history, settings, Pro entitlements, profile data, and saved locations. Apple-only iCloud sync can be useful for iPhone, iPad, Mac, Watch, and Widget handoff, but it must not be treated as the parity solution for Android or Windows.
 
-Initial API scaffold: `SyncAPI` contains a runnable local-development HTTP API for the preferred cross-platform sync contract. Treat it as the protocol starting point; replace its JSON file store with production storage before public release.
+Current beta direction: `SyncAPI` is the chosen custom API starting point and is deployed at `https://sync.gtimer.app`. App version 0.9.17 adds opt-in Apple client support for dose-history sync against this API.
 
-Before Android or Windows implementation begins, choose one:
+Before Android or Windows implementation begins, keep this decision unless there is an explicit product/security review that replaces it:
 
-1. Apple-only sync for iOS/watchOS/widget, with Android/Windows local-only.
-2. Cross-platform sync backend for all platforms.
-3. No sync for any store release until a later version.
-
-Record the decision here before writing platform code.
+1. Cross-platform sync backend for all platforms.
+2. Apple-only sync for Apple devices only as a temporary fallback.
+3. No sync for a store release only if the API is not production-ready.
 
 ### Preferred Cross-Platform Sync Model
 
@@ -255,7 +253,7 @@ Use a small account-backed API with an encrypted local store on every device:
 - Soft deletes: deleting a dose should sync as a tombstone first, then be compacted later.
 - Conflict policy: dose history should preserve both conflicting edits where data loss is possible, while settings can use last-write-wins with visible review if an important setting changes on another device.
 - Privacy: location coordinates and notes are sensitive data. If server sync is used, design for encryption at rest, transport security, export/delete account controls, and minimal logging.
-- Migration: iCloud/local Apple data must have a one-time migration path into the cross-platform sync store if backend sync is added after Apple beta releases.
+- Migration: local Apple data is the source of truth until sync is enabled. First sync uploads existing dose records, then pulls records from the server.
 
 Recommended backend options to assess before implementation:
 

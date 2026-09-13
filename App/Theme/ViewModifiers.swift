@@ -57,6 +57,17 @@ extension View {
   }
 
   @ViewBuilder
+  func platformPlainTextEntry() -> some View {
+    #if os(iOS)
+    self
+      .textInputAutocapitalization(.never)
+      .disableAutocorrection(true)
+    #else
+    self
+    #endif
+  }
+
+  @ViewBuilder
   func platformNavigationBarStyle() -> some View {
     #if os(iOS)
     self

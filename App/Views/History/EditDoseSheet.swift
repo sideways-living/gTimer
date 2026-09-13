@@ -40,6 +40,7 @@ struct EditDoseSheet: View {
         dose.locationSource = result.location.source
       }
 
+      DoseStore.markChangedForSync(dose)
       try? context.save()
       DoseStore.backfillMissingEarlyDoseTiming(context: context, settings: settings)
       DoseStore.refreshSharedAfterEdit(context: context, settings: settings)

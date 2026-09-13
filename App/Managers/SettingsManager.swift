@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import WidgetKit
+import Security
 #if os(iOS)
 import UIKit
 #endif
@@ -278,6 +279,48 @@ enum EmergencyNumberCatalogue {
   }
 }
 
+private enum KeychainStore {
+  static func string(for account: String) -> String? {
+    var query = baseQuery(account)
+    query[kSecReturnData as String] = true
+    query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+    var item: CFTypeRef?
+    let status = SecItemCopyMatching(query as CFDictionary, &item)
+    guard status == errSecSuccess,
+          let data = item as? Data,
+          let value = String(data: data, encoding: .utf8) else {
+      return nil
+    }
+    return value
+  }
+
+  static func set(_ value: String, for account: String) {
+    let data = Data(value.utf8)
+    if value.isEmpty {
+      SecItemDelete(baseQuery(account) as CFDictionary)
+      return
+    }
+
+    let query = baseQuery(account)
+    let update: [String: Any] = [kSecValueData as String: data]
+    let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+    if status == errSecItemNotFound {
+      var item = query
+      item[kSecValueData as String] = data
+      SecItemAdd(item as CFDictionary, nil)
+    }
+  }
+
+  private static func baseQuery(_ account: String) -> [String: Any] {
+    [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: "gTimer",
+      kSecAttrAccount as String: account
+    ]
+  }
+}
+
 @Observable
 final class SettingsManager {
   static let shared = SettingsManager()
@@ -324,6 +367,25 @@ final class SettingsManager {
   var syncEnabled: Bool {
     didSet { UserDefaults.standard.set(syncEnabled, forKey: "syncEnabled") }
   }
+  var syncServerURL: String {
+    didSet { UserDefaults.standard.set(syncServerURL, forKey: "syncServerURL") }
+  }
+  var syncToken: String {
+    didSet { KeychainStore.set(syncToken, for: "gtimer.syncToken") }
+  }
+  var syncCursor: Int {
+    didSet { UserDefaults.standard.set(syncCursor, forKey: "syncCursor") }
+  }
+  var lastSyncAt: Date? {
+    didSet {
+      if let lastSyncAt {
+        UserDefaults.standard.set(lastSyncAt, forKey: "lastSyncAt")
+      } else {
+        UserDefaults.standard.removeObject(forKey: "lastSyncAt")
+      }
+    }
+  }
+  var syncStatusMessage: String
   var deviceName: String {
     didSet { UserDefaults.standard.set(deviceName, forKey: "deviceName") }
   }
@@ -387,6 +449,12 @@ final class SettingsManager {
     countdownMode     = ud.object(forKey: "countdownMode") as? Bool ?? true
     timeFormat        = ud.string(forKey: "timeFormat") ?? "hours"
     syncEnabled       = ud.bool(forKey: "syncEnabled")
+    syncServerURL     = ud.string(forKey: "syncServerURL") ?? "https://sync.gtimer.app"
+    syncToken         = KeychainStore.string(for: "gtimer.syncToken") ?? ""
+    syncCursor        = ud.object(forKey: "syncCursor") as? Int ?? 0
+    let savedLastSyncAt = ud.object(forKey: "lastSyncAt") as? Date
+    lastSyncAt        = savedLastSyncAt
+    syncStatusMessage = savedLastSyncAt.map { "Last synced \($0.formatted(date: .omitted, time: .shortened))." } ?? "Not synced yet."
     deviceName        = ud.string(forKey: "deviceName") ?? Self.defaultDeviceName
     vanityName        = ud.string(forKey: "vanityName") ?? ""
     proBetaAccepted   = ud.bool(forKey: "proBetaAccepted")

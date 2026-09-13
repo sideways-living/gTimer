@@ -25,13 +25,14 @@ struct HistoryView: View {
   @State private var handledExportRequestID = 0
   @State private var handledDoseMapRequestID = 0
 
+  private var activeDoses: [DoseRecord] { allDoses.filter { !$0.isDeletedForSync } }
   private var visibleDoses: [DoseRecord] {
-    if settings.proBetaAccepted { return allDoses }
+    if settings.proBetaAccepted { return activeDoses }
     let cutoff = Date().addingTimeInterval(-24 * 3600)
-    return allDoses.filter { $0.time >= cutoff }
+    return activeDoses.filter { $0.time >= cutoff }
   }
 
-  private var locatedDoses: [DoseRecord] { allDoses.filter { $0.hasLocation } }
+  private var locatedDoses: [DoseRecord] { activeDoses.filter { $0.hasLocation } }
   private var locatedCount: Int { locatedDoses.count }
 
   private var mostCommonArea: String? {
@@ -44,13 +45,13 @@ struct HistoryView: View {
   private var earlyRedoseCount: Int {
     let intervalSecs = Double(settings.safeIntervalMinutes) * 60
     var count = 0
-    for (i, dose) in allDoses.enumerated() {
+    for (i, dose) in activeDoses.enumerated() {
       if dose.wasTakenEarly {
         count += 1
         continue
       }
-      guard i + 1 < allDoses.count else { continue }
-      let prev = allDoses[i + 1]
+      guard i + 1 < activeDoses.count else { continue }
+      let prev = activeDoses[i + 1]
       if dose.time.timeIntervalSince(prev.time) < intervalSecs { count += 1 }
     }
     return count
@@ -59,7 +60,7 @@ struct HistoryView: View {
   var body: some View {
     NavigationStack {
       Group {
-        if allDoses.isEmpty {
+        if activeDoses.isEmpty {
           emptyState
         } else {
           doseList
@@ -69,10 +70,10 @@ struct HistoryView: View {
       .platformNavigationBarStyle()
       .toolbar {
         ToolbarItemGroup(placement: .primaryAction) {
-          if !allDoses.isEmpty {
+          if !activeDoses.isEmpty {
             exportButton
           }
-          if !allDoses.isEmpty {
+          if !activeDoses.isEmpty {
             Button { showDeleteAll = true } label: {
               Image(systemName: "trash").foregroundStyle(AppTheme.statusRed)
             }
@@ -85,14 +86,14 @@ struct HistoryView: View {
         isPresented: $showDeleteAll,
         titleVisibility: .visible
       ) {
-        Button("Delete All", role: .destructive) { DoseStore.deleteAll(context: context) }
+        Button("Delete All", role: .destructive) { DoseStore.deleteAll(context: context, settings: settings) }
         Button("Cancel", role: .cancel) {}
       } message: {
         Text("This cannot be undone.")
       }
       .sheet(isPresented: $showHistoryExport) {
         HistoryExportSheet(
-          doses: allDoses,
+          doses: activeDoses,
           locationApproximate: settings.locationApproximate,
           initialOutcome: exportOutcome
         )
@@ -145,7 +146,7 @@ struct HistoryView: View {
             ) {
               if settings.proBetaAccepted { editingDose = dose }
             } onDelete: {
-              DoseStore.delete(dose, context: context)
+              DoseStore.delete(dose, context: context, settings: settings)
             }
           }
         }

@@ -151,6 +151,24 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.17",
+      build: 107,
+      category: .newFeatures,
+      message: "Added beta cross-device dose history sync using your own gTimer sync server."
+    ),
+    AppUpdateEntry(
+      version: "0.9.17",
+      build: 107,
+      category: .minorImprovements,
+      message: "Added Settings controls for sync server URL, private sync token, sync status, and manual Sync Now."
+    ),
+    AppUpdateEntry(
+      version: "0.9.17",
+      build: 107,
+      category: .bugFixes,
+      message: "Deleted dose records are now hidden locally while preserving sync tombstones for other devices."
+    ),
+    AppUpdateEntry(
       version: "0.9.16",
       build: 106,
       category: .newFeatures,

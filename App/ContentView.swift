@@ -1,7 +1,10 @@
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
   @Environment(AppNavigation.self) private var nav
+  @Environment(SettingsManager.self) private var settings
+  @Environment(\.modelContext) private var context
   private let tabs = AppTab.allCases
 
   var body: some View {
@@ -22,6 +25,7 @@ struct ContentView: View {
       }
     }
     .tint(AppTheme.accentBlue)
+    .onAppear(perform: syncOnOpen)
   }
 
   #if os(macOS)
@@ -37,6 +41,7 @@ struct ContentView: View {
     }
     .tint(AppTheme.accentBlue)
     .background(AppTheme.backgroundPrimary)
+    .onAppear(perform: syncOnOpen)
   }
 
   private var selectedTab: AppTab {
@@ -92,6 +97,11 @@ struct ContentView: View {
     return AppTheme.accentBlue
   }
   #endif
+
+  private func syncOnOpen() {
+    guard settings.syncEnabled else { return }
+    DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
+  }
 }
 
 private enum AppTab: Int, CaseIterable, Identifiable {

@@ -21,11 +21,12 @@ struct TimerView: View {
   @State private var handledNewDoseRequestID = 0
   @State private var recentHistoryLimit = 10
 
-  private var lastDose: DoseRecord? { doses.first }
+  private var activeDoses: [DoseRecord] { doses.filter { !$0.isDeletedForSync } }
+  private var lastDose: DoseRecord? { activeDoses.first }
   private var visibleDoses: [DoseRecord] {
-    if settings.proBetaAccepted { return doses }
+    if settings.proBetaAccepted { return activeDoses }
     let cutoff = Date().addingTimeInterval(-24 * 3600)
-    return doses.filter { $0.time >= cutoff }
+    return activeDoses.filter { $0.time >= cutoff }
   }
   private var displayedRecentHistoryDoses: [DoseRecord] {
     Array(visibleDoses.prefix(min(recentHistoryLimit, 30)))
@@ -244,7 +245,7 @@ struct TimerView: View {
           Image(systemName: "clock.arrow.circlepath")
             .font(.system(size: 30))
             .foregroundStyle(AppTheme.textMuted)
-          Text(doses.isEmpty ? "No doses recorded yet" : "Older records are hidden in free mode.")
+          Text(activeDoses.isEmpty ? "No doses recorded yet" : "Older records are hidden in free mode.")
             .font(.system(size: 14))
             .foregroundStyle(AppTheme.textMuted)
             .multilineTextAlignment(.center)
@@ -261,7 +262,7 @@ struct TimerView: View {
               ) {
                 if settings.proBetaAccepted { editingDose = dose }
               } onDelete: {
-                DoseStore.delete(dose, context: context)
+                DoseStore.delete(dose, context: context, settings: settings)
               }
             }
 

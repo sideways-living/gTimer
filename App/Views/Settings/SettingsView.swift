@@ -18,11 +18,15 @@ struct SettingsView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(AppNavigation.self) private var nav
   @Environment(\.openURL) private var openURL
+  @Environment(\.modelContext) private var context
   @Query(sort: \DoseRecord.time, order: .reverse) private var doseRecords: [DoseRecord]
   @State private var saveState: SaveState = .idle
   @State private var customIntervalText = ""
   @State private var standardDoseText = ""
   @State private var deviceNameText = ""
+  @State private var syncServerURLText = ""
+  @State private var syncTokenText = ""
+  @State private var isSyncing = false
   @State private var vanityNameText = ""
   @State private var homeCityText = ""
   @State private var homeCountryCode = ""
@@ -66,6 +70,7 @@ struct SettingsView: View {
             colourSection
             notificationsSection
             deviceSection
+            syncSection
             locationSection
             homeLocationSection
             if settings.proBetaAccepted { profileSection }
@@ -125,6 +130,8 @@ struct SettingsView: View {
     .onAppear { reloadFromSettings() }
     .onChange(of: standardDoseText) { markUnsaved() }
     .onChange(of: deviceNameText) { markUnsaved() }
+    .onChange(of: syncServerURLText) { markUnsaved() }
+    .onChange(of: syncTokenText) { markUnsaved() }
     .onChange(of: vanityNameText) { markUnsaved() }
     .onChange(of: homeCityText) { markUnsaved() }
     .onChange(of: homeCountryCode) { markUnsaved() }
@@ -442,12 +449,91 @@ struct SettingsView: View {
           Image(systemName: "lock.fill")
             .font(.system(size: 11))
             .foregroundStyle(AppTheme.statusGreen)
-          Text("All dose data is stored locally on this device only.")
+          Text(settings.syncEnabled ? "Dose data is stored locally and synced with your gTimer sync server." : "All dose data is stored locally on this device only.")
             .font(.system(size: 12))
             .foregroundStyle(AppTheme.textMuted)
           Spacer()
         }
         .padding(.vertical, 6)
+      }
+    }
+  }
+
+  private var syncSection: some View {
+    settingsCard(title: "Sync") {
+      VStack(alignment: .leading, spacing: 12) {
+        row(label: "Cross-device sync") {
+          @Bindable var s = settings
+          Toggle("Cross-device sync", isOn: $s.syncEnabled)
+            .labelsHidden()
+            .tint(AppTheme.accentBlue)
+            .accessibilityLabel("Cross-device sync")
+            .onChange(of: settings.syncEnabled) { markUnsaved() }
+        }
+
+        VStack(alignment: .leading, spacing: 7) {
+          Text("Server")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(AppTheme.textSecondary)
+          TextField("https://sync.gtimer.app", text: $syncServerURLText)
+            .platformPlainTextEntry()
+            .font(.system(size: 14, design: .monospaced))
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding(10)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+        }
+
+        VStack(alignment: .leading, spacing: 7) {
+          Text("Token")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(AppTheme.textSecondary)
+          SecureField("Paste your private sync token", text: $syncTokenText)
+            .platformPlainTextEntry()
+            .font(.system(size: 14))
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding(10)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .privacySensitive()
+        }
+
+        HStack(spacing: 8) {
+          Image(systemName: settings.syncEnabled ? "arrow.triangle.2.circlepath.circle.fill" : "icloud.slash.fill")
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(settings.syncEnabled ? AppTheme.accentBlue : AppTheme.textMuted)
+          Text(settings.syncStatusMessage)
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textMuted)
+            .lineLimit(2)
+          Spacer()
+          Button {
+            performManualSync()
+          } label: {
+            HStack(spacing: 6) {
+              if isSyncing {
+                ProgressView()
+                  .controlSize(.small)
+              } else {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                  .font(.system(size: 12, weight: .semibold))
+              }
+              Text(isSyncing ? "Syncing" : "Sync now")
+                .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(AppTheme.accentBlue)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(AppTheme.accentBlue.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+          }
+          .buttonStyle(.plain)
+          .disabled(isSyncing)
+        }
+
+        Text("Sync is beta and uses your own server. Keep your token private.")
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
       }
     }
   }
@@ -927,6 +1013,8 @@ struct SettingsView: View {
 
     if let d = Double(standardDoseText), d > 0 { settings.standardDose = d }
     settings.deviceName = deviceNameText
+    settings.syncServerURL = syncServerURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+    settings.syncToken = syncTokenText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.vanityName = vanityNameText
     settings.homeCity = homeCityText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.homeCountryCode = homeCountryCode
@@ -970,6 +1058,8 @@ struct SettingsView: View {
     hasLoaded = false
     standardDoseText = settings.standardDose.formatted(.number.precision(.fractionLength(1)))
     deviceNameText = settings.deviceName
+    syncServerURLText = settings.syncServerURL
+    syncTokenText = settings.syncToken
     vanityNameText = settings.vanityName
     homeCityText = settings.homeCity
     homeCountryCode = settings.homeCountryCode
@@ -1000,6 +1090,19 @@ struct SettingsView: View {
     homeLongitudeText = coordinateText(location.longitude)
     homeLocationError = nil
     markUnsaved()
+  }
+
+  private func performManualSync() {
+    saveAll()
+    guard quickAmountsError == nil,
+          intervalError == nil,
+          homeLocationError == nil else { return }
+
+    isSyncing = true
+    Task { @MainActor in
+      await DoseSyncManager.shared.syncNow(context: context, settings: settings)
+      isSyncing = false
+    }
   }
 
   private func lookUpHomeLocation() {
