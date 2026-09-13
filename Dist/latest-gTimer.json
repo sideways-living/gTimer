@@ -1,22 +1,22 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.18",
-  "build": 108,
+  "version": "0.9.19",
+  "build": 109,
   "minimum_os": "14.0",
-  "published_at": "2026-09-13T03:58:52Z",
-  "summary": "Improves the Dose Map window and adds a Pro-only Map navigation button.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.18/gTimer-macOS-0.9.18-108-local.pkg",
-  "sha256": "0953801b132c73566be272bdba488eda47aadceba1dc21f929de63f4571f4512",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.18/gTimer-macOS-0.9.18-108-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.18",
+  "published_at": "2026-09-13T04:05:50Z",
+  "summary": "Adds beta account login and removable device access for gTimer sync.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.19/gTimer-macOS-0.9.19-109-local.pkg",
+  "sha256": "947574dff8e512b4275dbc430ad0280b07ec1e2d2a206f0547b746631e6aab3e",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.19/gTimer-macOS-0.9.19-109-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.19",
   "changes": {
     "new_features": [
-      "Added a Pro-only Map button to the main navigation menu."
+      "Added beta email and password accounts for gTimer sync.",
+      "Added per-device sync tokens and a device list so signed-in users can remove devices."
     ],
     "minor_improvements": [
-      "Removed the duplicate in-window Dose Map header so the native page or window title is used instead.",
-      "Gave the main Map page bottom clearance so the map summary stays above the desktop navigation menu."
+      "The Sync settings screen now supports creating an account, signing in, and syncing immediately after login."
     ],
     "bug_fixes": []
   }
