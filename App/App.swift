@@ -81,14 +81,14 @@ struct GTimerApp: App {
           .keyboardShortcut("1", modifiers: .command)
         Button("History") { nav.openHistory() }
           .keyboardShortcut("2", modifiers: .command)
+        Button("Map") { nav.requestDoseMap() }
+          .keyboardShortcut("6", modifiers: .command)
         Button("Health") { nav.openHealth() }
           .keyboardShortcut("3", modifiers: .command)
         Button("Settings") { nav.openSettings() }
           .keyboardShortcut("4", modifiers: .command)
         Button("gTimer Pro") { nav.openPro() }
           .keyboardShortcut("5", modifiers: .command)
-        Button("Map") { nav.requestDoseMap() }
-          .keyboardShortcut("6", modifiers: .command)
       }
 
       CommandGroup(replacing: .newItem) {
@@ -150,6 +150,24 @@ final class AppUpdateManager {
   var shouldShowUpdateNotes = false
 
   let entries: [AppUpdateEntry] = [
+    AppUpdateEntry(
+      version: "0.9.21",
+      build: 111,
+      category: .minorImprovements,
+      message: "Moved Map between History and Health in the navigation menu."
+    ),
+    AppUpdateEntry(
+      version: "0.9.21",
+      build: 111,
+      category: .minorImprovements,
+      message: "Dose Map marker details now open without resizing or moving the dose marker."
+    ),
+    AppUpdateEntry(
+      version: "0.9.21",
+      build: 111,
+      category: .minorImprovements,
+      message: "Dose Map detail bubbles now point back to the selected dose marker based on its position on the map."
+    ),
     AppUpdateEntry(
       version: "0.9.20",
       build: 110,

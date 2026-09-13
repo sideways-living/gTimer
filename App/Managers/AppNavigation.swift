@@ -29,15 +29,15 @@ final class AppNavigation {
   }
 
   func openHealth() {
-    selectedTab = 2
-  }
-
-  func openSettings() {
     selectedTab = 3
   }
 
-  func openPro() {
+  func openSettings() {
     selectedTab = 4
+  }
+
+  func openPro() {
+    selectedTab = 5
   }
 
   func requestNewDose() {
@@ -52,7 +52,7 @@ final class AppNavigation {
   }
 
   func requestDoseMap() {
-    selectedTab = 1
+    selectedTab = 2
     doseMapRequestID += 1
   }
 

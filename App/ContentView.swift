@@ -118,10 +118,10 @@ struct ContentView: View {
 private enum AppTab: Int, CaseIterable, Identifiable {
   case timer
   case history
+  case map
   case health
   case settings
   case pro
-  case map
 
   var id: Int { rawValue }
 

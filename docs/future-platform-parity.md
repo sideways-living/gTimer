@@ -92,7 +92,7 @@ Future Android and Windows versions should match these features:
 | Pro | Current app uses free beta activation. Future store payments are a separate product decision. |
 | Notifications | Optional local reminder when the configured timing interval elapses. Notification copy must not imply medical safety. |
 | Location | Pro-gated optional location recording; current setting named "Show approximate location" rounds display only, not saved coordinates. |
-| Map/insights | Pro-gated dose map and location summary behavior. |
+| Map/insights | Pro-gated dose map and location summary behavior. When visible in navigation, Map sits between History and Health. Marker details open as anchored overlays so the dose marker remains fixed as the focal point, with the callout pointer adapting near map edges. |
 | Widgets | Companion widgets show current timer status, last dose amount/time, safe interval progress, and an open-app action. Widgets must match countdown/count-up visual semantics. Widgets should not directly write dose history unless the platform implementation writes through the canonical dose store and triggers the same notification/update flow. |
 | Export/print | Pro-gated export window supports date range, field selection, location/map inclusion, PDF export, and print output. When map output is selected, include a full-page rendered visual map with dose markers. Desktop platforms should expose keyboard commands for these flows. |
 
@@ -161,7 +161,7 @@ WidgetKit:
 
 macOS:
 
-- Provide menu commands for opening gTimer, History, Health, Settings, and gTimer Pro.
+- Provide menu commands for opening gTimer, History, Map, Health, Settings, and gTimer Pro. Map should appear between History and Health where it is visible.
 - Provide menu commands for new dose, export history to PDF, print history, and quit with confirmation.
 - Keep desktop export/print controls aligned with future Windows desktop behavior.
 

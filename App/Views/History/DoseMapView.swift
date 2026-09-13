@@ -12,10 +12,13 @@ struct DoseMapView: View {
 
   @State private var position: MapCameraPosition = .automatic
   @State private var selectedDose: DoseRecord? = nil
-  @State private var highlightedDoseID: UUID? = nil
+  @State private var hoveredDoseID: UUID? = nil
+  @State private var pinnedDoseID: UUID? = nil
+  @State private var markerFrames: [UUID: CGRect] = [:]
 
   private var activeDoses: [DoseRecord] { allDoses.filter { !$0.isDeletedForSync } }
   private var locatedDoses: [DoseRecord] { activeDoses.filter { $0.hasLocation } }
+  private var activeCalloutDoseID: UUID? { pinnedDoseID ?? hoveredDoseID }
 
   // Determines pin color: red = logged before safe interval elapsed, blue = normal
   private func pinColor(for dose: DoseRecord) -> Color {
@@ -66,14 +69,24 @@ struct DoseMapView: View {
 
   private var mapContent: some View {
     VStack(spacing: 0) {
-      Map(position: $position) {
-        ForEach(locatedDoses) { dose in
-          Annotation("", coordinate: dose.coordinate, anchor: .bottom) {
-            doseMarker(for: dose)
+      ZStack {
+        Map(position: $position) {
+          ForEach(locatedDoses) { dose in
+            Annotation("", coordinate: dose.coordinate, anchor: .bottom) {
+              doseMarker(for: dose)
+            }
           }
         }
+        .mapStyle(.standard)
+        .onPreferenceChange(DoseMarkerFramePreferenceKey.self) { frames in
+          if !markerFrames.roughlyMatches(frames) {
+            markerFrames = frames
+          }
+        }
+
+        doseCalloutOverlay
       }
-      .mapStyle(.standard)
+      .coordinateSpace(name: DoseMapCoordinateSpace.name)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
       summaryBar
@@ -83,38 +96,153 @@ struct DoseMapView: View {
 
   private func doseMarker(for dose: DoseRecord) -> some View {
     let color = pinColor(for: dose)
-    let isHighlighted = highlightedDoseID == dose.id
+    let isHighlighted = activeCalloutDoseID == dose.id
 
-    return ZStack(alignment: .bottomLeading) {
-      if isHighlighted {
-        doseBubble(for: dose, color: color)
-          .offset(x: 28, y: -18)
-          .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottomLeading)))
-          .zIndex(1)
-      }
-
+    return ZStack {
       ZStack {
         Circle()
           .fill(color)
-          .frame(width: isHighlighted ? 30 : 24, height: isHighlighted ? 30 : 24)
+          .frame(width: 24, height: 24)
           .shadow(color: color.opacity(0.5), radius: 4)
         Image(systemName: "drop.fill")
-          .font(.system(size: isHighlighted ? 13 : 11, weight: .bold))
+          .font(.system(size: 11, weight: .bold))
           .foregroundStyle(.white)
       }
+      .scaleEffect(isHighlighted ? 1.15 : 1)
       .contentShape(Circle())
       .onTapGesture {
-        withAnimation(.snappy) {
-          highlightedDoseID = dose.id
-        }
+        pinnedDoseID = pinnedDoseID == dose.id ? nil : dose.id
       }
       .onHover { hovering in
-        withAnimation(.snappy) {
-          highlightedDoseID = hovering ? dose.id : (highlightedDoseID == dose.id ? nil : highlightedDoseID)
+        if hovering {
+          hoveredDoseID = dose.id
+        } else if hoveredDoseID == dose.id {
+          hoveredDoseID = nil
         }
       }
       .accessibilityAddTraits(.isButton)
       .accessibilityLabel("\(dose.amount.formatted(.number.precision(.fractionLength(1))))\(dose.unit) at \(dose.time.formatted(date: .abbreviated, time: .shortened))")
+    }
+    .frame(width: 34, height: 34)
+    .background(
+      GeometryReader { proxy in
+        Color.clear.preference(
+          key: DoseMarkerFramePreferenceKey.self,
+          value: [dose.id: proxy.frame(in: .named(DoseMapCoordinateSpace.name))]
+        )
+      }
+    )
+  }
+
+  @ViewBuilder
+  private var doseCalloutOverlay: some View {
+    GeometryReader { proxy in
+      if let id = activeCalloutDoseID,
+         let dose = locatedDoses.first(where: { $0.id == id }),
+         let frame = markerFrames[id] {
+        let marker = CGPoint(x: frame.midX, y: frame.midY)
+        let placement = calloutPlacement(for: marker, in: proxy.size)
+        doseBubbleContainer(
+          for: dose,
+          color: pinColor(for: dose),
+          placement: placement
+        )
+        .position(calloutPosition(for: marker, placement: placement, in: proxy.size))
+        .transition(.opacity)
+        .onHover { hovering in
+          if hovering {
+            hoveredDoseID = id
+          } else if hoveredDoseID == id {
+            hoveredDoseID = nil
+          }
+        }
+      }
+    }
+  }
+
+  private func doseBubbleContainer(
+    for dose: DoseRecord,
+    color: Color,
+    placement: DoseCalloutPlacement
+  ) -> some View {
+    let fill = AppTheme.backgroundCard.opacity(0.96)
+
+    return Group {
+      switch placement {
+      case .right:
+        HStack(spacing: 0) {
+          DoseCalloutPointer(direction: .left)
+            .fill(fill)
+            .frame(width: 12, height: 22)
+          doseBubble(for: dose, color: color)
+        }
+      case .left:
+        HStack(spacing: 0) {
+          doseBubble(for: dose, color: color)
+          DoseCalloutPointer(direction: .right)
+            .fill(fill)
+            .frame(width: 12, height: 22)
+        }
+      case .below:
+        VStack(spacing: 0) {
+          DoseCalloutPointer(direction: .up)
+            .fill(fill)
+            .frame(width: 22, height: 12)
+          doseBubble(for: dose, color: color)
+        }
+      case .above:
+        VStack(spacing: 0) {
+          doseBubble(for: dose, color: color)
+          DoseCalloutPointer(direction: .down)
+            .fill(fill)
+            .frame(width: 22, height: 12)
+        }
+      }
+    }
+    .shadow(color: .black.opacity(0.28), radius: 14, x: 0, y: 8)
+  }
+
+  private func calloutPlacement(for marker: CGPoint, in size: CGSize) -> DoseCalloutPlacement {
+    let horizontalEdge: CGFloat = 292
+    let verticalEdge: CGFloat = 182
+
+    if marker.x < horizontalEdge { return .right }
+    if marker.x > size.width - horizontalEdge { return .left }
+    if marker.y < verticalEdge { return .below }
+    return .above
+  }
+
+  private func calloutPosition(
+    for marker: CGPoint,
+    placement: DoseCalloutPlacement,
+    in size: CGSize
+  ) -> CGPoint {
+    let bubbleWidth: CGFloat = 254
+    let bubbleHeight: CGFloat = 156
+    let gap: CGFloat = 14
+    let inset: CGFloat = 14
+
+    switch placement {
+    case .right:
+      return CGPoint(
+        x: min(marker.x + gap + bubbleWidth / 2, size.width - bubbleWidth / 2 - inset),
+        y: marker.y.clamped(to: (bubbleHeight / 2 + inset)...(size.height - bubbleHeight / 2 - inset))
+      )
+    case .left:
+      return CGPoint(
+        x: max(marker.x - gap - bubbleWidth / 2, bubbleWidth / 2 + inset),
+        y: marker.y.clamped(to: (bubbleHeight / 2 + inset)...(size.height - bubbleHeight / 2 - inset))
+      )
+    case .below:
+      return CGPoint(
+        x: marker.x.clamped(to: (bubbleWidth / 2 + inset)...(size.width - bubbleWidth / 2 - inset)),
+        y: min(marker.y + gap + bubbleHeight / 2, size.height - bubbleHeight / 2 - inset)
+      )
+    case .above:
+      return CGPoint(
+        x: marker.x.clamped(to: (bubbleWidth / 2 + inset)...(size.width - bubbleWidth / 2 - inset)),
+        y: max(marker.y - gap - bubbleHeight / 2, bubbleHeight / 2 + inset)
+      )
     }
   }
 
@@ -162,7 +290,6 @@ struct DoseMapView: View {
     .background(AppTheme.backgroundCard.opacity(0.96))
     .clipShape(RoundedRectangle(cornerRadius: 12))
     .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 0.5))
-    .shadow(color: .black.opacity(0.28), radius: 14, x: 0, y: 8)
   }
 
   // MARK: - Summary bar
@@ -224,5 +351,86 @@ struct DoseMapView: View {
       Spacer()
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+}
+
+private enum DoseMapCoordinateSpace {
+  static let name = "DoseMapCoordinateSpace"
+}
+
+private enum DoseCalloutPlacement {
+  case above
+  case below
+  case left
+  case right
+}
+
+private enum DoseCalloutPointerDirection {
+  case up
+  case down
+  case left
+  case right
+}
+
+private struct DoseCalloutPointer: Shape {
+  let direction: DoseCalloutPointerDirection
+
+  func path(in rect: CGRect) -> Path {
+    var path = Path()
+    switch direction {
+    case .up:
+      path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+      path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+      path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+    case .down:
+      path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+      path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+      path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+    case .left:
+      path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+      path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+      path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+    case .right:
+      path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+      path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+      path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+    }
+    path.closeSubpath()
+    return path
+  }
+}
+
+private struct DoseMarkerFramePreferenceKey: PreferenceKey {
+  static var defaultValue: [UUID: CGRect] = [:]
+
+  static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+    value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+  }
+}
+
+private extension Dictionary where Key == UUID, Value == CGRect {
+  func roughlyMatches(_ other: [UUID: CGRect]) -> Bool {
+    guard count == other.count else { return false }
+    for (key, value) in self {
+      guard let otherValue = other[key], value.roughlyMatches(otherValue) else {
+        return false
+      }
+    }
+    return true
+  }
+}
+
+private extension CGRect {
+  func roughlyMatches(_ other: CGRect) -> Bool {
+    abs(midX - other.midX) < 0.5 &&
+      abs(midY - other.midY) < 0.5 &&
+      abs(width - other.width) < 0.5 &&
+      abs(height - other.height) < 0.5
+  }
+}
+
+private extension CGFloat {
+  func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
+    Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
   }
 }
