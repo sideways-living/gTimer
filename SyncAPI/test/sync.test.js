@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -152,6 +152,8 @@ test("registers an account and syncs with the issued device token", async () => 
 
     assert.equal(registered.status, 201);
     assert.equal(registered.json.user.email, "person@example.com");
+    assert.equal(registered.json.user.entitlement.plan, "free");
+    assert.equal(registered.json.user.entitlement.hasSyncAccess, true);
     assert.equal(registered.json.device.name, "Dan's Mac");
     assert.match(registered.json.token, /^gtimer_/);
 
@@ -214,6 +216,36 @@ test("logs in on another device and can revoke that device", async () => {
   });
 });
 
+test("blocks account-token sync after the free sync trial ends", async () => {
+  await withTestAPI(async ({ baseURL, dataDir }) => {
+    const registered = await requestJSON(`${baseURL}/v1/auth/register`, {
+      method: "POST",
+      body: {
+        email: "expired@example.com",
+        password: "correct horse battery staple",
+        deviceName: "Mac"
+      }
+    });
+
+    const authPath = join(dataDir, "_auth.json");
+    const state = JSON.parse(await readFile(authPath, "utf8"));
+    const user = state.users[registered.json.user.id];
+    user.syncTrialStartedAt = "2026-01-01T00:00:00.000Z";
+    user.syncTrialEndsAt = "2026-01-15T00:00:00.000Z";
+    user.plan = "free";
+    user.proUntil = null;
+    await writeFile(authPath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+
+    const rejected = await requestJSON(`${baseURL}/v1/sync/pull?since=0`, {
+      method: "GET",
+      token: registered.json.token
+    });
+
+    assert.equal(rejected.status, 402);
+    assert.match(rejected.json.error, /Sync trial ended/);
+  });
+});
+
 async function withTestAPI(callback) {
   const dataDir = await mkdtemp(join(tmpdir(), "gtimer-sync-api-"));
   const server = createServer({
@@ -230,7 +262,7 @@ async function withTestAPI(callback) {
   const baseURL = `http://127.0.0.1:${address.port}`;
 
   try {
-    await callback({ baseURL });
+    await callback({ baseURL, dataDir });
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(dataDir, { recursive: true, force: true });

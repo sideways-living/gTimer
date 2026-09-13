@@ -61,6 +61,9 @@ struct SettingsView: View {
   private var homeLocationSuggestions: [ManualDoseLocation] {
     ManualLocationStore.shared.suggestions(matching: homeAddressText, limit: 4)
   }
+  private var canUseDeviceSync: Bool {
+    settings.canUseDeviceSync
+  }
 
   var body: some View {
     NavigationStack {
@@ -466,15 +469,24 @@ struct SettingsView: View {
   }
 
   private var syncSection: some View {
-    settingsCard(title: "Sync") {
+    settingsCard(title: "Device Sync") {
       VStack(alignment: .leading, spacing: 12) {
+        syncAccessCard
+
         row(label: "Cross-device sync") {
           @Bindable var s = settings
           Toggle("Cross-device sync", isOn: $s.syncEnabled)
             .labelsHidden()
             .tint(AppTheme.accentBlue)
             .accessibilityLabel("Cross-device sync")
-            .onChange(of: settings.syncEnabled) { markUnsaved() }
+            .disabled(!canUseDeviceSync)
+            .onChange(of: settings.syncEnabled) {
+              if settings.syncEnabled && !settings.canUseDeviceSync {
+                settings.syncEnabled = false
+                syncAuthMessage = "Start the free sync trial or activate gTimer Pro to sync devices."
+              }
+              markUnsaved()
+            }
         }
 
         VStack(alignment: .leading, spacing: 7) {
@@ -488,10 +500,11 @@ struct SettingsView: View {
             .padding(10)
             .background(AppTheme.backgroundElevated)
             .clipShape(RoundedRectangle(cornerRadius: 9))
+            .disabled(!canUseDeviceSync)
         }
 
         VStack(alignment: .leading, spacing: 7) {
-          Text("Token")
+          Text("Advanced token")
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(AppTheme.textSecondary)
           SecureField(settings.syncToken.isEmpty ? "Created after account login" : "Saved in keychain", text: $syncTokenText)
@@ -502,10 +515,11 @@ struct SettingsView: View {
             .background(AppTheme.backgroundElevated)
             .clipShape(RoundedRectangle(cornerRadius: 9))
             .privacySensitive()
+            .disabled(!canUseDeviceSync)
         }
 
         VStack(alignment: .leading, spacing: 7) {
-          Text("Account")
+          Text("Sync account")
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(AppTheme.textSecondary)
           TextField("Email", text: $syncEmailText)
@@ -516,6 +530,7 @@ struct SettingsView: View {
             .padding(10)
             .background(AppTheme.backgroundElevated)
             .clipShape(RoundedRectangle(cornerRadius: 9))
+            .disabled(!canUseDeviceSync)
           SecureField("Password", text: $syncPasswordText)
             .font(.system(size: 15))
             .foregroundStyle(AppTheme.textPrimary)
@@ -523,6 +538,7 @@ struct SettingsView: View {
             .background(AppTheme.backgroundElevated)
             .clipShape(RoundedRectangle(cornerRadius: 9))
             .privacySensitive()
+            .disabled(!canUseDeviceSync)
           HStack(spacing: 8) {
             Button {
               authenticateSyncAccount(register: false)
@@ -530,7 +546,7 @@ struct SettingsView: View {
               syncAuthButtonLabel("Sign in")
             }
             .buttonStyle(.plain)
-            .disabled(isAuthenticatingSync)
+            .disabled(isAuthenticatingSync || !canUseDeviceSync)
 
             Button {
               authenticateSyncAccount(register: true)
@@ -538,7 +554,7 @@ struct SettingsView: View {
               syncAuthButtonLabel("Create account")
             }
             .buttonStyle(.plain)
-            .disabled(isAuthenticatingSync)
+            .disabled(isAuthenticatingSync || !canUseDeviceSync)
           }
           if let syncAuthMessage {
             Text(syncAuthMessage)
@@ -600,13 +616,74 @@ struct SettingsView: View {
           }
           .buttonStyle(.plain)
           .disabled(isSyncing)
+          .disabled(isSyncing || !canUseDeviceSync)
         }
 
-        Text("Sync is beta and uses your own server. Each device gets its own token so lost devices can be removed.")
+        Text("Sync is optional. It uses the gTimer sync server, and each device gets its own token so lost devices can be removed.")
           .font(.system(size: 12))
           .foregroundStyle(AppTheme.textMuted)
       }
     }
+  }
+
+  @ViewBuilder
+  private var syncAccessCard: some View {
+    let title = settings.proBetaAccepted
+      ? "Included with gTimer Pro"
+      : settings.isSyncTrialActive
+        ? "Free sync trial active"
+        : settings.syncTrialStartedAt == nil
+          ? "Try device sync free"
+          : "Sync trial ended"
+    let detail = settings.proBetaAccepted
+      ? "Sync can keep your dose history available across your signed-in devices."
+      : settings.isSyncTrialActive
+        ? "\(settings.syncTrialDaysRemaining) day\(settings.syncTrialDaysRemaining == 1 ? "" : "s") left. Activate gTimer Pro to keep device sync after the trial."
+        : settings.syncTrialStartedAt == nil
+          ? "Start a \(SettingsManager.syncTrialDurationDays)-day trial to try cross-device dose logging before choosing Pro."
+          : "Activate gTimer Pro to keep syncing your dose history across devices."
+
+    HStack(alignment: .center, spacing: 12) {
+      Image(systemName: settings.canUseDeviceSync ? "icloud.fill" : "star.fill")
+        .font(.system(size: 18, weight: .semibold))
+        .foregroundStyle(settings.canUseDeviceSync ? AppTheme.accentBlue : AppTheme.proAmber)
+        .frame(width: 28, height: 28)
+      VStack(alignment: .leading, spacing: 3) {
+        Text(title)
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundStyle(AppTheme.textPrimary)
+        Text(detail)
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      Spacer(minLength: 8)
+      if !settings.canUseDeviceSync {
+        Button(settings.syncTrialStartedAt == nil ? "Start trial" : "gTimer Pro") {
+          if settings.syncTrialStartedAt == nil {
+            settings.startSyncTrialIfNeeded()
+            syncAuthMessage = "Sync trial started. Create an account or sign in to begin syncing."
+          } else {
+            paywallFeature = .deviceSync
+            showPaywall = true
+          }
+        }
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(settings.syncTrialStartedAt == nil ? AppTheme.accentBlue : AppTheme.proAmber)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(12)
+    .background((settings.canUseDeviceSync ? AppTheme.accentBlue : AppTheme.proAmber).opacity(0.10))
+    .clipShape(RoundedRectangle(cornerRadius: 12))
+    .overlay(
+      RoundedRectangle(cornerRadius: 12)
+        .stroke((settings.canUseDeviceSync ? AppTheme.accentBlue : AppTheme.proAmber).opacity(0.22), lineWidth: 0.75)
+    )
   }
 
   private func syncAuthButtonLabel(_ title: String) -> some View {
@@ -742,7 +819,7 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             cardDivider
-            Text("Location data is stored locally on this device only. It is never shared or uploaded.")
+            Text(settings.syncEnabled ? "Location data can sync with your account when device sync is on." : "Location data is stored locally on this device only while sync is off.")
               .font(.system(size: 12))
               .foregroundStyle(AppTheme.textMuted)
               .padding(.vertical, 4)
@@ -1235,6 +1312,13 @@ struct SettingsView: View {
   }
 
   private func performManualSync() {
+    guard settings.canUseDeviceSync else {
+      settings.syncEnabled = false
+      syncAuthMessage = "Start the free sync trial or activate gTimer Pro to sync devices."
+      settings.syncStatusMessage = "Sync trial ended. Activate gTimer Pro to keep syncing."
+      return
+    }
+
     saveAll()
     guard quickAmountsError == nil,
           intervalError == nil,
@@ -1248,6 +1332,11 @@ struct SettingsView: View {
   }
 
   private func authenticateSyncAccount(register: Bool) {
+    guard settings.canUseDeviceSync else {
+      syncAuthMessage = "Start the free sync trial or activate gTimer Pro before signing in for device sync."
+      return
+    }
+
     saveAll()
     guard quickAmountsError == nil,
           intervalError == nil,
@@ -1300,7 +1389,7 @@ struct SettingsView: View {
   }
 
   private func loadSyncDevices() {
-    guard !settings.syncToken.isEmpty else {
+    guard settings.canUseDeviceSync, !settings.syncToken.isEmpty else {
       syncDevices = []
       return
     }

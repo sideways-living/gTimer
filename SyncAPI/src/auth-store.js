@@ -4,6 +4,7 @@ import { pbkdf2Sync, randomBytes, randomUUID, timingSafeEqual } from "node:crypt
 
 const pbkdf2Iterations = 210_000;
 const tokenPrefix = "gtimer_";
+const syncTrialDurationDays = 14;
 
 export class AuthStore {
   constructor(options = {}) {
@@ -25,6 +26,10 @@ export class AuthStore {
         id: userId,
         email: normalizedEmail,
         password: hashPassword(password),
+        plan: "free",
+        syncTrialStartedAt: now,
+        syncTrialEndsAt: datePlusDays(now, syncTrialDurationDays),
+        proUntil: null,
         createdAt: now,
         updatedAt: now
       };
@@ -45,8 +50,10 @@ export class AuthStore {
         throw authError(401, "Email or password is incorrect.");
       }
 
+      const now = new Date().toISOString();
+      ensureSyncTrial(user, now);
       const session = addDeviceSession(state, user.id, deviceName);
-      user.updatedAt = new Date().toISOString();
+      user.updatedAt = now;
       await this.#writeState(state);
       return authResponse(user, session);
     });
@@ -59,9 +66,15 @@ export class AuthStore {
       const tokenHash = hashToken(token);
       const session = state.sessionsByTokenHash[tokenHash];
       if (!session || session.revokedAt) return null;
+      const user = state.users[session.userId];
+      if (!user) return null;
       session.lastSeenAt = new Date().toISOString();
       await this.#writeState(state);
-      return session.userId;
+      return {
+        userId: session.userId,
+        hasSyncAccess: hasSyncAccess(user),
+        entitlement: entitlementSummary(user)
+      };
     });
   }
 
@@ -167,8 +180,16 @@ function emptyAuthState() {
 }
 
 function normalizeState(state) {
+  const users = state.users ?? {};
+  for (const user of Object.values(users)) {
+    user.plan ??= "free";
+    user.syncTrialStartedAt ??= null;
+    user.syncTrialEndsAt ??= null;
+    user.proUntil ??= null;
+  }
+
   return {
-    users: state.users ?? {},
+    users,
     usersByEmail: state.usersByEmail ?? {},
     devices: state.devices ?? {},
     sessionsByTokenHash: state.sessionsByTokenHash ?? {}
@@ -255,8 +276,38 @@ function authResponse(user, session) {
     token: session.token,
     user: {
       id: user.id,
-      email: user.email
+      email: user.email,
+      entitlement: entitlementSummary(user)
     },
     device: publicDevice(session.device)
   };
+}
+
+function ensureSyncTrial(user, now) {
+  if (user.syncTrialStartedAt && user.syncTrialEndsAt) return;
+  user.syncTrialStartedAt = now;
+  user.syncTrialEndsAt = datePlusDays(now, syncTrialDurationDays);
+}
+
+function hasSyncAccess(user) {
+  if (user.plan === "pro") return true;
+  if (user.proUntil && Date.parse(user.proUntil) > Date.now()) return true;
+  if (user.syncTrialEndsAt && Date.parse(user.syncTrialEndsAt) > Date.now()) return true;
+  return false;
+}
+
+function entitlementSummary(user) {
+  return {
+    plan: user.plan ?? "free",
+    syncTrialStartedAt: user.syncTrialStartedAt ?? null,
+    syncTrialEndsAt: user.syncTrialEndsAt ?? null,
+    proUntil: user.proUntil ?? null,
+    hasSyncAccess: hasSyncAccess(user)
+  };
+}
+
+function datePlusDays(dateString, days) {
+  const date = new Date(dateString);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString();
 }

@@ -8,6 +8,7 @@ enum ProFeature: String, CaseIterable {
   case doseLocations
   case doseMap
   case locationInsights
+  case deviceSync
   case profile
 
   var title: String {
@@ -19,6 +20,7 @@ enum ProFeature: String, CaseIterable {
     case .doseLocations:    return "Dose Locations"
     case .doseMap:          return "Dose Map"
     case .locationInsights: return "Location Insights"
+    case .deviceSync:       return "Device Sync"
     case .profile:          return "Profile"
     }
   }
@@ -39,6 +41,8 @@ enum ProFeature: String, CaseIterable {
       return "See where doses were logged and spot patterns that may help you make safer choices."
     case .locationInsights:
       return "Understand your dose patterns across locations to make more informed choices."
+    case .deviceSync:
+      return "Keep dose history in sync across your signed-in devices."
     case .profile:
       return "Set a display name and profile photo."
     }
@@ -53,13 +57,14 @@ enum ProFeature: String, CaseIterable {
     case .doseLocations:    return "location.fill"
     case .doseMap:          return "map.fill"
     case .locationInsights: return "chart.bar.fill"
+    case .deviceSync:       return "icloud.fill"
     case .profile:          return "person.crop.circle.fill"
     }
   }
 
   var accentColor: Color {
     switch self {
-    case .doseLocations, .doseMap, .locationInsights:
+    case .doseLocations, .doseMap, .locationInsights, .deviceSync:
       return AppTheme.accentBlue
     default:
       return AppTheme.proAmber

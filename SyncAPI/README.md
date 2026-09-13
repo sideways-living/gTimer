@@ -47,6 +47,8 @@ Clients are local-first:
 
 The normal beta flow is email/password login. Registering or logging in returns a device token. The app stores that token locally and uses it as the bearer token for sync.
 
+Device sync is a Pro entitlement with a 14-day free trial for new sync accounts. Static development tokens bypass entitlement checks and should not be used for public users.
+
 The development server still supports static bearer tokens mapped to user ids through `GTIMER_SYNC_TOKENS`, a JSON object:
 
 ```json
@@ -91,7 +93,14 @@ Response:
   "token": "gtimer_...",
   "user": {
     "id": "user-uuid",
-    "email": "person@example.com"
+    "email": "person@example.com",
+    "entitlement": {
+      "plan": "free",
+      "syncTrialStartedAt": "2026-09-13T08:30:00.000Z",
+      "syncTrialEndsAt": "2026-09-27T08:30:00.000Z",
+      "proUntil": null,
+      "hasSyncAccess": true
+    }
   },
   "device": {
     "id": "device-uuid",

@@ -324,6 +324,7 @@ private enum KeychainStore {
 @Observable
 final class SettingsManager {
   static let shared = SettingsManager()
+  static let syncTrialDurationDays = 14
 
   var standardDose: Double {
     didSet { UserDefaults.standard.set(standardDose, forKey: "standardDose") }
@@ -378,6 +379,15 @@ final class SettingsManager {
   }
   var syncDeviceID: String {
     didSet { UserDefaults.standard.set(syncDeviceID, forKey: "syncDeviceID") }
+  }
+  var syncTrialStartedAt: Date? {
+    didSet {
+      if let syncTrialStartedAt {
+        UserDefaults.standard.set(syncTrialStartedAt, forKey: "syncTrialStartedAt")
+      } else {
+        UserDefaults.standard.removeObject(forKey: "syncTrialStartedAt")
+      }
+    }
   }
   var syncCursor: Int {
     didSet { UserDefaults.standard.set(syncCursor, forKey: "syncCursor") }
@@ -444,6 +454,35 @@ final class SettingsManager {
     didSet { UserDefaults.standard.set(customBackgroundHex, forKey: "customBackgroundHex") }
   }
 
+  var syncTrialEndsAt: Date? {
+    guard let syncTrialStartedAt else { return nil }
+    return Calendar.current.date(
+      byAdding: .day,
+      value: Self.syncTrialDurationDays,
+      to: syncTrialStartedAt
+    )
+  }
+
+  var isSyncTrialActive: Bool {
+    guard let syncTrialEndsAt else { return false }
+    return Date() < syncTrialEndsAt
+  }
+
+  var syncTrialDaysRemaining: Int {
+    guard let syncTrialEndsAt else { return Self.syncTrialDurationDays }
+    let days = Calendar.current.dateComponents([.day], from: Date(), to: syncTrialEndsAt).day ?? 0
+    return max(days + 1, 0)
+  }
+
+  var canUseDeviceSync: Bool {
+    proBetaAccepted || isSyncTrialActive
+  }
+
+  func startSyncTrialIfNeeded() {
+    guard syncTrialStartedAt == nil else { return }
+    syncTrialStartedAt = Date()
+  }
+
   init() {
     let ud = UserDefaults.standard
     standardDose      = ud.object(forKey: "standardDose") as? Double ?? 1.5
@@ -459,6 +498,7 @@ final class SettingsManager {
     syncToken         = KeychainStore.string(for: "gtimer.syncToken") ?? ""
     syncAccountEmail  = ud.string(forKey: "syncAccountEmail") ?? ""
     syncDeviceID      = ud.string(forKey: "syncDeviceID") ?? ""
+    syncTrialStartedAt = ud.object(forKey: "syncTrialStartedAt") as? Date
     syncCursor        = ud.object(forKey: "syncCursor") as? Int ?? 0
     let savedLastSyncAt = ud.object(forKey: "lastSyncAt") as? Date
     lastSyncAt        = savedLastSyncAt
@@ -489,6 +529,14 @@ final class SettingsManager {
       quickAmounts = decoded
     } else {
       quickAmounts = [0.5, 1.0, 1.5, 2.0]
+    }
+
+    if !syncToken.isEmpty && !proBetaAccepted && syncTrialStartedAt == nil {
+      syncTrialStartedAt = Date()
+    }
+    if syncEnabled && !canUseDeviceSync {
+      syncEnabled = false
+      syncStatusMessage = "Sync trial ended. Activate gTimer Pro to keep syncing."
     }
   }
 

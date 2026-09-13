@@ -151,6 +151,24 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.20",
+      build: 110,
+      category: .newFeatures,
+      message: "Added a 14-day free trial for cross-device sync."
+    ),
+    AppUpdateEntry(
+      version: "0.9.20",
+      build: 110,
+      category: .minorImprovements,
+      message: "Device sync is now clearly positioned as an optional gTimer Pro benefit."
+    ),
+    AppUpdateEntry(
+      version: "0.9.20",
+      build: 110,
+      category: .bugFixes,
+      message: "Sync now stops cleanly when neither Pro nor an active sync trial is available."
+    ),
+    AppUpdateEntry(
       version: "0.9.19",
       build: 109,
       category: .newFeatures,

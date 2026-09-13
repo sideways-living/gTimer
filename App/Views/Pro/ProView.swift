@@ -101,7 +101,7 @@ struct ProView: View {
           .font(.system(size: 28, weight: .bold)).foregroundStyle(AppTheme.textPrimary)
         Text("Beta Access")
           .font(.system(size: 16, weight: .medium)).foregroundStyle(AppTheme.proAmber)
-        Text("Unlock all features instantly — free during beta.")
+        Text("Unlock all features instantly. Device sync includes a short free trial, then stays available with Pro.")
           .font(.system(size: 14)).foregroundStyle(AppTheme.textMuted)
           .multilineTextAlignment(.center).padding(.horizontal, 32)
       }
@@ -190,6 +190,7 @@ struct ProView: View {
         featureRow("Edit & correct dose records",    "pencil",                  unlocked: unlocked)
         featureRow("Export your data as CSV",        "square.and.arrow.up",     unlocked: unlocked)
         featureRow("Log missed/forgotten doses",     "xmark.circle",            unlocked: unlocked)
+        featureRow("Cross-device sync",              "icloud.fill",             unlocked: unlocked)
         featureRow("Profile & display name",         "person.crop.circle",      unlocked: unlocked)
         featureRow("Safe-to-redose notifications",   "bell.badge.fill",         unlocked: unlocked)
       }

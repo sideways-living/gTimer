@@ -210,7 +210,7 @@ final class DoseSyncManager {
   }()
 
   func syncAfterLocalChange(context: ModelContext, settings: SettingsManager) {
-    guard settings.syncEnabled else { return }
+    guard settings.syncEnabled, settings.canUseDeviceSync else { return }
     Task { @MainActor in
       await syncNow(context: context, settings: settings)
     }
@@ -222,8 +222,13 @@ final class DoseSyncManager {
       settings.syncStatusMessage = "Sync is off."
       return
     }
+    guard settings.canUseDeviceSync else {
+      settings.syncEnabled = false
+      settings.syncStatusMessage = "Sync trial ended. Activate gTimer Pro to keep syncing."
+      return
+    }
     guard !settings.syncToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      settings.syncStatusMessage = "Add your sync token first."
+      settings.syncStatusMessage = "Sign in or create an account to sync devices."
       return
     }
     guard let baseURL = URL(string: settings.syncServerURL.trimmingCharacters(in: .whitespacesAndNewlines)),

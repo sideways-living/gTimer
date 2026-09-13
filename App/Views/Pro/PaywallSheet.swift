@@ -98,11 +98,21 @@ struct PaywallSheet: View {
           .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
           .padding(.horizontal, 20)
 
-          // Privacy note for location features
+          // Privacy note for sensitive features
           if feature == .doseLocations || feature == .doseMap || feature == .locationInsights {
             HStack(spacing: 8) {
               Image(systemName: "lock.fill").font(.system(size: 12)).foregroundStyle(AppTheme.statusGreen)
-              Text("Location history is stored locally on this device only.")
+              Text(settings.syncEnabled ? "Location history can sync with your account while device sync is on." : "Location history is stored locally on this device while sync is off.")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textMuted)
+            }
+            .padding(.horizontal, 20)
+          }
+
+          if feature == .deviceSync {
+            HStack(spacing: 8) {
+              Image(systemName: "sparkles").font(.system(size: 12)).foregroundStyle(AppTheme.proAmber)
+              Text("Try device sync first, then keep it with a low-cost gTimer Pro membership.")
                 .font(.system(size: 12))
                 .foregroundStyle(AppTheme.textMuted)
             }

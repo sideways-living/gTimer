@@ -51,32 +51,35 @@ async function route(request, response, activeStore, activeTokens, activeAuthSto
   }
 
   if (request.method === "GET" && url.pathname === "/v1/auth/devices") {
-    const userId = await authenticate(request, activeTokens, activeAuthStore);
-    sendJSON(response, 200, await activeAuthStore.listDevices(userId));
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    sendJSON(response, 200, await activeAuthStore.listDevices(auth.userId));
     return;
   }
 
   const revokeMatch = url.pathname.match(/^\/v1\/auth\/devices\/([^/]+)$/);
   if (request.method === "DELETE" && revokeMatch) {
-    const userId = await authenticate(request, activeTokens, activeAuthStore);
-    sendJSON(response, 200, await activeAuthStore.revokeDevice(userId, decodeURIComponent(revokeMatch[1])));
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    sendJSON(response, 200, await activeAuthStore.revokeDevice(auth.userId, decodeURIComponent(revokeMatch[1])));
     return;
   }
 
   if (url.pathname.startsWith("/v1/sync/")) {
-    const userId = await authenticate(request, activeTokens, activeAuthStore);
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    if (!auth.hasSyncAccess) {
+      throw httpError(402, "Sync trial ended. Activate gTimer Pro to keep syncing.");
+    }
 
     if (request.method === "POST" && url.pathname === "/v1/sync/push") {
       const body = await readJSONBody(request);
       const push = normalizePushBody(body);
-      const result = await activeStore.push(userId, push.clientId, push.changes);
+      const result = await activeStore.push(auth.userId, push.clientId, push.changes);
       sendJSON(response, 200, result);
       return;
     }
 
     if (request.method === "GET" && url.pathname === "/v1/sync/pull") {
       const query = normalizePullQuery(url);
-      const result = await activeStore.pull(userId, query.since, query.limit);
+      const result = await activeStore.pull(auth.userId, query.since, query.limit);
       sendJSON(response, 200, result);
       return;
     }
@@ -92,11 +95,20 @@ async function authenticate(request, activeTokens, activeAuthStore) {
     throw httpError(401, "Missing bearer token.");
   }
 
-  const userId = activeTokens[match[1]] ?? await activeAuthStore.authenticateToken(match[1]);
-  if (!userId) {
+  const staticUserId = activeTokens[match[1]];
+  if (staticUserId) {
+    return {
+      userId: staticUserId,
+      hasSyncAccess: true,
+      entitlement: { plan: "development", hasSyncAccess: true }
+    };
+  }
+
+  const auth = await activeAuthStore.authenticateToken(match[1]);
+  if (!auth?.userId) {
     throw httpError(403, "Invalid bearer token.");
   }
-  return userId;
+  return auth;
 }
 
 async function readJSONBody(request) {
