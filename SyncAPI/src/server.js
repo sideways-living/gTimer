@@ -1,6 +1,7 @@
 import http from "node:http";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { AuthStore, cleanAuthRequest } from "./auth-store.js";
 import { FileSyncStore } from "./store.js";
 import { httpError, normalizePullQuery, normalizePushBody } from "./validation.js";
 
@@ -8,15 +9,17 @@ loadDotEnv();
 
 const port = Number(process.env.PORT ?? 8787);
 const tokens = loadTokenMap();
+const authStore = new AuthStore({ dataDir: process.env.GTIMER_SYNC_DATA_DIR });
 const store = new FileSyncStore({ dataDir: process.env.GTIMER_SYNC_DATA_DIR });
 
 export function createServer(options = {}) {
   const activeStore = options.store ?? store;
   const activeTokens = options.tokens ?? tokens;
+  const activeAuthStore = options.authStore ?? authStore;
 
   return http.createServer(async (request, response) => {
     try {
-      await route(request, response, activeStore, activeTokens);
+      await route(request, response, activeStore, activeTokens, activeAuthStore);
     } catch (error) {
       sendJSON(response, error.status ?? 500, {
         error: error.status ? error.message : "Internal server error."
@@ -25,7 +28,7 @@ export function createServer(options = {}) {
   });
 }
 
-async function route(request, response, activeStore, activeTokens) {
+async function route(request, response, activeStore, activeTokens, activeAuthStore) {
   const url = new URL(request.url ?? "/", "http://localhost");
 
   if (request.method === "GET" && url.pathname === "/health") {
@@ -33,8 +36,35 @@ async function route(request, response, activeStore, activeTokens) {
     return;
   }
 
+  if (request.method === "POST" && url.pathname === "/v1/auth/register") {
+    const body = await readJSONBody(request);
+    const result = await activeAuthStore.register(cleanAuthRequest(body));
+    sendJSON(response, 201, result);
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/auth/login") {
+    const body = await readJSONBody(request);
+    const result = await activeAuthStore.login(cleanAuthRequest(body));
+    sendJSON(response, 200, result);
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/v1/auth/devices") {
+    const userId = await authenticate(request, activeTokens, activeAuthStore);
+    sendJSON(response, 200, await activeAuthStore.listDevices(userId));
+    return;
+  }
+
+  const revokeMatch = url.pathname.match(/^\/v1\/auth\/devices\/([^/]+)$/);
+  if (request.method === "DELETE" && revokeMatch) {
+    const userId = await authenticate(request, activeTokens, activeAuthStore);
+    sendJSON(response, 200, await activeAuthStore.revokeDevice(userId, decodeURIComponent(revokeMatch[1])));
+    return;
+  }
+
   if (url.pathname.startsWith("/v1/sync/")) {
-    const userId = authenticate(request, activeTokens);
+    const userId = await authenticate(request, activeTokens, activeAuthStore);
 
     if (request.method === "POST" && url.pathname === "/v1/sync/push") {
       const body = await readJSONBody(request);
@@ -55,14 +85,14 @@ async function route(request, response, activeStore, activeTokens) {
   throw httpError(404, "Not found.");
 }
 
-function authenticate(request, activeTokens) {
+async function authenticate(request, activeTokens, activeAuthStore) {
   const authorization = request.headers.authorization ?? "";
   const match = authorization.match(/^Bearer\s+(.+)$/i);
   if (!match) {
     throw httpError(401, "Missing bearer token.");
   }
 
-  const userId = activeTokens[match[1]];
+  const userId = activeTokens[match[1]] ?? await activeAuthStore.authenticateToken(match[1]);
   if (!userId) {
     throw httpError(403, "Invalid bearer token.");
   }

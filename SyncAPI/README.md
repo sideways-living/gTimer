@@ -1,6 +1,6 @@
 # gTimer Sync API
 
-Small cross-platform sync API for gTimer dose history, settings, profile data, and saved locations.
+Small cross-platform sync API for gTimer dose history, settings, profile data, saved locations, account login, and device tokens.
 
 This is a first backend slice for local development and protocol testing. It uses only built-in Node modules and stores data as JSON files under `SyncAPI/data`. For production, keep the HTTP contract and replace the file store with Postgres or another audited database.
 
@@ -15,6 +15,14 @@ Then call the API with:
 
 ```text
 Authorization: Bearer dev-token
+```
+
+Or create a beta account and use the returned device token:
+
+```sh
+curl -X POST http://127.0.0.1:8787/v1/auth/register \
+  -H 'content-type: application/json' \
+  -d '{"email":"person@example.com","password":"change-this-password","deviceName":"Dan Mac"}'
 ```
 
 ## Test
@@ -37,7 +45,9 @@ Clients are local-first:
 
 ## Auth
 
-This development server maps bearer tokens to user ids through `GTIMER_SYNC_TOKENS`, a JSON object:
+The normal beta flow is email/password login. Registering or logging in returns a device token. The app stores that token locally and uses it as the bearer token for sync.
+
+The development server still supports static bearer tokens mapped to user ids through `GTIMER_SYNC_TOKENS`, a JSON object:
 
 ```json
 {
@@ -61,6 +71,57 @@ Do not commit `.env`. It is ignored by Git.
 ### `GET /health`
 
 Returns service status.
+
+### `POST /v1/auth/register`
+
+Creates a beta account and registers the current device.
+
+```json
+{
+  "email": "person@example.com",
+  "password": "change-this-password",
+  "deviceName": "Dan Mac"
+}
+```
+
+Response:
+
+```json
+{
+  "token": "gtimer_...",
+  "user": {
+    "id": "user-uuid",
+    "email": "person@example.com"
+  },
+  "device": {
+    "id": "device-uuid",
+    "name": "Dan Mac",
+    "createdAt": "2026-09-13T08:30:00.000Z",
+    "lastSeenAt": "2026-09-13T08:30:00.000Z",
+    "revokedAt": null
+  }
+}
+```
+
+### `POST /v1/auth/login`
+
+Logs in and registers this device as a separate synced device.
+
+```json
+{
+  "email": "person@example.com",
+  "password": "change-this-password",
+  "deviceName": "Dan iPhone"
+}
+```
+
+### `GET /v1/auth/devices`
+
+Requires `Authorization: Bearer <device-token>`. Returns all devices registered to the account, including revoked devices.
+
+### `DELETE /v1/auth/devices/:deviceId`
+
+Requires `Authorization: Bearer <device-token>`. Revokes a device and invalidates its token for future sync requests.
 
 ### `POST /v1/sync/push`
 

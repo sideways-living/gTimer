@@ -373,6 +373,12 @@ final class SettingsManager {
   var syncToken: String {
     didSet { KeychainStore.set(syncToken, for: "gtimer.syncToken") }
   }
+  var syncAccountEmail: String {
+    didSet { UserDefaults.standard.set(syncAccountEmail, forKey: "syncAccountEmail") }
+  }
+  var syncDeviceID: String {
+    didSet { UserDefaults.standard.set(syncDeviceID, forKey: "syncDeviceID") }
+  }
   var syncCursor: Int {
     didSet { UserDefaults.standard.set(syncCursor, forKey: "syncCursor") }
   }
@@ -451,6 +457,8 @@ final class SettingsManager {
     syncEnabled       = ud.bool(forKey: "syncEnabled")
     syncServerURL     = ud.string(forKey: "syncServerURL") ?? "https://sync.gtimer.app"
     syncToken         = KeychainStore.string(for: "gtimer.syncToken") ?? ""
+    syncAccountEmail  = ud.string(forKey: "syncAccountEmail") ?? ""
+    syncDeviceID      = ud.string(forKey: "syncDeviceID") ?? ""
     syncCursor        = ud.object(forKey: "syncCursor") as? Int ?? 0
     let savedLastSyncAt = ud.object(forKey: "lastSyncAt") as? Date
     lastSyncAt        = savedLastSyncAt

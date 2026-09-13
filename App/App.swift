@@ -151,6 +151,24 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.19",
+      build: 109,
+      category: .newFeatures,
+      message: "Added beta email and password accounts for gTimer sync."
+    ),
+    AppUpdateEntry(
+      version: "0.9.19",
+      build: 109,
+      category: .newFeatures,
+      message: "Added per-device sync tokens and a device list so signed-in users can remove devices."
+    ),
+    AppUpdateEntry(
+      version: "0.9.19",
+      build: 109,
+      category: .minorImprovements,
+      message: "The Sync settings screen now supports creating an account, signing in, and syncing immediately after login."
+    ),
+    AppUpdateEntry(
       version: "0.9.18",
       build: 108,
       category: .minorImprovements,

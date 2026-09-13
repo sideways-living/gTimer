@@ -26,7 +26,12 @@ struct SettingsView: View {
   @State private var deviceNameText = ""
   @State private var syncServerURLText = ""
   @State private var syncTokenText = ""
+  @State private var syncEmailText = ""
+  @State private var syncPasswordText = ""
+  @State private var syncAuthMessage: String? = nil
+  @State private var syncDevices: [SyncDevice] = []
   @State private var isSyncing = false
+  @State private var isAuthenticatingSync = false
   @State private var vanityNameText = ""
   @State private var homeCityText = ""
   @State private var homeCountryCode = ""
@@ -132,6 +137,7 @@ struct SettingsView: View {
     .onChange(of: deviceNameText) { markUnsaved() }
     .onChange(of: syncServerURLText) { markUnsaved() }
     .onChange(of: syncTokenText) { markUnsaved() }
+    .onChange(of: syncEmailText) { markUnsaved() }
     .onChange(of: vanityNameText) { markUnsaved() }
     .onChange(of: homeCityText) { markUnsaved() }
     .onChange(of: homeCountryCode) { markUnsaved() }
@@ -488,7 +494,7 @@ struct SettingsView: View {
           Text("Token")
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(AppTheme.textSecondary)
-          SecureField("Paste your private sync token", text: $syncTokenText)
+          SecureField(settings.syncToken.isEmpty ? "Created after account login" : "Saved in keychain", text: $syncTokenText)
             .platformPlainTextEntry()
             .font(.system(size: 14))
             .foregroundStyle(AppTheme.textPrimary)
@@ -496,6 +502,71 @@ struct SettingsView: View {
             .background(AppTheme.backgroundElevated)
             .clipShape(RoundedRectangle(cornerRadius: 9))
             .privacySensitive()
+        }
+
+        VStack(alignment: .leading, spacing: 7) {
+          Text("Account")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(AppTheme.textSecondary)
+          TextField("Email", text: $syncEmailText)
+            .platformKeyboardType(.emailAddress)
+            .platformPlainTextEntry()
+            .font(.system(size: 15))
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding(10)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+          SecureField("Password", text: $syncPasswordText)
+            .font(.system(size: 15))
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding(10)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .privacySensitive()
+          HStack(spacing: 8) {
+            Button {
+              authenticateSyncAccount(register: false)
+            } label: {
+              syncAuthButtonLabel("Sign in")
+            }
+            .buttonStyle(.plain)
+            .disabled(isAuthenticatingSync)
+
+            Button {
+              authenticateSyncAccount(register: true)
+            } label: {
+              syncAuthButtonLabel("Create account")
+            }
+            .buttonStyle(.plain)
+            .disabled(isAuthenticatingSync)
+          }
+          if let syncAuthMessage {
+            Text(syncAuthMessage)
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.textMuted)
+          } else if !settings.syncAccountEmail.isEmpty {
+            Text("Signed in as \(settings.syncAccountEmail).")
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.textMuted)
+          }
+        }
+
+        if !syncDevices.isEmpty {
+          VStack(alignment: .leading, spacing: 8) {
+            HStack {
+              Text("Devices")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(AppTheme.textSecondary)
+              Spacer()
+              Button("Refresh") { loadSyncDevices() }
+                .font(.system(size: 12, weight: .semibold))
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.accentBlue)
+            }
+            ForEach(syncDevices) { device in
+              syncDeviceRow(device)
+            }
+          }
         }
 
         HStack(spacing: 8) {
@@ -531,11 +602,75 @@ struct SettingsView: View {
           .disabled(isSyncing)
         }
 
-        Text("Sync is beta and uses your own server. Keep your token private.")
+        Text("Sync is beta and uses your own server. Each device gets its own token so lost devices can be removed.")
           .font(.system(size: 12))
           .foregroundStyle(AppTheme.textMuted)
       }
     }
+  }
+
+  private func syncAuthButtonLabel(_ title: String) -> some View {
+    HStack(spacing: 6) {
+      if isAuthenticatingSync {
+        ProgressView()
+          .controlSize(.small)
+      }
+      Text(title)
+        .font(.system(size: 13, weight: .semibold))
+    }
+    .foregroundStyle(.white)
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 10)
+    .background(AppTheme.accentBlue)
+    .clipShape(RoundedRectangle(cornerRadius: 10))
+  }
+
+  private func syncDeviceRow(_ device: SyncDevice) -> some View {
+    HStack(spacing: 10) {
+      Image(systemName: device.isRevoked ? "iphone.slash" : "desktopcomputer.and.macbook")
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(device.isRevoked ? AppTheme.textMuted : AppTheme.accentBlue)
+      VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 6) {
+          Text(device.name)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(AppTheme.textPrimary)
+          if device.id == settings.syncDeviceID {
+            Text("This device")
+              .font(.system(size: 10, weight: .bold))
+              .foregroundStyle(AppTheme.statusGreen)
+              .padding(.horizontal, 6)
+              .padding(.vertical, 2)
+              .background(AppTheme.statusGreen.opacity(0.12))
+              .clipShape(Capsule())
+          }
+          if device.isRevoked {
+            Text("Revoked")
+              .font(.system(size: 10, weight: .bold))
+              .foregroundStyle(AppTheme.textMuted)
+              .padding(.horizontal, 6)
+              .padding(.vertical, 2)
+              .background(AppTheme.backgroundElevated)
+              .clipShape(Capsule())
+          }
+        }
+        Text("Last seen \(device.lastSeenAt ?? device.createdAt)")
+          .font(.system(size: 11))
+          .foregroundStyle(AppTheme.textMuted)
+      }
+      Spacer()
+      if !device.isRevoked {
+        Button("Remove") {
+          revokeSyncDevice(device)
+        }
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(device.id == settings.syncDeviceID ? AppTheme.statusAmber : AppTheme.statusRed)
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(10)
+    .background(AppTheme.backgroundElevated)
+    .clipShape(RoundedRectangle(cornerRadius: 10))
   }
 
   private var locationSection: some View {
@@ -1015,6 +1150,7 @@ struct SettingsView: View {
     settings.deviceName = deviceNameText
     settings.syncServerURL = syncServerURLText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.syncToken = syncTokenText.trimmingCharacters(in: .whitespacesAndNewlines)
+    settings.syncAccountEmail = syncEmailText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.vanityName = vanityNameText
     settings.homeCity = homeCityText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.homeCountryCode = homeCountryCode
@@ -1060,6 +1196,9 @@ struct SettingsView: View {
     deviceNameText = settings.deviceName
     syncServerURLText = settings.syncServerURL
     syncTokenText = settings.syncToken
+    syncEmailText = settings.syncAccountEmail
+    syncPasswordText = ""
+    syncAuthMessage = nil
     vanityNameText = settings.vanityName
     homeCityText = settings.homeCity
     homeCountryCode = settings.homeCountryCode
@@ -1078,6 +1217,9 @@ struct SettingsView: View {
     quickAmountsError = nil
     intervalError = nil
     homeLocationError = nil
+    if !settings.syncToken.isEmpty {
+      loadSyncDevices()
+    }
     Task { @MainActor in hasLoaded = true }
   }
 
@@ -1102,6 +1244,92 @@ struct SettingsView: View {
     Task { @MainActor in
       await DoseSyncManager.shared.syncNow(context: context, settings: settings)
       isSyncing = false
+    }
+  }
+
+  private func authenticateSyncAccount(register: Bool) {
+    saveAll()
+    guard quickAmountsError == nil,
+          intervalError == nil,
+          homeLocationError == nil else { return }
+
+    let email = syncEmailText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let password = syncPasswordText.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard email.contains("@"), password.count >= 8 else {
+      syncAuthMessage = "Enter an email and a password of at least 8 characters."
+      return
+    }
+
+    isAuthenticatingSync = true
+    syncAuthMessage = register ? "Creating account..." : "Signing in..."
+    Task { @MainActor in
+      defer {
+        isAuthenticatingSync = false
+        syncPasswordText = ""
+      }
+      do {
+        let response: SyncAuthResponse
+        if register {
+          response = try await DoseSyncManager.shared.registerAccount(
+            email: email,
+            password: password,
+            deviceName: deviceNameText,
+            settings: settings
+          )
+        } else {
+          response = try await DoseSyncManager.shared.login(
+            email: email,
+            password: password,
+            deviceName: deviceNameText,
+            settings: settings
+          )
+        }
+        settings.syncToken = response.token
+        settings.syncAccountEmail = response.user.email
+        settings.syncDeviceID = response.device.id
+        settings.syncEnabled = true
+        syncTokenText = response.token
+        syncEmailText = response.user.email
+        syncAuthMessage = register ? "Account created. This device is signed in." : "Signed in. This device is registered."
+        loadSyncDevices()
+        await DoseSyncManager.shared.syncNow(context: context, settings: settings)
+      } catch {
+        syncAuthMessage = error.localizedDescription
+      }
+    }
+  }
+
+  private func loadSyncDevices() {
+    guard !settings.syncToken.isEmpty else {
+      syncDevices = []
+      return
+    }
+    Task { @MainActor in
+      do {
+        syncDevices = try await DoseSyncManager.shared.devices(settings: settings)
+      } catch {
+        syncAuthMessage = "Could not load devices: \(error.localizedDescription)"
+      }
+    }
+  }
+
+  private func revokeSyncDevice(_ device: SyncDevice) {
+    Task { @MainActor in
+      do {
+        try await DoseSyncManager.shared.revokeDevice(device, settings: settings)
+        if device.id == settings.syncDeviceID {
+          settings.syncToken = ""
+          settings.syncDeviceID = ""
+          settings.syncEnabled = false
+          syncTokenText = ""
+          syncAuthMessage = "This device was removed and signed out."
+        } else {
+          syncAuthMessage = "\(device.name) was removed."
+        }
+        loadSyncDevices()
+      } catch {
+        syncAuthMessage = "Could not remove device: \(error.localizedDescription)"
+      }
     }
   }
 

@@ -270,6 +270,56 @@ final class DoseSyncManager {
     }
   }
 
+  func registerAccount(
+    email: String,
+    password: String,
+    deviceName: String,
+    settings: SettingsManager
+  ) async throws -> SyncAuthResponse {
+    try await authenticate(
+      path: "v1/auth/register",
+      email: email,
+      password: password,
+      deviceName: deviceName,
+      settings: settings
+    )
+  }
+
+  func login(
+    email: String,
+    password: String,
+    deviceName: String,
+    settings: SettingsManager
+  ) async throws -> SyncAuthResponse {
+    try await authenticate(
+      path: "v1/auth/login",
+      email: email,
+      password: password,
+      deviceName: deviceName,
+      settings: settings
+    )
+  }
+
+  func devices(settings: SettingsManager) async throws -> [SyncDevice] {
+    let baseURL = try syncBaseURL(settings)
+    var request = URLRequest(url: baseURL.appending(path: "v1/auth/devices"))
+    request.addValue("Bearer \(settings.syncToken)", forHTTPHeaderField: "Authorization")
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+    try validateHTTPResponse(response, data: data)
+    return try JSONDecoder().decode(SyncDevicesResponse.self, from: data).devices
+  }
+
+  func revokeDevice(_ device: SyncDevice, settings: SettingsManager) async throws {
+    let baseURL = try syncBaseURL(settings)
+    var request = URLRequest(url: baseURL.appending(path: "v1/auth/devices/\(device.id)"))
+    request.httpMethod = "DELETE"
+    request.addValue("Bearer \(settings.syncToken)", forHTTPHeaderField: "Authorization")
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+    try validateHTTPResponse(response, data: data)
+  }
+
   private func push(records: [DoseRecord], to baseURL: URL, settings: SettingsManager) async throws {
     var request = URLRequest(url: baseURL.appending(path: "v1/sync/push"))
     request.httpMethod = "POST"
@@ -302,6 +352,38 @@ final class DoseSyncManager {
     let (data, response) = try await URLSession.shared.data(for: request)
     try validateHTTPResponse(response)
     return try JSONDecoder().decode(SyncPullResponse.self, from: data)
+  }
+
+  private func authenticate(
+    path: String,
+    email: String,
+    password: String,
+    deviceName: String,
+    settings: SettingsManager
+  ) async throws -> SyncAuthResponse {
+    let baseURL = try syncBaseURL(settings)
+    var request = URLRequest(url: baseURL.appending(path: path))
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = try JSONEncoder().encode(
+      SyncAuthRequest(
+        email: email,
+        password: password,
+        deviceName: deviceName.isEmpty ? "gTimer" : deviceName
+      )
+    )
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+    try validateHTTPResponse(response, data: data)
+    return try JSONDecoder().decode(SyncAuthResponse.self, from: data)
+  }
+
+  private func syncBaseURL(_ settings: SettingsManager) throws -> URL {
+    guard let baseURL = URL(string: settings.syncServerURL.trimmingCharacters(in: .whitespacesAndNewlines)),
+          baseURL.scheme?.hasPrefix("http") == true else {
+      throw SyncError.invalidURL
+    }
+    return baseURL
   }
 
   private func merge(_ remoteDoses: [SyncDosePayload], context: ModelContext) {
@@ -411,20 +493,68 @@ final class DoseSyncManager {
       throw SyncError.httpStatus(http.statusCode)
     }
   }
+
+  private func validateHTTPResponse(_ response: URLResponse, data: Data) throws {
+    guard let http = response as? HTTPURLResponse else { throw SyncError.invalidResponse }
+    guard (200..<300).contains(http.statusCode) else {
+      if let apiError = try? JSONDecoder().decode(SyncAPIError.self, from: data),
+         !apiError.error.isEmpty {
+        throw SyncError.apiMessage(apiError.error)
+      }
+      throw SyncError.httpStatus(http.statusCode)
+    }
+  }
 }
 
 private enum SyncError: LocalizedError {
   case invalidURL
   case invalidResponse
   case httpStatus(Int)
+  case apiMessage(String)
 
   var errorDescription: String? {
     switch self {
     case .invalidURL: "The sync server URL is invalid."
     case .invalidResponse: "The sync server did not return a valid response."
     case .httpStatus(let status): "The sync server returned \(status)."
+    case .apiMessage(let message): message
     }
   }
+}
+
+struct SyncDevice: Codable, Identifiable, Hashable {
+  var id: String
+  var name: String
+  var createdAt: String
+  var lastSeenAt: String?
+  var revokedAt: String?
+
+  var isRevoked: Bool { revokedAt != nil }
+}
+
+struct SyncAuthResponse: Codable {
+  var token: String
+  var user: SyncUser
+  var device: SyncDevice
+}
+
+struct SyncUser: Codable {
+  var id: String
+  var email: String
+}
+
+private struct SyncAuthRequest: Codable {
+  var email: String
+  var password: String
+  var deviceName: String
+}
+
+private struct SyncDevicesResponse: Codable {
+  var devices: [SyncDevice]
+}
+
+private struct SyncAPIError: Codable {
+  var error: String
 }
 
 private struct SyncPushRequest: Codable {

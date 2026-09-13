@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { AuthStore } from "../src/auth-store.js";
 import { createServer } from "../src/server.js";
 import { FileSyncStore } from "../src/store.js";
 
@@ -138,10 +139,86 @@ test("rejects invalid dose payloads", async () => {
   });
 });
 
+test("registers an account and syncs with the issued device token", async () => {
+  await withTestAPI(async ({ baseURL }) => {
+    const registered = await requestJSON(`${baseURL}/v1/auth/register`, {
+      method: "POST",
+      body: {
+        email: "Person@Example.com",
+        password: "correct horse battery staple",
+        deviceName: "Dan's Mac"
+      }
+    });
+
+    assert.equal(registered.status, 201);
+    assert.equal(registered.json.user.email, "person@example.com");
+    assert.equal(registered.json.device.name, "Dan's Mac");
+    assert.match(registered.json.token, /^gtimer_/);
+
+    const push = await requestJSON(`${baseURL}/v1/sync/push`, {
+      method: "POST",
+      token: registered.json.token,
+      body: {
+        clientId: registered.json.device.id,
+        changes: { doses: [sampleDose("dose-auth-1", "2026-09-13T08:30:00.000Z")] }
+      }
+    });
+
+    assert.equal(push.status, 200);
+    assert.equal(push.json.accepted.doses, 1);
+  });
+});
+
+test("logs in on another device and can revoke that device", async () => {
+  await withTestAPI(async ({ baseURL }) => {
+    const registered = await requestJSON(`${baseURL}/v1/auth/register`, {
+      method: "POST",
+      body: {
+        email: "person@example.com",
+        password: "correct horse battery staple",
+        deviceName: "iPhone"
+      }
+    });
+
+    const loggedIn = await requestJSON(`${baseURL}/v1/auth/login`, {
+      method: "POST",
+      body: {
+        email: "person@example.com",
+        password: "correct horse battery staple",
+        deviceName: "Mac"
+      }
+    });
+
+    assert.equal(loggedIn.status, 200);
+    assert.notEqual(loggedIn.json.device.id, registered.json.device.id);
+
+    const listed = await requestJSON(`${baseURL}/v1/auth/devices`, {
+      method: "GET",
+      token: registered.json.token
+    });
+    assert.equal(listed.status, 200);
+    assert.equal(listed.json.devices.length, 2);
+
+    const revoked = await requestJSON(`${baseURL}/v1/auth/devices/${loggedIn.json.device.id}`, {
+      method: "DELETE",
+      token: registered.json.token
+    });
+    assert.equal(revoked.status, 200);
+    assert.equal(revoked.json.device.revokedAt !== null, true);
+
+    const rejected = await requestJSON(`${baseURL}/v1/sync/pull?since=0`, {
+      method: "GET",
+      token: loggedIn.json.token
+    });
+    assert.equal(rejected.status, 403);
+  });
+});
+
 async function withTestAPI(callback) {
   const dataDir = await mkdtemp(join(tmpdir(), "gtimer-sync-api-"));
   const server = createServer({
     store: new FileSyncStore({ dataDir }),
+    authStore: new AuthStore({ dataDir }),
     tokens: {
       "token-a": "user-a",
       "token-b": "user-b"
@@ -161,12 +238,16 @@ async function withTestAPI(callback) {
 }
 
 async function requestJSON(url, options) {
+  const headers = {
+    "content-type": "application/json"
+  };
+  if (options.token) {
+    headers.authorization = `Bearer ${options.token}`;
+  }
+
   const response = await fetch(url, {
     method: options.method,
-    headers: {
-      "authorization": `Bearer ${options.token}`,
-      "content-type": "application/json"
-    },
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined
   });
 
