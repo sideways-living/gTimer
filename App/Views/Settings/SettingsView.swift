@@ -52,6 +52,7 @@ struct SettingsView: View {
   @State private var quickAmountTexts = Array(repeating: "", count: 4)
   @State private var quickAmountsError: String? = nil
   @State private var intervalError: String? = nil
+  @State private var notificationStatusMessage: String? = nil
   @State private var hasLoaded = false
   @State private var showPaywall = false
   @State private var paywallFeature: ProFeature = .doseLocations
@@ -240,6 +241,7 @@ struct SettingsView: View {
               settings.safeIntervalMinutes = preset
               customIntervalText = ""
               intervalError = nil
+              rescheduleNotificationsIfNeeded()
               markUnsaved()
             } label: {
               Text("\(preset)m")
@@ -404,15 +406,22 @@ struct SettingsView: View {
               markUnsaved()
               if settings.notificationsEnabled {
                 Task {
-                  await NotificationManager.shared.requestPermission(
-                    lockScreenDelivery: settings.lockScreenNotificationsEnabled
-                  )
+                  await enableNotificationsFromSettings()
+                }
+              } else {
+                NotificationManager.shared.cancelRedoseReminder()
+                Task {
+                  await refreshNotificationStatus()
                 }
               }
             }
         }
+        Text(notificationStatusMessage ?? "Notification status is being checked.")
+          .font(.system(size: 12))
+          .foregroundStyle(notificationStatusColour)
+          .frame(maxWidth: .infinity, alignment: .leading)
         if settings.notificationsEnabled {
-          Text("You'll receive a notification when your safe interval has passed.")
+          Text("You'll receive a notification when your minimum interval has passed.")
             .font(.system(size: 12))
             .foregroundStyle(AppTheme.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -428,7 +437,18 @@ struct SettingsView: View {
                 markUnsaved()
                 if settings.lockScreenNotificationsEnabled {
                   Task {
-                    await NotificationManager.shared.requestPermission(lockScreenDelivery: true)
+                    let granted = await NotificationManager.shared.requestPermission(lockScreenDelivery: true)
+                    if granted {
+                      DoseStore.scheduleReminderForMostRecentDose(context: context, settings: settings)
+                    } else {
+                      settings.lockScreenNotificationsEnabled = false
+                    }
+                    await refreshNotificationStatus()
+                  }
+                } else {
+                  rescheduleNotificationsIfNeeded()
+                  Task {
+                    await refreshNotificationStatus()
                   }
                 }
               }
@@ -440,7 +460,40 @@ struct SettingsView: View {
           #endif
         }
       }
+      .task {
+        await refreshNotificationStatus()
+      }
     }
+  }
+
+  private var notificationStatusColour: Color {
+    guard let notificationStatusMessage else { return AppTheme.textMuted }
+    return notificationStatusMessage.localizedCaseInsensitiveContains("blocked")
+      ? AppTheme.statusAmber
+      : AppTheme.textMuted
+  }
+
+  @MainActor
+  private func enableNotificationsFromSettings() async {
+    let granted = await NotificationManager.shared.requestPermission(
+      lockScreenDelivery: settings.lockScreenNotificationsEnabled
+    )
+    if granted {
+      DoseStore.scheduleReminderForMostRecentDose(context: context, settings: settings)
+    } else {
+      settings.notificationsEnabled = false
+      settings.lockScreenNotificationsEnabled = false
+    }
+    await refreshNotificationStatus()
+  }
+
+  @MainActor
+  private func refreshNotificationStatus() async {
+    notificationStatusMessage = await NotificationManager.shared.authorizationStatusMessage()
+  }
+
+  private func rescheduleNotificationsIfNeeded() {
+    DoseStore.scheduleReminderForMostRecentDose(context: context, settings: settings)
   }
 
   private var deviceSection: some View {
@@ -1221,6 +1274,7 @@ struct SettingsView: View {
         return
       }
       settings.safeIntervalMinutes = minutes
+      rescheduleNotificationsIfNeeded()
     }
 
     if let d = Double(standardDoseText), d > 0 { settings.standardDose = d }

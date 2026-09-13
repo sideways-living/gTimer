@@ -49,13 +49,7 @@ final class DoseStore {
     try? context.save()
     updateShared(amount: amount, unit: unit, time: time, settings: settings)
 
-    if settings.notificationsEnabled {
-      NotificationManager.shared.scheduleRedoseReminder(
-        after: time,
-        intervalMinutes: settings.safeIntervalMinutes,
-        lockScreenDelivery: settings.lockScreenNotificationsEnabled
-      )
-    }
+    scheduleReminderForMostRecentDose(context: context, settings: settings)
     WidgetCenter.shared.reloadAllTimelines()
     DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
   }
@@ -68,6 +62,9 @@ final class DoseStore {
     }
     try? context.save()
     refreshSharedAfterDeletion(context: context)
+    if let settings {
+      scheduleReminderForMostRecentDose(context: context, settings: settings)
+    }
     WidgetCenter.shared.reloadAllTimelines()
     if let settings {
       DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
@@ -85,6 +82,7 @@ final class DoseStore {
     }
     try? context.save()
     updateShared(amount: nil, unit: nil, time: nil, settings: nil)
+    NotificationManager.shared.cancelRedoseReminder()
     WidgetCenter.shared.reloadAllTimelines()
     if let settings {
       DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
@@ -107,10 +105,33 @@ final class DoseStore {
       updateShared(amount: newest.amount, unit: newest.unit,
                    time: newest.time, settings: settings)
     }
+    scheduleReminderForMostRecentDose(context: context, settings: settings)
     WidgetCenter.shared.reloadAllTimelines()
     if scheduleSync {
       DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
     }
+  }
+
+  static func scheduleReminderForMostRecentDose(context: ModelContext, settings: SettingsManager) {
+    guard settings.notificationsEnabled else {
+      NotificationManager.shared.cancelRedoseReminder()
+      return
+    }
+
+    let desc = FetchDescriptor<DoseRecord>(
+      sortBy: [SortDescriptor(\.time, order: .reverse)]
+    )
+    let newest = ((try? context.fetch(desc)) ?? []).first { !$0.isDeletedForSync }
+    guard let newest else {
+      NotificationManager.shared.cancelRedoseReminder()
+      return
+    }
+
+    NotificationManager.shared.scheduleRedoseReminder(
+      after: newest.time,
+      intervalMinutes: settings.safeIntervalMinutes,
+      lockScreenDelivery: settings.lockScreenNotificationsEnabled
+    )
   }
 
   static func backfillMissingEarlyDoseTiming(context: ModelContext, settings: SettingsManager) {

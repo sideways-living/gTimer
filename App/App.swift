@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 #if os(iOS)
 import UIKit
@@ -13,6 +14,10 @@ struct GTimerApp: App {
   @State private var nav = AppNavigation.shared
   @State private var updates = AppUpdateManager.shared
   @State private var upgrade = GitHubUpgradeManager.shared
+
+  init() {
+    NotificationManager.shared.configure()
+  }
 
   var body: some Scene {
     WindowGroup {
@@ -150,6 +155,24 @@ final class AppUpdateManager {
   var shouldShowUpdateNotes = false
 
   let entries: [AppUpdateEntry] = [
+    AppUpdateEntry(
+      version: "0.9.22",
+      build: 112,
+      category: .bugFixes,
+      message: "Fixed redose reminders not appearing while gTimer is open."
+    ),
+    AppUpdateEntry(
+      version: "0.9.22",
+      build: 112,
+      category: .bugFixes,
+      message: "Redose reminders now reschedule from the most recent dose after missed, edited, deleted, or synced dose changes."
+    ),
+    AppUpdateEntry(
+      version: "0.9.22",
+      build: 112,
+      category: .minorImprovements,
+      message: "Settings now shows the current notification permission status."
+    ),
     AppUpdateEntry(
       version: "0.9.21",
       build: 111,

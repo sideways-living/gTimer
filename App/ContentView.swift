@@ -27,7 +27,7 @@ struct ContentView: View {
       }
     }
     .tint(AppTheme.accentBlue)
-    .onAppear(perform: syncOnOpen)
+    .onAppear(perform: appOpened)
   }
 
   #if os(macOS)
@@ -43,7 +43,7 @@ struct ContentView: View {
     }
     .tint(AppTheme.accentBlue)
     .background(AppTheme.backgroundPrimary)
-    .onAppear(perform: syncOnOpen)
+    .onAppear(perform: appOpened)
   }
 
   private var selectedTab: AppTab {
@@ -109,7 +109,9 @@ struct ContentView: View {
   }
   #endif
 
-  private func syncOnOpen() {
+  private func appOpened() {
+    NotificationManager.shared.configure()
+    DoseStore.scheduleReminderForMostRecentDose(context: context, settings: settings)
     guard settings.syncEnabled else { return }
     DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
   }
