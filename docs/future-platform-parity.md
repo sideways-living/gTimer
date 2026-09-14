@@ -235,7 +235,7 @@ The current Apple implementation can use Apple-only storage patterns. Android an
 
 Recommended long-term direction: build a cross-platform sync backend for dose history, settings, Pro entitlements, profile data, and saved locations. Apple-only iCloud sync can be useful for iPhone, iPad, Mac, Watch, and Widget handoff, but it must not be treated as the parity solution for Android or Windows.
 
-Current beta direction: `SyncAPI` is the chosen custom API starting point and is deployed at `https://sync.gtimer.app`. App version 0.9.17 adds opt-in Apple client support for dose-history sync against this API. App version 0.9.19 adds beta email/password accounts with per-device tokens and device removal. App version 0.9.20 makes account sync optional, positions it as a gTimer Pro benefit, and adds a 14-day free device-sync trial.
+Current beta direction: `SyncAPI` is the chosen custom API starting point and is deployed at `https://sync.gtimer.app`. App version 0.9.17 adds opt-in Apple client support for dose-history sync against this API. App version 0.9.19 adds beta email/password accounts with per-device tokens and device removal. App version 0.9.20 makes account sync optional, positions it as a gTimer Pro benefit, and adds a 14-day free device-sync trial. App version 0.9.24 separates local account setup from sync-device registration: first launch collects a local name, email address, and password for data protection and optional PIN recovery, while a sync device id is only created when the user starts a sync trial or has gTimer Pro and explicitly registers that install for sync.
 
 Before Android or Windows implementation begins, keep this decision unless there is an explicit product/security review that replaces it:
 
@@ -248,8 +248,10 @@ Before Android or Windows implementation begins, keep this decision unless there
 Use a small account-backed API with an encrypted local store on every device:
 
 - Local-first operation: the app must keep logging doses offline and sync when a connection returns.
+- Local account setup: first launch should make local-only operation clear while still collecting the user's name, email address, and password into secure local storage for data protection and optional PIN recovery. This must not create a server sync device by itself.
+- Optional history PIN: all platforms should offer a basic numeric PIN that locks previous-dose surfaces such as History and Map, while current dose recording remains available without unlocking. PIN reset uses the local account password tied to the saved email address.
 - Per-user account identity: sync records belong to the signed-in user, not the device.
-- Per-device access: each signed-in device receives its own token so a lost or retired device can be removed without resetting every other device.
+- Per-device access: each signed-in device receives its own token so a lost or retired device can be removed without resetting every other device. A stable per-install device key should only be generated at sync registration time, and repeated registration from the same app install must reuse the same active device record instead of creating duplicates.
 - Entitlement: device sync is a Pro entitlement. New sync accounts may receive a short free trial, but all platforms must enforce the same trial expiry and paid-access rules.
 - Stable record ids: every dose, settings row, saved location, and profile record needs a stable id generated before upload.
 - Changed-at timestamps: every synced object should carry `createdAt`, `updatedAt`, and `deletedAt` for conflict handling.

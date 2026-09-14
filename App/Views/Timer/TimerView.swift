@@ -20,6 +20,7 @@ struct TimerView: View {
   @State private var editingDose: DoseRecord?
   @State private var handledNewDoseRequestID = 0
   @State private var recentHistoryLimit = 10
+  @State private var security = AppSecurityManager.shared
 
   private var activeDoses: [DoseRecord] { doses.filter { !$0.isDeletedForSync } }
   private var lastDose: DoseRecord? { activeDoses.first }
@@ -240,7 +241,27 @@ struct TimerView: View {
         .accessibilityLabel("Open full history")
       }
 
-      if visibleDoses.isEmpty {
+      if security.isHistoryLocked(settings: settings) {
+        VStack(spacing: 10) {
+          Image(systemName: "lock.fill")
+            .font(.system(size: 30))
+            .foregroundStyle(AppTheme.accentBlue)
+          Text("Recent history is locked")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(AppTheme.textPrimary)
+          Text("Open History and enter your PIN to view previous doses.")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textMuted)
+            .multilineTextAlignment(.center)
+          Button("Unlock history") {
+            nav.openHistory()
+          }
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(AppTheme.accentBlue)
+          .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      } else if visibleDoses.isEmpty {
         VStack(spacing: 10) {
           Image(systemName: "clock.arrow.circlepath")
             .font(.system(size: 30))

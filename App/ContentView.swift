@@ -5,23 +5,35 @@ struct ContentView: View {
   @Environment(AppNavigation.self) private var nav
   @Environment(SettingsManager.self) private var settings
   @Environment(\.modelContext) private var context
+  @State private var showAccountSetup = false
   private var tabs: [AppTab] {
     AppTab.allCases.filter { $0 != .map || settings.proBetaAccepted }
   }
 
   var body: some View {
-    #if os(macOS)
-    macContent
-    #else
-    iOSContent
-    #endif
+    Group {
+      #if os(macOS)
+      macContent
+      #else
+      iOSContent
+      #endif
+    }
+    .sheet(isPresented: $showAccountSetup) {
+      AccountSetupSheet()
+        .environment(settings)
+        .preferredColorScheme(settings.appearanceMode.preferredColorScheme)
+        .interactiveDismissDisabled(!settings.accountSetupCompleted)
+    }
+    .onAppear {
+      showAccountSetup = !settings.accountSetupCompleted
+    }
   }
 
   private var iOSContent: some View {
     @Bindable var nav = nav
     return TabView(selection: $nav.selectedTab) {
       ForEach(tabs) { tab in
-        tab.content
+        protectedContent(for: tab)
           .tabItem { Label(tab.title, systemImage: tab.systemImage) }
           .tag(tab.rawValue)
       }
@@ -33,7 +45,7 @@ struct ContentView: View {
   #if os(macOS)
   private var macContent: some View {
     ZStack(alignment: .bottom) {
-      selectedTab.content
+      protectedContent(for: selectedTab)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppTheme.backgroundPrimary.ignoresSafeArea())
 
@@ -124,6 +136,26 @@ struct ContentView: View {
     guard settings.syncEnabled else { return }
     DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
   }
+
+  @ViewBuilder
+  private func protectedContent(for tab: AppTab) -> some View {
+    switch tab {
+    case .history:
+      HistoryPrivacyGate {
+        HistoryView()
+      }
+    case .map:
+      HistoryPrivacyGate {
+        #if os(macOS)
+        DoseMapView(showsDismissButton: false, bottomBarClearance: 96)
+        #else
+        DoseMapView(showsDismissButton: false)
+        #endif
+      }
+    default:
+      tab.content
+    }
+  }
 }
 
 private enum AppTab: Int, CaseIterable, Identifiable {
@@ -178,5 +210,214 @@ private enum AppTab: Int, CaseIterable, Identifiable {
       DoseMapView(showsDismissButton: false)
       #endif
     }
+  }
+}
+
+private struct AccountSetupSheet: View {
+  @Environment(SettingsManager.self) private var settings
+  @Environment(\.dismiss) private var dismiss
+  @State private var name = ""
+  @State private var email = ""
+  @State private var password = ""
+  @State private var message: String?
+
+  var body: some View {
+    NavigationStack {
+      VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 6) {
+          Text("Set up gTimer")
+            .font(.system(size: 26, weight: .bold))
+            .foregroundStyle(AppTheme.textPrimary)
+          Text("gTimer can run local only. Your name, email address, and password are saved on this device to help protect your data and allow PIN recovery if you choose to lock previous-dose views. Device sync is only created later if you start a trial or activate gTimer Pro.")
+            .font(.system(size: 14))
+            .foregroundStyle(AppTheme.textMuted)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+
+        VStack(alignment: .leading, spacing: 10) {
+          TextField("Name", text: $name)
+            .platformPlainTextEntry()
+            .padding(12)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+          TextField("Email", text: $email)
+            .platformKeyboardType(.emailAddress)
+            .platformPlainTextEntry()
+            .padding(12)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+          SecureField("Password", text: $password)
+            .padding(12)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .privacySensitive()
+        }
+
+        if let message {
+          Text(message)
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.statusAmber)
+        }
+
+        Spacer(minLength: 0)
+
+        Button {
+          saveAccount()
+        } label: {
+          Text("Use local account only")
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(AppTheme.accentBlue)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+      }
+      .padding(22)
+      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+    }
+    #if os(macOS)
+    .frame(width: 520, height: 520)
+    #endif
+    .onAppear {
+      name = settings.accountName
+      email = settings.accountEmail
+    }
+  }
+
+  private func saveAccount() {
+    let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    guard !cleanName.isEmpty else {
+      message = "Enter your name."
+      return
+    }
+    guard cleanEmail.contains("@") else {
+      message = "Enter a valid email address."
+      return
+    }
+    guard password.count >= 8 else {
+      message = "Password must be at least 8 characters."
+      return
+    }
+
+    settings.accountName = cleanName
+    settings.accountEmail = cleanEmail
+    settings.syncAccountEmail = cleanEmail
+    settings.setAccountPassword(password)
+    settings.accountSetupCompleted = true
+    dismiss()
+  }
+}
+
+private struct HistoryPrivacyGate<Content: View>: View {
+  @Environment(SettingsManager.self) private var settings
+  @Environment(AppNavigation.self) private var nav
+  @State private var security = AppSecurityManager.shared
+  @State private var pin = ""
+  @State private var accountPassword = ""
+  @State private var newPIN = ""
+  @State private var confirmPIN = ""
+  let content: () -> Content
+
+  var body: some View {
+    if security.isHistoryLocked(settings: settings) {
+      lockedView
+    } else {
+      content()
+    }
+  }
+
+  private var lockedView: some View {
+    VStack(spacing: 16) {
+      Image(systemName: "lock.fill")
+        .font(.system(size: 34, weight: .semibold))
+        .foregroundStyle(AppTheme.accentBlue)
+      Text("Previous doses are locked")
+        .font(.system(size: 22, weight: .bold))
+        .foregroundStyle(AppTheme.textPrimary)
+      Text("Enter your PIN to view history and maps. You can still record a dose from the gTimer tab without unlocking.")
+        .font(.system(size: 14))
+        .foregroundStyle(AppTheme.textMuted)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: 420)
+
+      SecureField("PIN", text: $pin)
+        .platformKeyboardType(.numberPad)
+        .font(.system(size: 18, weight: .semibold, design: .monospaced))
+        .multilineTextAlignment(.center)
+        .padding(12)
+        .background(AppTheme.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: 220)
+        .privacySensitive()
+
+      Button("Unlock") {
+        _ = security.unlockHistory(pin: pin)
+        pin = ""
+      }
+      .font(.system(size: 15, weight: .semibold))
+      .foregroundStyle(.white)
+      .padding(.horizontal, 26)
+      .padding(.vertical, 11)
+      .background(AppTheme.accentBlue)
+      .clipShape(RoundedRectangle(cornerRadius: 12))
+      .buttonStyle(.plain)
+
+      if settings.hasLocalAccountPassword {
+        VStack(spacing: 8) {
+          SecureField("Account password", text: $accountPassword)
+            .padding(10)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .frame(maxWidth: 260)
+            .privacySensitive()
+          HStack(spacing: 8) {
+            SecureField("New PIN", text: $newPIN)
+              .platformKeyboardType(.numberPad)
+            SecureField("Confirm", text: $confirmPIN)
+              .platformKeyboardType(.numberPad)
+          }
+          .textFieldStyle(.plain)
+          .font(.system(size: 14, weight: .semibold, design: .monospaced))
+          .padding(10)
+          .background(AppTheme.backgroundElevated)
+          .clipShape(RoundedRectangle(cornerRadius: 10))
+          .frame(maxWidth: 260)
+          .privacySensitive()
+          Button("Reset PIN") {
+            guard newPIN == confirmPIN else {
+              security.authMessage = "New PIN entries do not match."
+              return
+            }
+            if security.resetHistoryPIN(accountPassword: accountPassword, newPIN: newPIN, settings: settings) {
+              accountPassword = ""
+              newPIN = ""
+              confirmPIN = ""
+            }
+          }
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(AppTheme.accentBlue)
+          .buttonStyle(.plain)
+        }
+      }
+
+      if let message = security.authMessage {
+        Text(message)
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.statusAmber)
+      }
+
+      Button("Open gTimer") {
+        nav.openTimer()
+      }
+      .font(.system(size: 13, weight: .semibold))
+      .foregroundStyle(AppTheme.textSecondary)
+      .buttonStyle(.plain)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .padding(24)
+    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
   }
 }

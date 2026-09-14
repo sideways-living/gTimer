@@ -1,7 +1,7 @@
 import http from "node:http";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { AuthStore, cleanAuthRequest } from "./auth-store.js";
+import { AuthStore, cleanAuthRequest, cleanDeviceAuthRequest } from "./auth-store.js";
 import { FileSyncStore } from "./store.js";
 import { httpError, normalizePullQuery, normalizePushBody } from "./validation.js";
 
@@ -46,6 +46,13 @@ async function route(request, response, activeStore, activeTokens, activeAuthSto
   if (request.method === "POST" && url.pathname === "/v1/auth/login") {
     const body = await readJSONBody(request);
     const result = await activeAuthStore.login(cleanAuthRequest(body));
+    sendJSON(response, 200, result);
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/auth/device") {
+    const body = await readJSONBody(request);
+    const result = await activeAuthStore.registerDevice(cleanDeviceAuthRequest(body));
     sendJSON(response, 200, result);
     return;
   }

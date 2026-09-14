@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import WidgetKit
 import Security
+import CryptoKit
 #if os(iOS)
 import UIKit
 #endif
@@ -321,6 +322,94 @@ private enum KeychainStore {
   }
 }
 
+private enum SecureHashing {
+  static func makeHash(for value: String) -> String {
+    let salt = randomHex(byteCount: 16)
+    return "\(salt)$\(digest(value, salt: salt))"
+  }
+
+  static func verify(_ value: String, encodedHash: String?) -> Bool {
+    guard let encodedHash else { return false }
+    let parts = encodedHash.split(separator: "$", maxSplits: 1).map(String.init)
+    guard parts.count == 2 else { return false }
+    return digest(value, salt: parts[0]) == parts[1]
+  }
+
+  private static func digest(_ value: String, salt: String) -> String {
+    let data = Data("\(salt):\(value)".utf8)
+    return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+  }
+
+  private static func randomHex(byteCount: Int) -> String {
+    var bytes = [UInt8](repeating: 0, count: byteCount)
+    let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+    if status != errSecSuccess {
+      return UUID().uuidString.replacingOccurrences(of: "-", with: "")
+    }
+    return bytes.map { String(format: "%02x", $0) }.joined()
+  }
+}
+
+@Observable
+final class AppSecurityManager {
+  static let shared = AppSecurityManager()
+
+  private let pinHashKey = "gtimer.historyPinHash"
+  var historyUnlocked = false
+  var authMessage: String?
+
+  var hasHistoryPIN: Bool {
+    KeychainStore.string(for: pinHashKey) != nil
+  }
+
+  func isHistoryLocked(settings: SettingsManager) -> Bool {
+    settings.historyPinEnabled && hasHistoryPIN && !historyUnlocked
+  }
+
+  func setHistoryPIN(_ pin: String) -> Bool {
+    guard Self.isValidPIN(pin) else {
+      authMessage = "Enter a PIN with at least 4 digits."
+      return false
+    }
+    KeychainStore.set(SecureHashing.makeHash(for: pin), for: pinHashKey)
+    historyUnlocked = true
+    authMessage = "PIN saved."
+    return true
+  }
+
+  func clearHistoryPIN() {
+    KeychainStore.set("", for: pinHashKey)
+    historyUnlocked = false
+    authMessage = "PIN removed."
+  }
+
+  func unlockHistory(pin: String) -> Bool {
+    if SecureHashing.verify(pin, encodedHash: KeychainStore.string(for: pinHashKey)) {
+      historyUnlocked = true
+      authMessage = nil
+      return true
+    }
+    authMessage = "PIN is incorrect."
+    return false
+  }
+
+  func resetHistoryPIN(accountPassword: String, newPIN: String, settings: SettingsManager) -> Bool {
+    guard settings.verifyAccountPassword(accountPassword) else {
+      authMessage = "Account password is incorrect."
+      return false
+    }
+    return setHistoryPIN(newPIN)
+  }
+
+  func lockHistory() {
+    historyUnlocked = false
+  }
+
+  private static func isValidPIN(_ pin: String) -> Bool {
+    pin.count >= 4 && pin.allSatisfy { $0.isNumber }
+  }
+}
+
 @Observable
 final class SettingsManager {
   static let shared = SettingsManager()
@@ -379,6 +468,21 @@ final class SettingsManager {
   }
   var syncDeviceID: String {
     didSet { UserDefaults.standard.set(syncDeviceID, forKey: "syncDeviceID") }
+  }
+  var deviceInstallID: String {
+    didSet { UserDefaults.standard.set(deviceInstallID, forKey: "deviceInstallID") }
+  }
+  var accountSetupCompleted: Bool {
+    didSet { UserDefaults.standard.set(accountSetupCompleted, forKey: "accountSetupCompleted") }
+  }
+  var accountName: String {
+    didSet { UserDefaults.standard.set(accountName, forKey: "accountName") }
+  }
+  var accountEmail: String {
+    didSet { UserDefaults.standard.set(accountEmail, forKey: "accountEmail") }
+  }
+  var historyPinEnabled: Bool {
+    didSet { UserDefaults.standard.set(historyPinEnabled, forKey: "historyPinEnabled") }
   }
   var syncTrialStartedAt: Date? {
     didSet {
@@ -478,9 +582,20 @@ final class SettingsManager {
     proBetaAccepted || isSyncTrialActive
   }
 
+  var hasLocalAccountPassword: Bool {
+    KeychainStore.string(for: "gtimer.accountPasswordHash") != nil
+  }
+
   func startSyncTrialIfNeeded() {
     guard syncTrialStartedAt == nil else { return }
     syncTrialStartedAt = Date()
+  }
+
+  func ensureDeviceInstallID() -> String {
+    if deviceInstallID.isEmpty {
+      deviceInstallID = UUID().uuidString
+    }
+    return deviceInstallID
   }
 
   init() {
@@ -495,9 +610,15 @@ final class SettingsManager {
     timeFormat        = ud.string(forKey: "timeFormat") ?? "hours"
     syncEnabled       = ud.bool(forKey: "syncEnabled")
     syncServerURL     = ud.string(forKey: "syncServerURL") ?? "https://sync.gtimer.app"
+    let savedSyncAccountEmail = ud.string(forKey: "syncAccountEmail") ?? ""
     syncToken         = KeychainStore.string(for: "gtimer.syncToken") ?? ""
-    syncAccountEmail  = ud.string(forKey: "syncAccountEmail") ?? ""
+    syncAccountEmail  = savedSyncAccountEmail
     syncDeviceID      = ud.string(forKey: "syncDeviceID") ?? ""
+    deviceInstallID   = ud.string(forKey: "deviceInstallID") ?? ""
+    accountSetupCompleted = ud.bool(forKey: "accountSetupCompleted")
+    accountName       = ud.string(forKey: "accountName") ?? ""
+    accountEmail      = ud.string(forKey: "accountEmail") ?? savedSyncAccountEmail
+    historyPinEnabled = ud.bool(forKey: "historyPinEnabled")
     syncTrialStartedAt = ud.object(forKey: "syncTrialStartedAt") as? Date
     syncCursor        = ud.object(forKey: "syncCursor") as? Int ?? 0
     let savedLastSyncAt = ud.object(forKey: "lastSyncAt") as? Date
@@ -558,5 +679,13 @@ final class SettingsManager {
     #else
     Host.current().localizedName ?? "My Mac"
     #endif
+  }
+
+  func setAccountPassword(_ password: String) {
+    KeychainStore.set(SecureHashing.makeHash(for: password), for: "gtimer.accountPasswordHash")
+  }
+
+  func verifyAccountPassword(_ password: String) -> Bool {
+    SecureHashing.verify(password, encodedHash: KeychainStore.string(for: "gtimer.accountPasswordHash"))
   }
 }

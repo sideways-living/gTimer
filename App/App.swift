@@ -156,6 +156,30 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.24",
+      build: 114,
+      category: .newFeatures,
+      message: "First launch now separates local account setup from optional device sync."
+    ),
+    AppUpdateEntry(
+      version: "0.9.24",
+      build: 114,
+      category: .newFeatures,
+      message: "Added an optional PIN lock for previous-dose History and Map views while keeping dose recording available."
+    ),
+    AppUpdateEntry(
+      version: "0.9.24",
+      build: 114,
+      category: .minorImprovements,
+      message: "Device sync now creates a device id only when a sync trial or gTimer Pro registration is used."
+    ),
+    AppUpdateEntry(
+      version: "0.9.24",
+      build: 114,
+      category: .bugFixes,
+      message: "Repeated sync registration from the same app install now reuses one active device record instead of creating duplicates."
+    ),
+    AppUpdateEntry(
       version: "0.9.23",
       build: 113,
       category: .minorImprovements,

@@ -326,6 +326,22 @@ final class DoseSyncManager {
     )
   }
 
+  func registerDevice(
+    email: String,
+    password: String,
+    deviceName: String,
+    settings: SettingsManager
+  ) async throws -> SyncAuthResponse {
+    try await authenticate(
+      path: "v1/auth/device",
+      email: email,
+      password: password,
+      deviceName: deviceName,
+      deviceKey: settings.ensureDeviceInstallID(),
+      settings: settings
+    )
+  }
+
   func devices(settings: SettingsManager) async throws -> [SyncDevice] {
     let baseURL = try syncBaseURL(settings)
     var request = URLRequest(url: baseURL.appending(path: "v1/auth/devices"))
@@ -385,6 +401,7 @@ final class DoseSyncManager {
     email: String,
     password: String,
     deviceName: String,
+    deviceKey: String? = nil,
     settings: SettingsManager
   ) async throws -> SyncAuthResponse {
     let baseURL = try syncBaseURL(settings)
@@ -395,7 +412,8 @@ final class DoseSyncManager {
       SyncAuthRequest(
         email: email,
         password: password,
-        deviceName: deviceName.isEmpty ? "gTimer" : deviceName
+        deviceName: deviceName.isEmpty ? "gTimer" : deviceName,
+        deviceKey: deviceKey
       )
     )
 
@@ -559,9 +577,9 @@ struct SyncDevice: Codable, Identifiable, Hashable {
 }
 
 struct SyncAuthResponse: Codable {
-  var token: String
+  var token: String?
   var user: SyncUser
-  var device: SyncDevice
+  var device: SyncDevice?
 }
 
 struct SyncUser: Codable {
@@ -573,6 +591,7 @@ private struct SyncAuthRequest: Codable {
   var email: String
   var password: String
   var deviceName: String
+  var deviceKey: String?
 }
 
 private struct SyncDevicesResponse: Codable {

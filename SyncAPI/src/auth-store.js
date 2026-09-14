@@ -12,7 +12,7 @@ export class AuthStore {
     this.lock = Promise.resolve();
   }
 
-  async register({ email, password, deviceName }) {
+  async register({ email, password }) {
     return this.#withLock(async () => {
       const state = await this.#readState();
       const normalizedEmail = normalizeEmail(email);
@@ -27,21 +27,36 @@ export class AuthStore {
         email: normalizedEmail,
         password: hashPassword(password),
         plan: "free",
-        syncTrialStartedAt: now,
-        syncTrialEndsAt: datePlusDays(now, syncTrialDurationDays),
+        syncTrialStartedAt: null,
+        syncTrialEndsAt: null,
         proUntil: null,
         createdAt: now,
         updatedAt: now
       };
       state.usersByEmail[normalizedEmail] = userId;
       state.users[userId] = user;
-      const session = addDeviceSession(state, userId, deviceName);
       await this.#writeState(state);
-      return authResponse(user, session);
+      return authResponse(user);
     });
   }
 
-  async login({ email, password, deviceName }) {
+  async login({ email, password }) {
+    return this.#withLock(async () => {
+      const state = await this.#readState();
+      const userId = state.usersByEmail[normalizeEmail(email)];
+      const user = userId ? state.users[userId] : null;
+      if (!user || !verifyPassword(password, user.password)) {
+        throw authError(401, "Email or password is incorrect.");
+      }
+
+      const now = new Date().toISOString();
+      user.updatedAt = now;
+      await this.#writeState(state);
+      return authResponse(user);
+    });
+  }
+
+  async registerDevice({ email, password, deviceName, deviceKey }) {
     return this.#withLock(async () => {
       const state = await this.#readState();
       const userId = state.usersByEmail[normalizeEmail(email)];
@@ -52,7 +67,7 @@ export class AuthStore {
 
       const now = new Date().toISOString();
       ensureSyncTrial(user, now);
-      const session = addDeviceSession(state, user.id, deviceName);
+      const session = addDeviceSession(state, user.id, deviceName, deviceKey);
       user.updatedAt = now;
       await this.#writeState(state);
       return authResponse(user, session);
@@ -159,8 +174,17 @@ export function cleanAuthRequest(body) {
 
   return {
     email,
-    password,
-    deviceName: cleanString(body.deviceName ?? "gTimer", "deviceName", { maxLength: 128 }) || "gTimer"
+    password
+  };
+}
+
+export function cleanDeviceAuthRequest(body) {
+  const cleaned = cleanAuthRequest(body);
+  const deviceKey = cleanString(body.deviceKey, "deviceKey", { required: true, maxLength: 128 });
+  return {
+    ...cleaned,
+    deviceName: cleanString(body.deviceName ?? "gTimer", "deviceName", { maxLength: 128 }) || "gTimer",
+    deviceKey
   };
 }
 
@@ -230,25 +254,42 @@ function verifyPassword(password, encoded) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-function addDeviceSession(state, userId, deviceName) {
+function addDeviceSession(state, userId, deviceName, deviceKey) {
   const now = new Date().toISOString();
-  const deviceId = randomUUID();
+  let device = Object.values(state.devices).find((candidate) => {
+    return candidate.userId === userId &&
+      candidate.deviceKey === deviceKey &&
+      !candidate.revokedAt;
+  });
+  if (!device) {
+    device = {
+      id: randomUUID(),
+      userId,
+      deviceKey,
+      name: deviceName,
+      createdAt: now,
+      updatedAt: now,
+      lastSeenAt: now,
+      revokedAt: null
+    };
+    state.devices[device.id] = device;
+  } else {
+    device.name = deviceName;
+    device.updatedAt = now;
+    device.lastSeenAt = now;
+  }
+
+  for (const session of Object.values(state.sessionsByTokenHash)) {
+    if (session.userId === userId && session.deviceId === device.id && !session.revokedAt) {
+      session.revokedAt = now;
+    }
+  }
+
   const token = `${tokenPrefix}${randomBytes(32).toString("base64url")}`;
   const tokenHash = hashToken(token);
-
-  const device = {
-    id: deviceId,
-    userId,
-    name: deviceName,
-    createdAt: now,
-    updatedAt: now,
-    lastSeenAt: now,
-    revokedAt: null
-  };
-  state.devices[deviceId] = device;
   state.sessionsByTokenHash[tokenHash] = {
     userId,
-    deviceId,
+    deviceId: device.id,
     createdAt: now,
     lastSeenAt: now,
     revokedAt: null
@@ -271,16 +312,19 @@ function publicDevice(device) {
   };
 }
 
-function authResponse(user, session) {
-  return {
-    token: session.token,
+function authResponse(user, session = null) {
+  const response = {
     user: {
       id: user.id,
       email: user.email,
       entitlement: entitlementSummary(user)
-    },
-    device: publicDevice(session.device)
+    }
   };
+  if (session) {
+    response.token = session.token;
+    response.device = publicDevice(session.device);
+  }
+  return response;
 }
 
 function ensureSyncTrial(user, now) {

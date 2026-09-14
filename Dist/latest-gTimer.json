@@ -1,23 +1,26 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.23",
-  "build": 113,
+  "version": "0.9.24",
+  "build": 114,
   "minimum_os": "14.0",
-  "published_at": "2026-09-14T00:24:15Z",
-  "summary": "Adds clearer dose-location permission prompts and Settings recovery controls.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.23/gTimer-macOS-0.9.23-113-local.pkg",
-  "sha256": "7e74d6dd662a49ffc459ad2208840c0ad92592e43a4a5b0f782f9912f23ddfa0",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.23/gTimer-macOS-0.9.23-113-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.23",
+  "published_at": "2026-09-14T00:42:50Z",
+  "summary": "Adds local account setup, optional history PIN lock, and safer sync-device registration.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.24/gTimer-macOS-0.9.24-114-local.pkg",
+  "sha256": "42c7f51d021c03a200e3e27a89f67b2b3671ff404c935b8ce4e5b944e1f6fbef",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.24/gTimer-macOS-0.9.24-114-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.24",
   "changes": {
-    "new_features": [],
+    "new_features": [
+      "First launch now sets up a local account while making clear that gTimer can run without device sync.",
+      "Added an optional PIN lock for previous-dose History and Map views while keeping dose recording available."
+    ],
     "minor_improvements": [
-      "gTimer now prompts for dose-location permission when location logging is first used.",
-      "Settings now shows location permission status and offers request, recheck, or system-settings recovery actions."
+      "Device sync now creates a device id only when a sync trial or gTimer Pro registration is used.",
+      "The Android and Windows parity plan now records the local-account, PIN-lock, and delayed device-id rules."
     ],
     "bug_fixes": [
-      "Current-location dose entry now explains when permission is blocked instead of reporting a generic unavailable location."
+      "Repeated sync registration from the same app install now reuses one active device record instead of creating duplicate devices."
     ]
   }
 }

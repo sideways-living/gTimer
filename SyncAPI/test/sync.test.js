@@ -139,7 +139,7 @@ test("rejects invalid dose payloads", async () => {
   });
 });
 
-test("registers an account and syncs with the issued device token", async () => {
+test("registers an account, then registers one sync device per app install", async () => {
   await withTestAPI(async ({ baseURL }) => {
     const registered = await requestJSON(`${baseURL}/v1/auth/register`, {
       method: "POST",
@@ -153,15 +153,59 @@ test("registers an account and syncs with the issued device token", async () => 
     assert.equal(registered.status, 201);
     assert.equal(registered.json.user.email, "person@example.com");
     assert.equal(registered.json.user.entitlement.plan, "free");
-    assert.equal(registered.json.user.entitlement.hasSyncAccess, true);
-    assert.equal(registered.json.device.name, "Dan's Mac");
-    assert.match(registered.json.token, /^gtimer_/);
+    assert.equal(registered.json.user.entitlement.hasSyncAccess, false);
+    assert.equal(registered.json.device, undefined);
+    assert.equal(registered.json.token, undefined);
+
+    const device = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "person@example.com",
+        password: "correct horse battery staple",
+        deviceName: "Dan's Mac",
+        deviceKey: "mac-install-1"
+      }
+    });
+
+    assert.equal(device.status, 200);
+    assert.equal(device.json.user.entitlement.hasSyncAccess, true);
+    assert.equal(device.json.device.name, "Dan's Mac");
+    assert.match(device.json.token, /^gtimer_/);
+
+    const sameDevice = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "person@example.com",
+        password: "correct horse battery staple",
+        deviceName: "Dan's MacBook",
+        deviceKey: "mac-install-1"
+      }
+    });
+
+    assert.equal(sameDevice.status, 200);
+    assert.equal(sameDevice.json.device.id, device.json.device.id);
+    assert.notEqual(sameDevice.json.token, device.json.token);
+
+    const oldTokenRejected = await requestJSON(`${baseURL}/v1/sync/pull?since=0`, {
+      method: "GET",
+      token: device.json.token
+    });
+    assert.equal(oldTokenRejected.status, 403);
+
+    const listed = await requestJSON(`${baseURL}/v1/auth/devices`, {
+      method: "GET",
+      token: sameDevice.json.token
+    });
+    assert.equal(listed.status, 200);
+    assert.equal(listed.json.devices.length, 1);
+    assert.equal(listed.json.devices[0].id, device.json.device.id);
+    assert.equal(listed.json.devices[0].name, "Dan's MacBook");
 
     const push = await requestJSON(`${baseURL}/v1/sync/push`, {
       method: "POST",
-      token: registered.json.token,
+      token: sameDevice.json.token,
       body: {
-        clientId: registered.json.device.id,
+        clientId: sameDevice.json.device.id,
         changes: { doses: [sampleDose("dose-auth-1", "2026-09-13T08:30:00.000Z")] }
       }
     });
@@ -173,7 +217,7 @@ test("registers an account and syncs with the issued device token", async () => 
 
 test("logs in on another device and can revoke that device", async () => {
   await withTestAPI(async ({ baseURL }) => {
-    const registered = await requestJSON(`${baseURL}/v1/auth/register`, {
+    await requestJSON(`${baseURL}/v1/auth/register`, {
       method: "POST",
       body: {
         email: "person@example.com",
@@ -182,7 +226,17 @@ test("logs in on another device and can revoke that device", async () => {
       }
     });
 
-    const loggedIn = await requestJSON(`${baseURL}/v1/auth/login`, {
+    const registeredDevice = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "person@example.com",
+        password: "correct horse battery staple",
+        deviceName: "iPhone",
+        deviceKey: "iphone-install"
+      }
+    });
+
+    const loginOnly = await requestJSON(`${baseURL}/v1/auth/login`, {
       method: "POST",
       body: {
         email: "person@example.com",
@@ -191,34 +245,48 @@ test("logs in on another device and can revoke that device", async () => {
       }
     });
 
-    assert.equal(loggedIn.status, 200);
-    assert.notEqual(loggedIn.json.device.id, registered.json.device.id);
+    assert.equal(loginOnly.status, 200);
+    assert.equal(loginOnly.json.device, undefined);
+    assert.equal(loginOnly.json.token, undefined);
+
+    const loggedInDevice = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "person@example.com",
+        password: "correct horse battery staple",
+        deviceName: "Mac",
+        deviceKey: "mac-install"
+      }
+    });
+
+    assert.equal(loggedInDevice.status, 200);
+    assert.notEqual(loggedInDevice.json.device.id, registeredDevice.json.device.id);
 
     const listed = await requestJSON(`${baseURL}/v1/auth/devices`, {
       method: "GET",
-      token: registered.json.token
+      token: registeredDevice.json.token
     });
     assert.equal(listed.status, 200);
     assert.equal(listed.json.devices.length, 2);
 
-    const revoked = await requestJSON(`${baseURL}/v1/auth/devices/${loggedIn.json.device.id}`, {
+    const revoked = await requestJSON(`${baseURL}/v1/auth/devices/${loggedInDevice.json.device.id}`, {
       method: "DELETE",
-      token: registered.json.token
+      token: registeredDevice.json.token
     });
     assert.equal(revoked.status, 200);
     assert.equal(revoked.json.device.revokedAt !== null, true);
 
     const rejected = await requestJSON(`${baseURL}/v1/sync/pull?since=0`, {
       method: "GET",
-      token: loggedIn.json.token
+      token: loggedInDevice.json.token
     });
     assert.equal(rejected.status, 403);
   });
 });
 
-test("blocks account-token sync after the free sync trial ends", async () => {
+test("blocks device-token sync after the free sync trial ends", async () => {
   await withTestAPI(async ({ baseURL, dataDir }) => {
-    const registered = await requestJSON(`${baseURL}/v1/auth/register`, {
+    await requestJSON(`${baseURL}/v1/auth/register`, {
       method: "POST",
       body: {
         email: "expired@example.com",
@@ -227,9 +295,19 @@ test("blocks account-token sync after the free sync trial ends", async () => {
       }
     });
 
+    const device = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "expired@example.com",
+        password: "correct horse battery staple",
+        deviceName: "Mac",
+        deviceKey: "expired-mac-install"
+      }
+    });
+
     const authPath = join(dataDir, "_auth.json");
     const state = JSON.parse(await readFile(authPath, "utf8"));
-    const user = state.users[registered.json.user.id];
+    const user = state.users[device.json.user.id];
     user.syncTrialStartedAt = "2026-01-01T00:00:00.000Z";
     user.syncTrialEndsAt = "2026-01-15T00:00:00.000Z";
     user.plan = "free";
@@ -238,7 +316,7 @@ test("blocks account-token sync after the free sync trial ends", async () => {
 
     const rejected = await requestJSON(`${baseURL}/v1/sync/pull?since=0`, {
       method: "GET",
-      token: registered.json.token
+      token: device.json.token
     });
 
     assert.equal(rejected.status, 402);

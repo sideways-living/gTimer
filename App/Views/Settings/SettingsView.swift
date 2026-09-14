@@ -21,6 +21,7 @@ struct SettingsView: View {
   @Environment(\.modelContext) private var context
   @Query(sort: \DoseRecord.time, order: .reverse) private var doseRecords: [DoseRecord]
   @State private var locationManager = LocationManager.shared
+  @State private var security = AppSecurityManager.shared
   @State private var saveState: SaveState = .idle
   @State private var customIntervalText = ""
   @State private var standardDoseText = ""
@@ -33,6 +34,15 @@ struct SettingsView: View {
   @State private var syncDevices: [SyncDevice] = []
   @State private var isSyncing = false
   @State private var isAuthenticatingSync = false
+  @State private var accountNameText = ""
+  @State private var accountEmailText = ""
+  @State private var accountPasswordText = ""
+  @State private var accountMessage: String? = nil
+  @State private var historyPINText = ""
+  @State private var historyPINConfirmText = ""
+  @State private var resetPINPasswordText = ""
+  @State private var resetPINText = ""
+  @State private var resetPINConfirmText = ""
   @State private var vanityNameText = ""
   @State private var homeCityText = ""
   @State private var homeCountryCode = ""
@@ -66,32 +76,55 @@ struct SettingsView: View {
   private var canUseDeviceSync: Bool {
     settings.canUseDeviceSync
   }
+  private var simpleSettingsSnapshot: String {
+    [
+      standardDoseText,
+      deviceNameText,
+      syncServerURLText,
+      syncTokenText,
+      syncEmailText,
+      accountNameText,
+      accountEmailText,
+      accountPasswordText,
+      vanityNameText,
+      homeCityText,
+      homeCountryCode
+    ].joined(separator: "\u{1f}")
+  }
+  private var homeCoordinateSnapshot: String {
+    "\(homeLatitudeText)\u{1f}\(homeLongitudeText)"
+  }
 
   var body: some View {
+    settingsRoot
+      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+      .sheet(isPresented: $showPaywall) { PaywallSheet(feature: paywallFeature) }
+      .sheet(isPresented: $showCamera) {
+        cameraSheet
+      }
+      .photosPicker(isPresented: $showPhotoPicker, selection: $photoPickerItem, matching: .images)
+      .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.image]) { result in
+        importProfilePhotoFile(result)
+      }
+      .confirmationDialog("Change profile photo", isPresented: $showPhotoSourceDialog, titleVisibility: .visible) {
+        photoSourceDialog
+      }
+      .onAppear(perform: reloadFromSettings)
+      .onChange(of: simpleSettingsSnapshot) { handleSimpleSettingChanged() }
+      .onChange(of: homeAddressText) { handleHomeAddressChanged() }
+      .onChange(of: homeCoordinateSnapshot) { handleHomeCoordinateChanged() }
+      .onChange(of: quickAmountTexts) { handleQuickAmountsChanged() }
+      .onChange(of: customIntervalText) { handleCustomIntervalChanged() }
+      .onChange(of: photoPickerItem) { handlePhotoPickerChanged() }
+      .onDisappear {
+        homeLocationSearchTask?.cancel()
+      }
+  }
+
+  private var settingsRoot: some View {
     NavigationStack {
       ScrollViewReader { proxy in
-        ScrollView {
-          VStack(spacing: 16) {
-            doseSection
-            intervalSection
-            quickAmountsSection
-              .id(SettingsScrollTarget.quickAmounts)
-            displaySection
-            colourSection
-            notificationsSection
-            deviceSection
-            syncSection
-            locationSection
-            homeLocationSection
-            if settings.proBetaAccepted { profileSection }
-          }
-          .padding(.horizontal, 16)
-          .padding(.top, 16)
-        }
-        .tabBarScrollClearance()
-        .background(AppTheme.backgroundPrimary.ignoresSafeArea())
-        .onAppear { scrollToRequestedSection(proxy) }
-        .onChange(of: nav.settingsScrollTarget) { scrollToRequestedSection(proxy) }
+        settingsScrollView(proxy: proxy)
       }
       .navigationTitle("Settings")
       .platformNavigationBarStyle()
@@ -101,70 +134,124 @@ struct SettingsView: View {
         }
       }
     }
+  }
+
+  private func settingsScrollView(proxy: ScrollViewProxy) -> some View {
+    ScrollView {
+      settingsSections
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+    }
+    .tabBarScrollClearance()
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
-    .sheet(isPresented: $showPaywall) { PaywallSheet(feature: paywallFeature) }
-    .sheet(isPresented: $showCamera) {
-      #if os(iOS)
-      CameraCaptureView { data in
-        saveProfilePhotoData(data)
-      }
-      #elseif os(macOS)
-      CameraCaptureView(
-        onCapture: { data in
-          saveProfilePhotoData(data)
-          showCamera = false
-        },
-        onCancel: {
-          showCamera = false
-        }
-      )
-      .frame(minWidth: 560, minHeight: 420)
-      #endif
-    }
-    .photosPicker(isPresented: $showPhotoPicker, selection: $photoPickerItem, matching: .images)
-    .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.image]) { result in
-      importProfilePhotoFile(result)
-    }
-    .confirmationDialog("Change profile photo", isPresented: $showPhotoSourceDialog, titleVisibility: .visible) {
-      Button("Choose from Photos") { presentPhotoPicker() }
-      Button("Choose File") { presentFilePicker() }
-      #if os(iOS)
-      if UIImagePickerController.isSourceTypeAvailable(.camera) {
-        Button("Take Photo") { presentCamera() }
-      }
-      #elseif os(macOS)
-      Button("Take Photo") { presentCamera() }
-      #endif
-      Button("Cancel", role: .cancel) {}
-    }
-    .onAppear { reloadFromSettings() }
-    .onChange(of: standardDoseText) { markUnsaved() }
-    .onChange(of: deviceNameText) { markUnsaved() }
-    .onChange(of: syncServerURLText) { markUnsaved() }
-    .onChange(of: syncTokenText) { markUnsaved() }
-    .onChange(of: syncEmailText) { markUnsaved() }
-    .onChange(of: vanityNameText) { markUnsaved() }
-    .onChange(of: homeCityText) { markUnsaved() }
-    .onChange(of: homeCountryCode) { markUnsaved() }
-    .onChange(of: homeAddressText) {
-      markUnsaved()
-      if suppressNextHomeLocationSearch {
-        suppressNextHomeLocationSearch = false
-      } else {
-        scheduleHomeLocationSearch()
-      }
-    }
-    .onChange(of: homeLatitudeText) { markUnsaved(); homeLocationError = nil }
-    .onChange(of: homeLongitudeText) { markUnsaved(); homeLocationError = nil }
-    .onChange(of: quickAmountTexts) { markUnsaved(); quickAmountsError = nil }
-    .onChange(of: customIntervalText) { markUnsaved(); intervalError = nil }
-    .onChange(of: photoPickerItem) { loadPhoto() }
-    .onDisappear {
-      homeLocationSearchTask?.cancel()
+    .onAppear { scrollToRequestedSection(proxy) }
+    .onChange(of: nav.settingsScrollTarget) { scrollToRequestedSection(proxy) }
+  }
+
+  private var settingsSections: some View {
+    VStack(spacing: 16) {
+      primarySettingsSections
+      accountAndSyncSections
+      locationSettingsSections
     }
   }
 
+  private var primarySettingsSections: some View {
+    Group {
+      doseSection
+      intervalSection
+      quickAmountsSection
+        .id(SettingsScrollTarget.quickAmounts)
+      displaySection
+      colourSection
+      notificationsSection
+    }
+  }
+
+  private var accountAndSyncSections: some View {
+    Group {
+      accountSection
+      privacySection
+      deviceSection
+      syncSection
+    }
+  }
+
+  private var locationSettingsSections: some View {
+    Group {
+      locationSection
+      homeLocationSection
+      if settings.proBetaAccepted { profileSection }
+    }
+  }
+
+  @ViewBuilder
+  private var cameraSheet: some View {
+    #if os(iOS)
+    CameraCaptureView { data in
+      saveProfilePhotoData(data)
+    }
+    #elseif os(macOS)
+    CameraCaptureView(
+      onCapture: { data in
+        saveProfilePhotoData(data)
+        showCamera = false
+      },
+      onCancel: {
+        showCamera = false
+      }
+    )
+    .frame(minWidth: 560, minHeight: 420)
+    #endif
+  }
+
+  @ViewBuilder
+  private var photoSourceDialog: some View {
+    Button("Choose from Photos") { presentPhotoPicker() }
+    Button("Choose File") { presentFilePicker() }
+    #if os(iOS)
+    if UIImagePickerController.isSourceTypeAvailable(.camera) {
+      Button("Take Photo") { presentCamera() }
+    }
+    #elseif os(macOS)
+    Button("Take Photo") { presentCamera() }
+    #endif
+    Button("Cancel", role: .cancel) {}
+  }
+
   // MARK: - Save button (3 states)
+
+  private func handleSimpleSettingChanged() {
+    markUnsaved()
+  }
+
+  private func handleHomeAddressChanged() {
+    markUnsaved()
+    if suppressNextHomeLocationSearch {
+      suppressNextHomeLocationSearch = false
+    } else {
+      scheduleHomeLocationSearch()
+    }
+  }
+
+  private func handleHomeCoordinateChanged() {
+    markUnsaved()
+    homeLocationError = nil
+  }
+
+  private func handleQuickAmountsChanged() {
+    markUnsaved()
+    quickAmountsError = nil
+  }
+
+  private func handleCustomIntervalChanged() {
+    markUnsaved()
+    intervalError = nil
+  }
+
+  private func handlePhotoPickerChanged() {
+    loadPhoto()
+  }
 
   @ViewBuilder
   private var saveButton: some View {
@@ -525,6 +612,41 @@ struct SettingsView: View {
     }
   }
 
+  private func saveHistoryPIN() {
+    guard historyPINText == historyPINConfirmText else {
+      security.authMessage = "PIN entries do not match."
+      return
+    }
+    if security.setHistoryPIN(historyPINText) {
+      settings.historyPinEnabled = true
+      clearPINFields()
+      markUnsaved()
+    }
+  }
+
+  private func resetHistoryPIN() {
+    guard resetPINText == resetPINConfirmText else {
+      security.authMessage = "New PIN entries do not match."
+      return
+    }
+    if security.resetHistoryPIN(
+      accountPassword: resetPINPasswordText,
+      newPIN: resetPINText,
+      settings: settings
+    ) {
+      clearPINFields()
+      markUnsaved()
+    }
+  }
+
+  private func clearPINFields() {
+    historyPINText = ""
+    historyPINConfirmText = ""
+    resetPINPasswordText = ""
+    resetPINText = ""
+    resetPINConfirmText = ""
+  }
+
   private var deviceSection: some View {
     settingsCard(title: "Device") {
       VStack(spacing: 0) {
@@ -550,6 +672,30 @@ struct SettingsView: View {
     }
   }
 
+  private var accountSection: some View {
+    AccountSettingsSection(
+      name: $accountNameText,
+      email: $accountEmailText,
+      password: $accountPasswordText,
+      message: accountMessage
+    )
+  }
+
+  private var privacySection: some View {
+    PrivacyLockSettingsSection(
+      security: security,
+      pin: $historyPINText,
+      confirmPIN: $historyPINConfirmText,
+      resetPassword: $resetPINPasswordText,
+      resetPIN: $resetPINText,
+      resetConfirmPIN: $resetPINConfirmText,
+      savePIN: saveHistoryPIN,
+      resetPINAction: resetHistoryPIN,
+      clearPINFields: clearPINFields,
+      markUnsaved: markUnsaved
+    )
+  }
+
   private var syncSection: some View {
     settingsCard(title: "Device Sync") {
       VStack(alignment: .leading, spacing: 12) {
@@ -566,6 +712,9 @@ struct SettingsView: View {
               if settings.syncEnabled && !settings.canUseDeviceSync {
                 settings.syncEnabled = false
                 syncAuthMessage = "Start the free sync trial or activate gTimer Pro to sync devices."
+              } else if settings.syncEnabled && settings.syncToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                settings.syncEnabled = false
+                syncAuthMessage = "Register this device before turning sync on."
               }
               markUnsaved()
             }
@@ -604,7 +753,7 @@ struct SettingsView: View {
           Text("Sync account")
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(AppTheme.textSecondary)
-          TextField("Email", text: $syncEmailText)
+          TextField(settings.accountEmail.isEmpty ? "Email" : settings.accountEmail, text: $syncEmailText)
             .platformKeyboardType(.emailAddress)
             .platformPlainTextEntry()
             .font(.system(size: 15))
@@ -625,7 +774,7 @@ struct SettingsView: View {
             Button {
               authenticateSyncAccount(register: false)
             } label: {
-              syncAuthButtonLabel("Sign in")
+              syncAuthButtonLabel(settings.syncToken.isEmpty ? "Register this device" : "Refresh device sign-in")
             }
             .buttonStyle(.plain)
             .disabled(isAuthenticatingSync || !canUseDeviceSync)
@@ -633,7 +782,7 @@ struct SettingsView: View {
             Button {
               authenticateSyncAccount(register: true)
             } label: {
-              syncAuthButtonLabel("Create account")
+              syncAuthButtonLabel("Create account and sync")
             }
             .buttonStyle(.plain)
             .disabled(isAuthenticatingSync || !canUseDeviceSync)
@@ -701,7 +850,7 @@ struct SettingsView: View {
           .disabled(isSyncing || !canUseDeviceSync)
         }
 
-        Text("Sync is optional. It uses the gTimer sync server, and each device gets its own token so lost devices can be removed.")
+        Text("Sync is optional. Your device gets its sync ID only when this switch is enabled through a trial or gTimer Pro. The same app install reuses one active device ID.")
           .font(.system(size: 12))
           .foregroundStyle(AppTheme.textMuted)
       }
@@ -744,7 +893,7 @@ struct SettingsView: View {
         Button(settings.syncTrialStartedAt == nil ? "Start trial" : "gTimer Pro") {
           if settings.syncTrialStartedAt == nil {
             settings.startSyncTrialIfNeeded()
-            syncAuthMessage = "Sync trial started. Create an account or sign in to begin syncing."
+            syncAuthMessage = "Sync trial started. Enter your account password to register this device."
           } else {
             paywallFeature = .deviceSync
             showPaywall = true
@@ -1349,6 +1498,30 @@ struct SettingsView: View {
     settings.syncServerURL = syncServerURLText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.syncToken = syncTokenText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.syncAccountEmail = syncEmailText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let cleanAccountName = accountNameText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let cleanAccountEmail = accountEmailText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    if !cleanAccountEmail.isEmpty && !cleanAccountEmail.contains("@") {
+      accountMessage = "Enter a valid account email address."
+      return
+    }
+    if !accountPasswordText.isEmpty && accountPasswordText.count < 8 {
+      accountMessage = "Password must be at least 8 characters."
+      return
+    }
+    settings.accountName = cleanAccountName
+    settings.accountEmail = cleanAccountEmail
+    if !accountPasswordText.isEmpty {
+      settings.setAccountPassword(accountPasswordText)
+      accountPasswordText = ""
+    }
+    if settings.syncAccountEmail.isEmpty, !cleanAccountEmail.isEmpty {
+      settings.syncAccountEmail = cleanAccountEmail
+      syncEmailText = cleanAccountEmail
+    }
+    if !cleanAccountName.isEmpty || !cleanAccountEmail.isEmpty || settings.hasLocalAccountPassword {
+      settings.accountSetupCompleted = true
+    }
+    accountMessage = "Account settings saved."
     settings.vanityName = vanityNameText
     settings.homeCity = homeCityText.trimmingCharacters(in: .whitespacesAndNewlines)
     settings.homeCountryCode = homeCountryCode
@@ -1397,6 +1570,11 @@ struct SettingsView: View {
     syncEmailText = settings.syncAccountEmail
     syncPasswordText = ""
     syncAuthMessage = nil
+    accountNameText = settings.accountName
+    accountEmailText = settings.accountEmail
+    accountPasswordText = ""
+    accountMessage = nil
+    clearPINFields()
     vanityNameText = settings.vanityName
     homeCityText = settings.homeCity
     homeCountryCode = settings.homeCountryCode
@@ -1463,7 +1641,10 @@ struct SettingsView: View {
           intervalError == nil,
           homeLocationError == nil else { return }
 
-    let email = syncEmailText.trimmingCharacters(in: .whitespacesAndNewlines)
+    let fallbackEmail = settings.accountEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+    let email = (syncEmailText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      ? fallbackEmail
+      : syncEmailText.trimmingCharacters(in: .whitespacesAndNewlines)).lowercased()
     let password = syncPasswordText.trimmingCharacters(in: .whitespacesAndNewlines)
     guard email.contains("@"), password.count >= 8 else {
       syncAuthMessage = "Enter an email and a password of at least 8 characters."
@@ -1471,36 +1652,59 @@ struct SettingsView: View {
     }
 
     isAuthenticatingSync = true
-    syncAuthMessage = register ? "Creating account..." : "Signing in..."
+    syncAuthMessage = register ? "Creating account and registering this device..." : "Registering this device..."
     Task { @MainActor in
       defer {
         isAuthenticatingSync = false
         syncPasswordText = ""
       }
       do {
-        let response: SyncAuthResponse
+        let accountResponse: SyncAuthResponse
         if register {
-          response = try await DoseSyncManager.shared.registerAccount(
+          accountResponse = try await DoseSyncManager.shared.registerAccount(
             email: email,
             password: password,
             deviceName: deviceNameText,
             settings: settings
           )
         } else {
-          response = try await DoseSyncManager.shared.login(
+          accountResponse = try await DoseSyncManager.shared.login(
             email: email,
             password: password,
             deviceName: deviceNameText,
             settings: settings
           )
         }
-        settings.syncToken = response.token
+        let response: SyncAuthResponse
+        do {
+          response = try await DoseSyncManager.shared.registerDevice(
+            email: email,
+            password: password,
+            deviceName: deviceNameText,
+            settings: settings
+          )
+        } catch {
+          if accountResponse.token != nil, accountResponse.device != nil {
+            response = accountResponse
+          } else {
+            throw error
+          }
+        }
+        guard let token = response.token,
+              let device = response.device else {
+          throw NSError(domain: "gTimerSync", code: 1, userInfo: [NSLocalizedDescriptionKey: "The sync server did not register this device."])
+        }
+        settings.syncToken = token
         settings.syncAccountEmail = response.user.email
-        settings.syncDeviceID = response.device.id
+        settings.accountEmail = response.user.email
+        settings.syncDeviceID = device.id
         settings.syncEnabled = true
-        syncTokenText = response.token
+        syncTokenText = token
         syncEmailText = response.user.email
-        syncAuthMessage = register ? "Account created. This device is signed in." : "Signed in. This device is registered."
+        accountEmailText = response.user.email
+        settings.setAccountPassword(password)
+        settings.accountSetupCompleted = true
+        syncAuthMessage = register ? "Account created. This device is registered for sync." : "This device is registered for sync."
         loadSyncDevices()
         await DoseSyncManager.shared.syncNow(context: context, settings: settings)
       } catch {
@@ -1745,6 +1949,240 @@ struct SettingsView: View {
       openURL(url)
     }
     #endif
+  }
+}
+
+private struct AccountSettingsSection: View {
+  @Environment(SettingsManager.self) private var settings
+  @Binding var name: String
+  @Binding var email: String
+  @Binding var password: String
+  let message: String?
+
+  var body: some View {
+    SettingsSectionCard(title: "Account") {
+      VStack(alignment: .leading, spacing: 10) {
+        Text("gTimer can run local only. Account details are used to protect your data and to support PIN recovery. Device sync remains off until you start a trial or activate gTimer Pro.")
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
+          .fixedSize(horizontal: false, vertical: true)
+
+        SettingsSectionDivider()
+        SettingsRow(label: "Name") {
+          TextField("Your name", text: $name)
+            .multilineTextAlignment(.trailing)
+            .font(.system(size: 15))
+            .foregroundStyle(AppTheme.textPrimary)
+            .frame(maxWidth: 220)
+        }
+        SettingsSectionDivider()
+        SettingsRow(label: "Email") {
+          TextField("you@example.com", text: $email)
+            .platformKeyboardType(.emailAddress)
+            .multilineTextAlignment(.trailing)
+            .font(.system(size: 15))
+            .foregroundStyle(AppTheme.textPrimary)
+            .frame(maxWidth: 260)
+        }
+        SettingsSectionDivider()
+        VStack(alignment: .leading, spacing: 7) {
+          Text(settings.hasLocalAccountPassword ? "Change password" : "Password")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(AppTheme.textSecondary)
+          SecureField(settings.hasLocalAccountPassword ? "Leave blank to keep current password" : "At least 8 characters", text: $password)
+            .font(.system(size: 15))
+            .foregroundStyle(AppTheme.textPrimary)
+            .padding(10)
+            .background(AppTheme.backgroundElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .privacySensitive()
+        }
+
+        if let message {
+          Text(message)
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textMuted)
+        }
+      }
+    }
+  }
+}
+
+private struct PrivacyLockSettingsSection: View {
+  @Environment(SettingsManager.self) private var settings
+  let security: AppSecurityManager
+  @Binding var pin: String
+  @Binding var confirmPIN: String
+  @Binding var resetPassword: String
+  @Binding var resetPIN: String
+  @Binding var resetConfirmPIN: String
+  let savePIN: () -> Void
+  let resetPINAction: () -> Void
+  let clearPINFields: () -> Void
+  let markUnsaved: () -> Void
+
+  var body: some View {
+    SettingsSectionCard(title: "Privacy Lock") {
+      VStack(alignment: .leading, spacing: 10) {
+        SettingsRow(label: "Require PIN for history and maps") {
+          @Bindable var s = settings
+          Toggle("Require PIN for history and maps", isOn: $s.historyPinEnabled)
+            .labelsHidden()
+            .tint(AppTheme.accentBlue)
+            .accessibilityLabel("Require PIN for history and maps")
+            .onChange(of: settings.historyPinEnabled) {
+              markUnsaved()
+              if !settings.historyPinEnabled {
+                security.clearHistoryPIN()
+                clearPINFields()
+              }
+            }
+        }
+
+        Text("Recording a dose never requires the PIN. The lock only protects previous-dose views such as History, Map, and desktop Recent History.")
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
+          .fixedSize(horizontal: false, vertical: true)
+
+        if settings.historyPinEnabled {
+          SettingsSectionDivider()
+          VStack(alignment: .leading, spacing: 8) {
+            SecureField(security.hasHistoryPIN ? "New PIN" : "PIN", text: $pin)
+              .platformKeyboardType(.numberPad)
+              .font(.system(size: 15))
+              .foregroundStyle(AppTheme.textPrimary)
+              .padding(10)
+              .background(AppTheme.backgroundElevated)
+              .clipShape(RoundedRectangle(cornerRadius: 9))
+              .privacySensitive()
+            SecureField("Confirm PIN", text: $confirmPIN)
+              .platformKeyboardType(.numberPad)
+              .font(.system(size: 15))
+              .foregroundStyle(AppTheme.textPrimary)
+              .padding(10)
+              .background(AppTheme.backgroundElevated)
+              .clipShape(RoundedRectangle(cornerRadius: 9))
+              .privacySensitive()
+            HStack(spacing: 8) {
+              Button(security.hasHistoryPIN ? "Change PIN" : "Set PIN", action: savePIN)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppTheme.accentBlue)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .buttonStyle(.plain)
+
+              if security.hasHistoryPIN {
+                Button("Lock now") {
+                  security.lockHistory()
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppTheme.textSecondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppTheme.backgroundElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .buttonStyle(.plain)
+              }
+            }
+          }
+
+          if security.hasHistoryPIN {
+            SettingsSectionDivider()
+            VStack(alignment: .leading, spacing: 8) {
+              Text("Forgot PIN")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(AppTheme.textSecondary)
+              Text(settings.accountEmail.isEmpty ? "Use your local account password to reset the PIN." : "Use the password for \(settings.accountEmail) to reset the PIN.")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textMuted)
+              SecureField("Account password", text: $resetPassword)
+                .font(.system(size: 15))
+                .foregroundStyle(AppTheme.textPrimary)
+                .padding(10)
+                .background(AppTheme.backgroundElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 9))
+                .privacySensitive()
+              HStack(spacing: 8) {
+                SecureField("New PIN", text: $resetPIN)
+                  .platformKeyboardType(.numberPad)
+                  .font(.system(size: 15))
+                  .foregroundStyle(AppTheme.textPrimary)
+                  .padding(10)
+                  .background(AppTheme.backgroundElevated)
+                  .clipShape(RoundedRectangle(cornerRadius: 9))
+                  .privacySensitive()
+                SecureField("Confirm", text: $resetConfirmPIN)
+                  .platformKeyboardType(.numberPad)
+                  .font(.system(size: 15))
+                  .foregroundStyle(AppTheme.textPrimary)
+                  .padding(10)
+                  .background(AppTheme.backgroundElevated)
+                  .clipShape(RoundedRectangle(cornerRadius: 9))
+                  .privacySensitive()
+              }
+              Button("Reset PIN with password", action: resetPINAction)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(AppTheme.accentBlue)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppTheme.accentBlue.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .buttonStyle(.plain)
+                .disabled(!settings.hasLocalAccountPassword)
+            }
+          }
+        }
+
+        if let message = security.authMessage {
+          Text(message)
+            .font(.system(size: 12))
+            .foregroundStyle(message.localizedCaseInsensitiveContains("incorrect") ? AppTheme.statusAmber : AppTheme.textMuted)
+        }
+      }
+    }
+  }
+}
+
+private struct SettingsSectionCard<Content: View>: View {
+  let title: String
+  @ViewBuilder let content: () -> Content
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Text(title.uppercased())
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(AppTheme.textMuted)
+        .kerning(0.3)
+        .padding(.leading, 4)
+      content()
+        .padding(14)
+        .background(AppTheme.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
+    }
+  }
+}
+
+private struct SettingsSectionDivider: View {
+  var body: some View {
+    Divider().background(AppTheme.border).padding(.vertical, 4)
+  }
+}
+
+private struct SettingsRow<Content: View>: View {
+  let label: String
+  @ViewBuilder let trailing: () -> Content
+
+  var body: some View {
+    HStack {
+      Text(label)
+        .foregroundStyle(AppTheme.textSecondary)
+        .font(.system(size: 15))
+      Spacer()
+      trailing()
+    }
   }
 }
 
