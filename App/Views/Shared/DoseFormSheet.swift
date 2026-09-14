@@ -435,8 +435,15 @@ struct DoseFormSheet: View {
   private func useCurrentLocation() {
     isCapturingLocation = true
     locationError = nil
-    LocationManager.shared.requestWhenInUsePermission()
     Task { @MainActor in
+      let hasPermission = await LocationManager.shared.requestWhenInUsePermissionIfNeeded()
+      guard hasPermission else {
+        isCapturingLocation = false
+        locationError = LocationManager.shared.needsSystemSettingsForPermission
+          ? "Location access is blocked. Open gTimer location permission in Settings."
+          : "Location permission is needed to use current location."
+        return
+      }
       let captured = await LocationManager.shared.captureForDose()
       isCapturingLocation = false
       guard let captured else {

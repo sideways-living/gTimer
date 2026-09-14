@@ -156,6 +156,24 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.23",
+      build: 113,
+      category: .minorImprovements,
+      message: "gTimer now prompts for dose-location permission when location logging is first used."
+    ),
+    AppUpdateEntry(
+      version: "0.9.23",
+      build: 113,
+      category: .minorImprovements,
+      message: "Settings now shows location permission status and offers request, recheck, or system-settings recovery actions."
+    ),
+    AppUpdateEntry(
+      version: "0.9.23",
+      build: 113,
+      category: .bugFixes,
+      message: "Current-location dose entry now explains when permission is blocked instead of reporting a generic unavailable location."
+    ),
+    AppUpdateEntry(
       version: "0.9.22",
       build: 112,
       category: .bugFixes,

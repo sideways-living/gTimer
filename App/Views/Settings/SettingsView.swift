@@ -20,6 +20,7 @@ struct SettingsView: View {
   @Environment(\.openURL) private var openURL
   @Environment(\.modelContext) private var context
   @Query(sort: \DoseRecord.time, order: .reverse) private var doseRecords: [DoseRecord]
+  @State private var locationManager = LocationManager.shared
   @State private var saveState: SaveState = .idle
   @State private var customIntervalText = ""
   @State private var standardDoseText = ""
@@ -496,6 +497,34 @@ struct SettingsView: View {
     DoseStore.scheduleReminderForMostRecentDose(context: context, settings: settings)
   }
 
+  private var locationStatusColour: Color {
+    if locationManager.hasLocationPermission { return AppTheme.statusGreen }
+    if locationManager.needsSystemSettingsForPermission { return AppTheme.statusAmber }
+    return AppTheme.textMuted
+  }
+
+  private var locationPermissionActionTitle: String {
+    if locationManager.needsSystemSettingsForPermission { return "Open location settings" }
+    if locationManager.hasLocationPermission { return "Check current location" }
+    return "Request location access"
+  }
+
+  @MainActor
+  private func requestLocationPermissionFromSettings() async {
+    let granted = await locationManager.requestWhenInUsePermissionIfNeeded()
+    locationManager.refreshAuthorizationStatus()
+    if granted {
+      locationManager.requestLocationInBackground()
+    }
+  }
+
+  private func recheckLocationPermission() {
+    locationManager.refreshAuthorizationStatus()
+    if locationManager.hasLocationPermission {
+      locationManager.requestLocationInBackground()
+    }
+  }
+
   private var deviceSection: some View {
     settingsCard(title: "Device") {
       VStack(spacing: 0) {
@@ -816,31 +845,66 @@ struct SettingsView: View {
               .onChange(of: settings.attachLocationToDoses) {
                 markUnsaved()
                 if settings.attachLocationToDoses {
-                  LocationManager.shared.requestWhenInUsePermission()
+                  Task {
+                    await requestLocationPermissionFromSettings()
+                  }
                 }
               }
           }
           if settings.attachLocationToDoses {
-            // Permission-denied warning
-            let status = LocationManager.shared.authorizationStatus
-            if status == .denied || status == .restricted {
-              cardDivider
+            cardDivider
+            VStack(alignment: .leading, spacing: 10) {
               HStack(spacing: 8) {
-                Image(systemName: "location.slash.fill")
-                  .font(.system(size: 12))
-                  .foregroundStyle(AppTheme.statusAmber)
-                VStack(alignment: .leading, spacing: 2) {
-                  Text("Location access denied")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(AppTheme.statusAmber)
-                  Text("Doses will still log normally. To record locations, enable permission in Settings.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(AppTheme.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
+                Image(systemName: locationManager.hasLocationPermission ? "location.fill" : "location.slash.fill")
+                  .font(.system(size: 12, weight: .semibold))
+                  .foregroundStyle(locationStatusColour)
+                Text(locationManager.authorizationStatusMessage)
+                  .font(.system(size: 12, weight: .medium))
+                  .foregroundStyle(locationStatusColour)
+                Spacer(minLength: 0)
               }
-              .padding(.vertical, 6)
+
+              HStack(spacing: 8) {
+                Button {
+                  if locationManager.needsSystemSettingsForPermission {
+                    openLocationSettings()
+                  } else {
+                    Task {
+                      await requestLocationPermissionFromSettings()
+                    }
+                  }
+                } label: {
+                  HStack(spacing: 6) {
+                    Image(systemName: locationManager.needsSystemSettingsForPermission ? "arrow.up.right.square" : "location")
+                      .font(.system(size: 12, weight: .semibold))
+                    Text(locationPermissionActionTitle)
+                      .font(.system(size: 13, weight: .semibold))
+                  }
+                  .foregroundStyle(AppTheme.accentBlue)
+                  .frame(maxWidth: .infinity)
+                  .padding(.vertical, 9)
+                  .background(AppTheme.accentBlue.opacity(0.10))
+                  .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                  recheckLocationPermission()
+                } label: {
+                  HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                      .font(.system(size: 12, weight: .semibold))
+                    Text("Check again")
+                      .font(.system(size: 13, weight: .semibold))
+                  }
+                  .foregroundStyle(AppTheme.textSecondary)
+                  .frame(maxWidth: .infinity)
+                  .padding(.vertical, 9)
+                  .background(AppTheme.backgroundElevated)
+                  .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+              }
             }
             cardDivider
             row(label: "Show approximate location") {
@@ -877,6 +941,9 @@ struct SettingsView: View {
               .foregroundStyle(AppTheme.textMuted)
               .padding(.vertical, 4)
           }
+        }
+        .task {
+          recheckLocationPermission()
         }
       } else {
         Button {

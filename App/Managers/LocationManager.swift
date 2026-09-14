@@ -18,10 +18,29 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
       authorizationStatus == .authorizedAlways
     #endif
   }
+  var needsSystemSettingsForPermission: Bool {
+    authorizationStatus == .denied || authorizationStatus == .restricted
+  }
+  var authorizationStatusMessage: String {
+    switch authorizationStatus {
+    case .notDetermined:
+      return "Location permission has not been requested yet."
+    case .restricted:
+      return "Location access is restricted in system settings."
+    case .denied:
+      return "Location access is blocked in system settings."
+    case .authorizedAlways, .authorizedWhenInUse:
+      return "Location access is allowed."
+    @unknown default:
+      return "Location permission status is unknown."
+    }
+  }
 
   private let manager = CLLocationManager()
   private var pendingContinuation: CheckedContinuation<CLLocation?, Never>?
   private var continuationResumed = false
+  private var pendingAuthorizationContinuation: CheckedContinuation<Bool, Never>?
+  private var authorizationContinuationResumed = false
 
   override init() {
     super.init()
@@ -32,7 +51,33 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
   // Call this when the user explicitly opts in to location recording.
   func requestWhenInUsePermission() {
+    refreshAuthorizationStatus()
+    guard authorizationStatus == .notDetermined else { return }
     manager.requestWhenInUseAuthorization()
+  }
+
+  func requestWhenInUsePermissionIfNeeded(timeout: TimeInterval = 12.0) async -> Bool {
+    refreshAuthorizationStatus()
+    if hasLocationPermission { return true }
+    guard authorizationStatus == .notDetermined else { return false }
+
+    resumeAuthorizationContinuation()
+
+    return await withCheckedContinuation { continuation in
+      authorizationContinuationResumed = false
+      pendingAuthorizationContinuation = continuation
+      manager.requestWhenInUseAuthorization()
+
+      Task {
+        try? await Task.sleep(for: .seconds(timeout))
+        self.refreshAuthorizationStatus()
+        self.resumeAuthorizationContinuation()
+      }
+    }
+  }
+
+  func refreshAuthorizationStatus() {
+    authorizationStatus = manager.authorizationStatus
   }
 
   // Fire-and-forget: request a fresh location in background.
@@ -76,6 +121,13 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     pendingContinuation = nil
   }
 
+  private func resumeAuthorizationContinuation() {
+    guard !authorizationContinuationResumed else { return }
+    authorizationContinuationResumed = true
+    pendingAuthorizationContinuation?.resume(returning: hasLocationPermission)
+    pendingAuthorizationContinuation = nil
+  }
+
   // MARK: - CLLocationManagerDelegate
 
   func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -92,6 +144,7 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
   func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
     authorizationStatus = manager.authorizationStatus
+    resumeAuthorizationContinuation()
   }
 
   private func reverseGeocode(_ location: CLLocation) {

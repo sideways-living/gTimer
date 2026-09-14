@@ -1,6 +1,6 @@
 # Future Platform Parity Plan
 
-Last updated: 2026-09-08
+Last updated: 2026-09-14
 
 ## Scope
 
@@ -91,7 +91,7 @@ Future Android and Windows versions should match these features:
 | Settings | Dose defaults, unit, substance, interval presets/custom interval, quick doses, timer mode, time format, notifications, device name, Pro profile, and location options. |
 | Pro | Current app uses free beta activation. Future store payments are a separate product decision. |
 | Notifications | Optional local reminder when the configured timing interval elapses. Notification copy must not imply medical safety. The pending reminder should always be derived from the most recent active dose, should reschedule after edits/deletes/sync changes, and should still present while the app is foregrounded where the platform allows it. |
-| Location | Pro-gated optional location recording; current setting named "Show approximate location" rounds display only, not saved coordinates. |
+| Location | Pro-gated optional location recording; request native location permission when location logging is first used, show current permission status in Settings, and provide a system-settings recovery action when permission is blocked. The current setting named "Show approximate location" rounds display only, not saved coordinates. |
 | Map/insights | Pro-gated dose map and location summary behavior. When visible in navigation, Map sits between History and Health. Marker details open as anchored overlays so the dose marker remains fixed as the focal point, with the callout pointer adapting near map edges. |
 | Widgets | Companion widgets show current timer status, last dose amount/time, safe interval progress, and an open-app action. Widgets must match countdown/count-up visual semantics. Widgets should not directly write dose history unless the platform implementation writes through the canonical dose store and triggers the same notification/update flow. |
 | Export/print | Pro-gated export window supports date range, field selection, location/map inclusion, PDF export, and print output. When map output is selected, include a full-page rendered visual map with dose markers. Desktop platforms should expose keyboard commands for these flows. |
@@ -105,6 +105,7 @@ Add dose, missed dose, and edit dose should present the same core flow on every 
 - Input column: amount and date/time controls together at the top, followed by one location text field for address, suburb, venue, hotel, or typed place name.
 - Location field: autocomplete from saved user/history locations and platform geocoder/place search; bias search near saved home location and current location when available.
 - Location shortcuts: current-location and home-location icon buttons at the end of the location field, with accessible labels/tooltips.
+- Location permission: choosing current location should request native permission if it has not already been requested, and should explain when OS settings block access.
 - Map: pan/zoom, tap/click to drop a pin, reverse geocode the pin, and fill the location text field from the selected pin.
 - Submit button: label must match the flow, for example `Log Dose`, `Save Changes`, or `Log Missed Dose`.
 
@@ -146,7 +147,7 @@ CSV exports/imports should use the same field names unless a migration map is ex
 | Device name | Editable | Same semantics. |
 | Pro beta | Local entitlement currently | Replace only through a cross-platform entitlement decision. |
 | Profile | Pro-gated display name/photo | Same gate or documented store-specific equivalent. |
-| Location attach | Pro-gated and off by default | Native permission prompt. |
+| Location attach | Pro-gated and off by default | Native permission prompt when first used; Settings must show permission status and offer recheck/system-settings recovery. |
 | Show approximate location | Display rounding only | If future privacy-preserving storage is added, update all platforms together. |
 
 ## Apple Companion Platform Notes

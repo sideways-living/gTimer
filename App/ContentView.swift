@@ -111,6 +111,15 @@ struct ContentView: View {
 
   private func appOpened() {
     NotificationManager.shared.configure()
+    LocationManager.shared.refreshAuthorizationStatus()
+    if settings.proBetaAccepted && settings.attachLocationToDoses {
+      Task { @MainActor in
+        let granted = await LocationManager.shared.requestWhenInUsePermissionIfNeeded()
+        if granted {
+          LocationManager.shared.requestLocationInBackground()
+        }
+      }
+    }
     DoseStore.scheduleReminderForMostRecentDose(context: context, settings: settings)
     guard settings.syncEnabled else { return }
     DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)

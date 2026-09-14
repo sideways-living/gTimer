@@ -773,6 +773,7 @@ struct TimerView: View {
       )
     } else if captureLocation {
       Task { @MainActor in
+        _ = await loc.requestWhenInUsePermissionIfNeeded()
         let captured = await loc.captureForDose()
         #if os(macOS)
         let fallback = captured == nil ? await homeFallbackLocation() : nil
