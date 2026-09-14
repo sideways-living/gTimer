@@ -441,6 +441,33 @@ struct SettingsView: View {
           .tint(AppTheme.accentBlue)
           .onChange(of: settings.timeFormat) { markUnsaved() }
         }
+        cardDivider
+        row(label: "Time since safe") {
+          @Bindable var s = settings
+          HStack(spacing: 8) {
+            Toggle("Time since safe", isOn: $s.showSafeElapsedTimer)
+              .labelsHidden()
+              .tint(AppTheme.accentBlue)
+              .disabled(!settings.proBetaAccepted)
+              .onChange(of: settings.showSafeElapsedTimer) { markUnsaved() }
+            if !settings.proBetaAccepted {
+              Button {
+                paywallFeature = .safeElapsedTimer
+                showPaywall = true
+              } label: {
+                Text("PRO")
+                  .font(.system(size: 9, weight: .bold))
+                  .foregroundStyle(.black)
+                  .padding(.horizontal, 6)
+                  .padding(.vertical, 3)
+                  .background(AppTheme.proAmber)
+                  .clipShape(Capsule())
+              }
+              .buttonStyle(.plain)
+              .accessibilityLabel("Safe elapsed timer requires gTimer Pro")
+            }
+          }
+        }
       }
     }
   }

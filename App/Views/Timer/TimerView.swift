@@ -67,6 +67,16 @@ struct TimerView: View {
     return String(format: "%02d:%02d:%02d", t / 3600, (t % 3600) / 60, t % 60)
   }
 
+  private var safeElapsedTimeString: String {
+    guard isActive, isSafe else { return "00:00:00" }
+    let t = max(Int(elapsed - intervalSeconds), 0)
+    return String(format: "%02d:%02d:%02d", t / 3600, (t % 3600) / 60, t % 60)
+  }
+
+  private var shouldShowSafeElapsedTimer: Bool {
+    settings.proBetaAccepted && settings.showSafeElapsedTimer && isActive && isSafe
+  }
+
   private var statusLabel: String {
     guard isActive else { return "No Active gTimer" }
     if isSafe { return "Safe to redose" }
@@ -344,13 +354,21 @@ struct TimerView: View {
   // MARK: - Status pill
 
   private var statusBadge: some View {
-    HStack(spacing: 6) {
-      Circle()
-        .fill(isActive ? statusColor : AppTheme.textMuted)
-        .frame(width: 8, height: 8)
-      Text(isActive ? (isSafe ? "Safe to redose" : "Not yet safe") : "No active timer")
-        .font(.system(size: 13, weight: .semibold))
-        .foregroundStyle(isActive ? statusColor : AppTheme.textMuted)
+    VStack(spacing: 3) {
+      HStack(spacing: 6) {
+        Circle()
+          .fill(isActive ? statusColor : AppTheme.textMuted)
+          .frame(width: 8, height: 8)
+        Text(isActive ? (isSafe ? "Safe to redose" : "Not yet safe") : "No active timer")
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(isActive ? statusColor : AppTheme.textMuted)
+      }
+      if shouldShowSafeElapsedTimer {
+        Text(safeElapsedTimeString)
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(statusColor)
+          .monospacedDigit()
+      }
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 7)

@@ -78,7 +78,7 @@ Future Android and Windows versions should match these features:
 
 | Area | Required behavior |
 | --- | --- |
-| Timer | Start from logged dose time; support countdown and count-up modes; apply configured interval; show active/inactive state; keep six-hour active window. |
+| Timer | Start from logged dose time; support countdown and count-up modes; apply configured interval; show active/inactive state; keep six-hour active window. Pro users can optionally show a second status timer counting up from `00:00:00` once the minimum interval has passed. |
 | Countdown mode | Display remaining time; arc starts fully coloured and empties from the right as time elapses. |
 | Count-up mode | Display elapsed time; arc starts empty and fills from the left as time elapses. |
 | Dose logging | Standard-dose button, 0-4 quick-dose buttons, custom amount, early-log warning before interval has elapsed. Custom/add-dose entry uses the shared dose form pattern below. |
@@ -144,6 +144,7 @@ CSV exports/imports should use the same field names unless a migration map is ex
 | Notifications | Off by default | Native opt-in permission flow. |
 | Timer mode | Countdown/count-up | Match display and arc behavior exactly. |
 | Time format | Setting exists | Preserve until product decision removes or uses it consistently. |
+| Time since safe | Pro-gated and off by default | When enabled, show an elapsed timer under the safe-to-redose status only after the configured minimum interval has passed. |
 | Device name | Editable | Same semantics. |
 | Pro beta | Local entitlement currently | Replace only through a cross-platform entitlement decision. |
 | Profile | Pro-gated display name/photo | Same gate or documented store-specific equivalent. |

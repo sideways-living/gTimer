@@ -156,6 +156,18 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.25",
+      build: 115,
+      category: .newFeatures,
+      message: "Added a Pro setting to show a time-since-safe counter after the minimum interval has passed."
+    ),
+    AppUpdateEntry(
+      version: "0.9.25",
+      build: 115,
+      category: .minorImprovements,
+      message: "The completed gTimer status can now show elapsed time in matching status styling."
+    ),
+    AppUpdateEntry(
       version: "0.9.24",
       build: 114,
       category: .newFeatures,

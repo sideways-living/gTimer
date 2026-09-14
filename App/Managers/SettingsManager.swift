@@ -454,6 +454,9 @@ final class SettingsManager {
   var timeFormat: String {
     didSet { UserDefaults.standard.set(timeFormat, forKey: "timeFormat") }
   }
+  var showSafeElapsedTimer: Bool {
+    didSet { UserDefaults.standard.set(showSafeElapsedTimer, forKey: "showSafeElapsedTimer") }
+  }
   var syncEnabled: Bool {
     didSet { UserDefaults.standard.set(syncEnabled, forKey: "syncEnabled") }
   }
@@ -608,6 +611,7 @@ final class SettingsManager {
     lockScreenNotificationsEnabled = ud.bool(forKey: "lockScreenNotificationsEnabled")
     countdownMode     = ud.object(forKey: "countdownMode") as? Bool ?? true
     timeFormat        = ud.string(forKey: "timeFormat") ?? "hours"
+    showSafeElapsedTimer = ud.bool(forKey: "showSafeElapsedTimer")
     syncEnabled       = ud.bool(forKey: "syncEnabled")
     syncServerURL     = ud.string(forKey: "syncServerURL") ?? "https://sync.gtimer.app"
     let savedSyncAccountEmail = ud.string(forKey: "syncAccountEmail") ?? ""

@@ -1,26 +1,22 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.24",
-  "build": 114,
+  "version": "0.9.25",
+  "build": 115,
   "minimum_os": "14.0",
-  "published_at": "2026-09-14T00:42:50Z",
-  "summary": "Adds local account setup, optional history PIN lock, and safer sync-device registration.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.24/gTimer-macOS-0.9.24-114-local.pkg",
-  "sha256": "42c7f51d021c03a200e3e27a89f67b2b3671ff404c935b8ce4e5b944e1f6fbef",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.24/gTimer-macOS-0.9.24-114-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.24",
+  "published_at": "2026-09-14T19:09:08Z",
+  "summary": "Adds a Pro time-since-safe counter for completed gTimers.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.25/gTimer-macOS-0.9.25-115-local.pkg",
+  "sha256": "8e04de827def7689af29b5a51a94edd4388fcfee59b748695bda3569ddb02fa8",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.25/gTimer-macOS-0.9.25-115-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.25",
   "changes": {
     "new_features": [
-      "First launch now sets up a local account while making clear that gTimer can run without device sync.",
-      "Added an optional PIN lock for previous-dose History and Map views while keeping dose recording available."
+      "Added a Pro setting to show a time-since-safe counter after the minimum interval has passed."
     ],
     "minor_improvements": [
-      "Device sync now creates a device id only when a sync trial or gTimer Pro registration is used.",
-      "The Android and Windows parity plan now records the local-account, PIN-lock, and delayed device-id rules."
+      "The completed gTimer status can now show elapsed time in matching status styling."
     ],
-    "bug_fixes": [
-      "Repeated sync registration from the same app install now reuses one active device record instead of creating duplicate devices."
-    ]
+    "bug_fixes": []
   }
 }
