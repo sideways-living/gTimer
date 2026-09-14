@@ -1,24 +1,23 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.22",
-  "build": 112,
+  "version": "0.9.23",
+  "build": 113,
   "minimum_os": "14.0",
-  "published_at": "2026-09-13T11:07:09Z",
-  "summary": "Fixes redose reminder scheduling and foreground notification delivery.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.22/gTimer-macOS-0.9.22-112-local.pkg",
-  "sha256": "a99dabeceb4dcb2e716d4256daad7c1fc733a6d8ea8a86965773bb1a9b595ab6",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.22/gTimer-macOS-0.9.22-112-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.22",
+  "published_at": "2026-09-14T00:24:15Z",
+  "summary": "Adds clearer dose-location permission prompts and Settings recovery controls.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.23/gTimer-macOS-0.9.23-113-local.pkg",
+  "sha256": "7e74d6dd662a49ffc459ad2208840c0ad92592e43a4a5b0f782f9912f23ddfa0",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.23/gTimer-macOS-0.9.23-113-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.23",
   "changes": {
     "new_features": [],
     "minor_improvements": [
-      "Settings now shows whether notifications are allowed, blocked, or not yet requested."
+      "gTimer now prompts for dose-location permission when location logging is first used.",
+      "Settings now shows location permission status and offers request, recheck, or system-settings recovery actions."
     ],
     "bug_fixes": [
-      "Fixed redose reminders not appearing while gTimer is open.",
-      "Redose reminders now reschedule from the most recent active dose after missed, edited, deleted, or synced dose changes.",
-      "Turning notifications on now requests permission and schedules a reminder for the current latest dose when one is pending."
+      "Current-location dose entry now explains when permission is blocked instead of reporting a generic unavailable location."
     ]
   }
 }
