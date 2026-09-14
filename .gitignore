@@ -23,6 +23,9 @@ Pods/
 # npm
 node_modules/
 
+# Android / Gradle
+.gradle/
+
 # IDE
 *.swp
 *.swo
