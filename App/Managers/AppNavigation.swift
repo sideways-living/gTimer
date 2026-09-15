@@ -32,17 +32,29 @@ final class AppNavigation {
   var historyExportOutcome: HistoryExportOutcome = .export
   var doseMapRequestID = 0
   var shouldShowQuitWarning = false
+  var settingsHasUnsavedChanges = false
+  var blockedSettingsTabRequest: Int?
+  var settingsNavigationPromptID = 0
+
+  func selectTab(_ tab: Int) {
+    if selectedTab == 4, tab != 4, settingsHasUnsavedChanges {
+      blockedSettingsTabRequest = tab
+      settingsNavigationPromptID += 1
+      return
+    }
+    selectedTab = tab
+  }
 
   func openTimer() {
-    selectedTab = 0
+    selectTab(0)
   }
 
   func openHistory() {
-    selectedTab = 1
+    selectTab(1)
   }
 
   func openHealth() {
-    selectedTab = 3
+    selectTab(3)
   }
 
   func openSettings(_ target: SettingsScrollTarget? = nil) {
@@ -51,22 +63,22 @@ final class AppNavigation {
   }
 
   func openPro() {
-    selectedTab = 5
+    selectTab(5)
   }
 
   func requestNewDose() {
-    selectedTab = 0
+    selectTab(0)
     newDoseRequestID += 1
   }
 
   func requestHistoryExport(outcome: HistoryExportOutcome) {
-    selectedTab = 1
+    selectTab(1)
     historyExportOutcome = outcome
     historyExportRequestID += 1
   }
 
   func requestDoseMap() {
-    selectedTab = 2
+    selectTab(2)
     doseMapRequestID += 1
   }
 

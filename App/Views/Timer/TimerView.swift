@@ -241,7 +241,7 @@ struct TimerView: View {
         }
         Spacer()
         Button {
-          nav.selectedTab = 1
+          nav.openHistory()
         } label: {
           Image(systemName: "arrow.right")
             .font(.system(size: 14, weight: .semibold))

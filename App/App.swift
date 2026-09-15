@@ -128,11 +128,11 @@ struct GTimerApp: App {
     guard url.scheme == "gtimer" else { return }
     switch url.host {
     case "timer":
-      nav.selectedTab = 0
+      nav.openTimer()
     case "log":
       Task { @MainActor in
         _ = try? await AssistedDoseLogger.log(assistedLoggingInput(from: url))
-        nav.selectedTab = 0
+        nav.openTimer()
       }
     default:
       break
@@ -189,6 +189,24 @@ final class AppUpdateManager {
   var shouldShowUpdateNotes = false
 
   let entries: [AppUpdateEntry] = [
+    AppUpdateEntry(
+      version: "0.9.32",
+      build: 122,
+      category: .minorImprovements,
+      message: "Settings now uses larger, clearer settings-area navigation with section summaries."
+    ),
+    AppUpdateEntry(
+      version: "0.9.32",
+      build: 122,
+      category: .bugFixes,
+      message: "Leaving Settings with unsaved changes now asks whether to save, discard, or keep editing."
+    ),
+    AppUpdateEntry(
+      version: "0.9.32",
+      build: 122,
+      category: .minorImprovements,
+      message: "The Settings save action now sits with the current settings area instead of in the top toolbar."
+    ),
     AppUpdateEntry(
       version: "0.9.31",
       build: 121,

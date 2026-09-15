@@ -42,6 +42,78 @@ private enum SettingsCategory: String, CaseIterable, Identifiable {
     case .app: "slider.horizontal.3"
     }
   }
+
+  var summary: String {
+    switch self {
+    case .timer: "Dose defaults, intervals, quick buttons, reminders"
+    case .account: "Profile details and history privacy"
+    case .sync: "Device name, server, sign-in, active devices"
+    case .location: "Location access, home address, emergency country"
+    case .app: "Appearance, colours, Shortcuts, Pro profile"
+    }
+  }
+}
+
+private enum PendingSettingsNavigation {
+  case category(SettingsCategory, SettingsScrollTarget?)
+  case appTab(Int)
+}
+
+private struct SettingsSnapshot {
+  var standardDose: Double
+  var unit: String
+  var safeIntervalMinutes: Int
+  var substance: String
+  var quickAmounts: [Double]
+  var notificationsEnabled: Bool
+  var lockScreenNotificationsEnabled: Bool
+  var countdownMode: Bool
+  var timeFormat: String
+  var showSafeElapsedTimer: Bool
+  var voiceDoseLoggingEnabled: Bool
+  var voiceDoseAttachCurrentLocation: Bool
+  var voiceDoseMatchSavedLocations: Bool
+  var voiceDoseStoreSpokenPhraseInNotes: Bool
+  var syncEnabled: Bool
+  var syncServerURL: String
+  var syncToken: String
+  var syncAccountEmail: String
+  var syncDeviceID: String
+  var syncTrialStartedAt: Date?
+  var accountSetupCompleted: Bool
+  var accountName: String
+  var accountEmail: String
+  var historyPinEnabled: Bool
+  var deviceName: String
+  var vanityName: String
+  var profilePictureData: Data?
+  var attachLocationToDoses: Bool
+  var locationApproximate: Bool
+  var homeCity: String
+  var homeCountryCode: String
+  var homeAddress: String
+  var homeLatitude: Double?
+  var homeLongitude: Double?
+  var appearanceMode: AppAppearanceMode
+  var customAccentHex: String
+  var customPrimaryButtonHex: String
+  var customQuickButtonHex: String
+  var customBackgroundHex: String
+  var standardDoseText: String
+  var deviceNameText: String
+  var syncServerURLText: String
+  var syncTokenText: String
+  var syncEmailText: String
+  var accountNameText: String
+  var accountEmailText: String
+  var vanityNameText: String
+  var homeCityText: String
+  var homeCountryCodeText: String
+  var homeAddressText: String
+  var homeLatitudeText: String
+  var homeLongitudeText: String
+  var quickAmountTexts: [String]
+  var customIntervalText: String
 }
 
 private extension SettingsScrollTarget {
@@ -119,6 +191,10 @@ struct SettingsView: View {
   @State private var showPaywall = false
   @State private var paywallFeature: ProFeature = .doseLocations
   @State private var selectedSettingsCategory: SettingsCategory = .timer
+  @State private var savedSettingsSnapshot: SettingsSnapshot?
+  @State private var pendingSettingsNavigation: PendingSettingsNavigation?
+  @State private var showUnsavedSettingsPrompt = false
+  @State private var isRevertingBlockedNavigation = false
 
   private let intervalPresets = [60, 90, 120]
   private var hasChanges: Bool { saveState == .unsaved }
@@ -164,6 +240,19 @@ struct SettingsView: View {
       .confirmationDialog("Change profile photo", isPresented: $showPhotoSourceDialog, titleVisibility: .visible) {
         photoSourceDialog
       }
+      .confirmationDialog("Save settings changes?", isPresented: $showUnsavedSettingsPrompt, titleVisibility: .visible) {
+        Button("Save Changes") {
+          savePendingNavigationChanges()
+        }
+        Button("Discard Changes", role: .destructive) {
+          discardPendingNavigationChanges()
+        }
+        Button("Keep Editing", role: .cancel) {
+          pendingSettingsNavigation = nil
+        }
+      } message: {
+        Text("This settings section has unsaved changes. Save or discard them before leaving.")
+      }
       .onAppear(perform: reloadFromSettings)
       .onChange(of: simpleSettingsSnapshot) { handleSimpleSettingChanged() }
       .onChange(of: homeAddressText) { handleHomeAddressChanged() }
@@ -171,6 +260,8 @@ struct SettingsView: View {
       .onChange(of: quickAmountTexts) { handleQuickAmountsChanged() }
       .onChange(of: customIntervalText) { handleCustomIntervalChanged() }
       .onChange(of: photoPickerItem) { handlePhotoPickerChanged() }
+      .onChange(of: nav.selectedTab) { handleAppTabChanged() }
+      .onChange(of: nav.settingsNavigationPromptID) { handleBlockedSettingsNavigationRequest() }
       .onDisappear {
         homeLocationSearchTask?.cancel()
       }
@@ -183,11 +274,6 @@ struct SettingsView: View {
       }
       .navigationTitle("Settings")
       .platformNavigationBarStyle()
-      .toolbar {
-        ToolbarItem(placement: .primaryAction) {
-          saveButton
-        }
-      }
     }
   }
 
@@ -206,7 +292,9 @@ struct SettingsView: View {
   private var settingsSections: some View {
     VStack(spacing: 16) {
       settingsCategoryTabs
+      selectedSettingsHeader
       selectedSettingsSections
+      settingsSavePanel
     }
   }
 
@@ -228,37 +316,91 @@ struct SettingsView: View {
   }
 
   private var settingsCategoryTabs: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 8) {
+    VStack(alignment: .leading, spacing: 12) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Settings areas")
+          .font(.system(size: 18, weight: .bold))
+          .foregroundStyle(AppTheme.textPrimary)
+        Text("Choose a section, make changes, then save that section before moving on.")
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
+      }
+
+      LazyVGrid(
+        columns: [GridItem(.adaptive(minimum: 190), spacing: 10, alignment: .top)],
+        spacing: 10
+      ) {
         ForEach(SettingsCategory.allCases) { category in
           settingsCategoryButton(category)
         }
       }
-      .padding(4)
     }
+    .padding(14)
     .background(AppTheme.backgroundCard)
-    .clipShape(RoundedRectangle(cornerRadius: 14))
-    .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
+    .clipShape(RoundedRectangle(cornerRadius: 16))
+    .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppTheme.border, lineWidth: 0.5))
   }
 
   private func settingsCategoryButton(_ category: SettingsCategory) -> some View {
     let isSelected = selectedSettingsCategory == category
     return Button {
-      withAnimation(.snappy) {
-        selectedSettingsCategory = category
-      }
+      requestSettingsCategory(category)
     } label: {
-      Label(category.title, systemImage: category.systemImage)
-        .font(.system(size: 13, weight: .semibold))
-        .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
-        .lineLimit(1)
-        .padding(.horizontal, 12)
-        .frame(height: 36)
-        .background(isSelected ? AppTheme.accentBlue : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+      HStack(alignment: .top, spacing: 10) {
+        Image(systemName: category.systemImage)
+          .font(.system(size: 15, weight: .semibold))
+          .foregroundStyle(isSelected ? .white : AppTheme.accentBlue)
+          .frame(width: 30, height: 30)
+          .background(isSelected ? AppTheme.accentBlue.opacity(0.95) : AppTheme.accentBlue.opacity(0.12))
+          .clipShape(RoundedRectangle(cornerRadius: 9))
+
+        VStack(alignment: .leading, spacing: 3) {
+          Text(category.title)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(AppTheme.textPrimary)
+          Text(category.summary)
+            .font(.system(size: 11))
+            .foregroundStyle(AppTheme.textMuted)
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+
+        Spacer(minLength: 4)
+
+        if isSelected {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(AppTheme.accentBlue)
+        }
+      }
+      .padding(12)
+      .frame(maxWidth: .infinity, minHeight: 78, alignment: .leading)
+      .background(isSelected ? AppTheme.accentBlue.opacity(0.14) : AppTheme.backgroundElevated)
+      .clipShape(RoundedRectangle(cornerRadius: 12))
+      .overlay(
+        RoundedRectangle(cornerRadius: 12)
+          .stroke(isSelected ? AppTheme.accentBlue.opacity(0.75) : AppTheme.border.opacity(0.7), lineWidth: isSelected ? 1.2 : 0.6)
+      )
     }
     .buttonStyle(.plain)
     .accessibilityLabel("\(category.title) settings")
+  }
+
+  private var selectedSettingsHeader: some View {
+    HStack(alignment: .center, spacing: 12) {
+      VStack(alignment: .leading, spacing: 3) {
+        Text("\(selectedSettingsCategory.title) settings")
+          .font(.system(size: 20, weight: .bold))
+          .foregroundStyle(AppTheme.textPrimary)
+        Text(selectedSettingsCategory.summary)
+          .font(.system(size: 13))
+          .foregroundStyle(AppTheme.textMuted)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      Spacer()
+      saveStateBadge
+    }
+    .padding(.horizontal, 4)
   }
 
   private var timerSettingsSections: some View {
@@ -350,7 +492,7 @@ struct SettingsView: View {
     Button("Cancel", role: .cancel) {}
   }
 
-  // MARK: - Save button (3 states)
+  // MARK: - Save controls
 
   private func handleSimpleSettingChanged() {
     markUnsaved()
@@ -385,24 +527,74 @@ struct SettingsView: View {
   }
 
   @ViewBuilder
-  private var saveButton: some View {
+  private var saveStateBadge: some View {
     switch saveState {
     case .idle:
-      Text("Save")
-        .font(.system(size: 15, weight: .semibold))
+      Label("Saved", systemImage: "checkmark.circle")
+        .font(.system(size: 12, weight: .semibold))
         .foregroundStyle(AppTheme.textMuted)
+        .labelStyle(.titleAndIcon)
     case .unsaved:
-      Button("Save") { saveAll() }
-        .font(.system(size: 15, weight: .semibold))
-        .foregroundStyle(AppTheme.accentBlue)
+      Label("Unsaved", systemImage: "circle.fill")
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(AppTheme.statusAmber)
+        .labelStyle(.titleAndIcon)
     case .saved:
-      HStack(spacing: 4) {
-        Image(systemName: "checkmark").font(.system(size: 13, weight: .bold))
-        Text("Saved")
-      }
-      .font(.system(size: 14, weight: .semibold))
-      .foregroundStyle(AppTheme.statusGreen)
+      Label("Saved", systemImage: "checkmark.circle.fill")
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(AppTheme.statusGreen)
+        .labelStyle(.titleAndIcon)
     }
+  }
+
+  private var settingsSavePanel: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .firstTextBaseline, spacing: 10) {
+        VStack(alignment: .leading, spacing: 3) {
+          Text(saveState == .unsaved ? "Unsaved \(selectedSettingsCategory.title.lowercased()) changes" : "No unsaved changes")
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(AppTheme.textPrimary)
+          Text(saveState == .unsaved ? "Save this section before moving to another settings area." : "Changes in this section are up to date.")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textMuted)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        Spacer(minLength: 10)
+        if saveState != .unsaved {
+          saveStateBadge
+        }
+      }
+
+      if saveState == .unsaved {
+        HStack(spacing: 10) {
+          Button("Discard") {
+            discardSettingsChanges()
+          }
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(AppTheme.textSecondary)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 10)
+          .background(AppTheme.backgroundElevated)
+          .clipShape(RoundedRectangle(cornerRadius: 10))
+          .buttonStyle(.plain)
+
+          Button("Save \(selectedSettingsCategory.title)") {
+            _ = saveAll()
+          }
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(.white)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 10)
+          .background(AppTheme.accentBlue)
+          .clipShape(RoundedRectangle(cornerRadius: 10))
+          .buttonStyle(.plain)
+        }
+      }
+    }
+    .padding(14)
+    .background(AppTheme.backgroundCard)
+    .clipShape(RoundedRectangle(cornerRadius: 14))
+    .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
   }
 
   // MARK: - Sections
@@ -1634,10 +1826,9 @@ struct SettingsView: View {
 
   private func settingsCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text(title.uppercased())
-        .font(.system(size: 11, weight: .semibold))
-        .foregroundStyle(AppTheme.textMuted)
-        .kerning(0.3)
+      Text(title)
+        .font(.system(size: 16, weight: .semibold))
+        .foregroundStyle(AppTheme.textPrimary)
         .padding(.leading, 4)
       content()
         .padding(14)
@@ -1751,28 +1942,99 @@ struct SettingsView: View {
   private func markUnsaved() {
     guard hasLoaded else { return }
     if saveState != .unsaved { saveState = .unsaved }
+    nav.settingsHasUnsavedChanges = true
   }
 
-  private func saveAll() {
+  private func requestSettingsCategory(_ category: SettingsCategory, scrollTarget: SettingsScrollTarget? = nil) {
+    guard category != selectedSettingsCategory else { return }
+    guard hasChanges else {
+      switchSettingsCategory(to: category, scrollTarget: scrollTarget)
+      return
+    }
+    pendingSettingsNavigation = .category(category, scrollTarget)
+    showUnsavedSettingsPrompt = true
+  }
+
+  private func switchSettingsCategory(to category: SettingsCategory, scrollTarget: SettingsScrollTarget? = nil) {
+    withAnimation(.snappy) {
+      selectedSettingsCategory = category
+    }
+    if let scrollTarget {
+      nav.settingsScrollTarget = scrollTarget
+    }
+  }
+
+  private func handleAppTabChanged() {
+    guard hasLoaded, !isRevertingBlockedNavigation else {
+      isRevertingBlockedNavigation = false
+      return
+    }
+    guard hasChanges, nav.selectedTab != 4 else { return }
+    pendingSettingsNavigation = .appTab(nav.selectedTab)
+    isRevertingBlockedNavigation = true
+    nav.selectedTab = 4
+    showUnsavedSettingsPrompt = true
+  }
+
+  private func handleBlockedSettingsNavigationRequest() {
+    guard hasChanges, let tab = nav.blockedSettingsTabRequest else { return }
+    pendingSettingsNavigation = .appTab(tab)
+    showUnsavedSettingsPrompt = true
+  }
+
+  private func savePendingNavigationChanges() {
+    guard saveAll() else { return }
+    completePendingSettingsNavigation()
+  }
+
+  private func discardPendingNavigationChanges() {
+    discardSettingsChanges()
+    completePendingSettingsNavigation()
+  }
+
+  private func completePendingSettingsNavigation() {
+    guard let pendingSettingsNavigation else { return }
+    self.pendingSettingsNavigation = nil
+    switch pendingSettingsNavigation {
+    case .category(let category, let scrollTarget):
+      switchSettingsCategory(to: category, scrollTarget: scrollTarget)
+    case .appTab(let tab):
+      nav.blockedSettingsTabRequest = nil
+      nav.settingsHasUnsavedChanges = false
+      isRevertingBlockedNavigation = true
+      nav.selectedTab = tab
+    }
+  }
+
+  private func discardSettingsChanges() {
+    guard let savedSettingsSnapshot else {
+      reloadFromSettings()
+      return
+    }
+    restoreSettingsSnapshot(savedSettingsSnapshot)
+  }
+
+  @discardableResult
+  private func saveAll() -> Bool {
     let enteredQuickAmounts = quickAmountTexts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
     var parsed: [Double] = []
     for value in enteredQuickAmounts where !value.isEmpty {
       guard let amount = Double(value), amount > 0 else {
         quickAmountsError = "Each quick dose must be a positive number, or left blank."
-        return
+        return false
       }
       parsed.append(amount)
     }
     if parsed.count != Set(parsed.map { String(format: "%.6f", $0) }).count {
       quickAmountsError = "Quick doses must not contain duplicates."
-      return
+      return false
     }
 
     // Validate custom interval
     if !customIntervalText.isEmpty {
       guard let minutes = Int(customIntervalText), minutes >= 15 else {
         intervalError = "Minimum interval is 15 minutes."
-        return
+        return false
       }
       settings.safeIntervalMinutes = minutes
       rescheduleNotificationsIfNeeded()
@@ -1787,11 +2049,11 @@ struct SettingsView: View {
     let cleanAccountEmail = accountEmailText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     if !cleanAccountEmail.isEmpty && !cleanAccountEmail.contains("@") {
       accountMessage = "Enter a valid account email address."
-      return
+      return false
     }
     if !accountPasswordText.isEmpty && accountPasswordText.count < 8 {
       accountMessage = "Password must be at least 8 characters."
-      return
+      return false
     }
     settings.accountName = cleanAccountName
     settings.accountEmail = cleanAccountEmail
@@ -1830,7 +2092,7 @@ struct SettingsView: View {
       )
     } else {
       homeLocationError = "Enter valid home latitude and longitude, or leave both blank."
-      return
+      return false
     }
     settings.quickAmounts = parsed
 
@@ -1838,12 +2100,15 @@ struct SettingsView: View {
     intervalError = nil
     homeLocationError = nil
     saveState = .saved
+    nav.settingsHasUnsavedChanges = false
+    savedSettingsSnapshot = makeSettingsSnapshot()
     WidgetCenter.shared.reloadAllTimelines()
 
     // Reset to idle after a moment
     DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
       if saveState == .saved { saveState = .idle }
     }
+    return true
   }
 
   private func reloadFromSettings() {
@@ -1875,12 +2140,146 @@ struct SettingsView: View {
     }
     customIntervalText = ""
     saveState = .idle
+    nav.settingsHasUnsavedChanges = false
     quickAmountsError = nil
     intervalError = nil
     homeLocationError = nil
     if !settings.syncToken.isEmpty {
       loadSyncDevices()
     }
+    savedSettingsSnapshot = makeSettingsSnapshot()
+    Task { @MainActor in hasLoaded = true }
+  }
+
+  private func makeSettingsSnapshot() -> SettingsSnapshot {
+    SettingsSnapshot(
+      standardDose: settings.standardDose,
+      unit: settings.unit,
+      safeIntervalMinutes: settings.safeIntervalMinutes,
+      substance: settings.substance,
+      quickAmounts: settings.quickAmounts,
+      notificationsEnabled: settings.notificationsEnabled,
+      lockScreenNotificationsEnabled: settings.lockScreenNotificationsEnabled,
+      countdownMode: settings.countdownMode,
+      timeFormat: settings.timeFormat,
+      showSafeElapsedTimer: settings.showSafeElapsedTimer,
+      voiceDoseLoggingEnabled: settings.voiceDoseLoggingEnabled,
+      voiceDoseAttachCurrentLocation: settings.voiceDoseAttachCurrentLocation,
+      voiceDoseMatchSavedLocations: settings.voiceDoseMatchSavedLocations,
+      voiceDoseStoreSpokenPhraseInNotes: settings.voiceDoseStoreSpokenPhraseInNotes,
+      syncEnabled: settings.syncEnabled,
+      syncServerURL: settings.syncServerURL,
+      syncToken: settings.syncToken,
+      syncAccountEmail: settings.syncAccountEmail,
+      syncDeviceID: settings.syncDeviceID,
+      syncTrialStartedAt: settings.syncTrialStartedAt,
+      accountSetupCompleted: settings.accountSetupCompleted,
+      accountName: settings.accountName,
+      accountEmail: settings.accountEmail,
+      historyPinEnabled: settings.historyPinEnabled,
+      deviceName: settings.deviceName,
+      vanityName: settings.vanityName,
+      profilePictureData: settings.profilePictureData,
+      attachLocationToDoses: settings.attachLocationToDoses,
+      locationApproximate: settings.locationApproximate,
+      homeCity: settings.homeCity,
+      homeCountryCode: settings.homeCountryCode,
+      homeAddress: settings.homeAddress,
+      homeLatitude: settings.homeLatitude,
+      homeLongitude: settings.homeLongitude,
+      appearanceMode: settings.appearanceMode,
+      customAccentHex: settings.customAccentHex,
+      customPrimaryButtonHex: settings.customPrimaryButtonHex,
+      customQuickButtonHex: settings.customQuickButtonHex,
+      customBackgroundHex: settings.customBackgroundHex,
+      standardDoseText: standardDoseText,
+      deviceNameText: deviceNameText,
+      syncServerURLText: syncServerURLText,
+      syncTokenText: syncTokenText,
+      syncEmailText: syncEmailText,
+      accountNameText: accountNameText,
+      accountEmailText: accountEmailText,
+      vanityNameText: vanityNameText,
+      homeCityText: homeCityText,
+      homeCountryCodeText: homeCountryCode,
+      homeAddressText: homeAddressText,
+      homeLatitudeText: homeLatitudeText,
+      homeLongitudeText: homeLongitudeText,
+      quickAmountTexts: quickAmountTexts,
+      customIntervalText: customIntervalText
+    )
+  }
+
+  private func restoreSettingsSnapshot(_ snapshot: SettingsSnapshot) {
+    hasLoaded = false
+    homeLocationSearchTask?.cancel()
+    settings.standardDose = snapshot.standardDose
+    settings.unit = snapshot.unit
+    settings.safeIntervalMinutes = snapshot.safeIntervalMinutes
+    settings.substance = snapshot.substance
+    settings.quickAmounts = snapshot.quickAmounts
+    settings.notificationsEnabled = snapshot.notificationsEnabled
+    settings.lockScreenNotificationsEnabled = snapshot.lockScreenNotificationsEnabled
+    settings.countdownMode = snapshot.countdownMode
+    settings.timeFormat = snapshot.timeFormat
+    settings.showSafeElapsedTimer = snapshot.showSafeElapsedTimer
+    settings.voiceDoseLoggingEnabled = snapshot.voiceDoseLoggingEnabled
+    settings.voiceDoseAttachCurrentLocation = snapshot.voiceDoseAttachCurrentLocation
+    settings.voiceDoseMatchSavedLocations = snapshot.voiceDoseMatchSavedLocations
+    settings.voiceDoseStoreSpokenPhraseInNotes = snapshot.voiceDoseStoreSpokenPhraseInNotes
+    settings.syncEnabled = snapshot.syncEnabled
+    settings.syncServerURL = snapshot.syncServerURL
+    settings.syncToken = snapshot.syncToken
+    settings.syncAccountEmail = snapshot.syncAccountEmail
+    settings.syncDeviceID = snapshot.syncDeviceID
+    settings.syncTrialStartedAt = snapshot.syncTrialStartedAt
+    settings.accountSetupCompleted = snapshot.accountSetupCompleted
+    settings.accountName = snapshot.accountName
+    settings.accountEmail = snapshot.accountEmail
+    settings.historyPinEnabled = snapshot.historyPinEnabled
+    settings.deviceName = snapshot.deviceName
+    settings.vanityName = snapshot.vanityName
+    settings.profilePictureData = snapshot.profilePictureData
+    settings.attachLocationToDoses = snapshot.attachLocationToDoses
+    settings.locationApproximate = snapshot.locationApproximate
+    settings.homeCity = snapshot.homeCity
+    settings.homeCountryCode = snapshot.homeCountryCode
+    settings.homeAddress = snapshot.homeAddress
+    settings.homeLatitude = snapshot.homeLatitude
+    settings.homeLongitude = snapshot.homeLongitude
+    settings.appearanceMode = snapshot.appearanceMode
+    settings.customAccentHex = snapshot.customAccentHex
+    settings.customPrimaryButtonHex = snapshot.customPrimaryButtonHex
+    settings.customQuickButtonHex = snapshot.customQuickButtonHex
+    settings.customBackgroundHex = snapshot.customBackgroundHex
+
+    standardDoseText = snapshot.standardDoseText
+    deviceNameText = snapshot.deviceNameText
+    syncServerURLText = snapshot.syncServerURLText
+    syncTokenText = snapshot.syncTokenText
+    syncEmailText = snapshot.syncEmailText
+    syncPasswordText = ""
+    accountNameText = snapshot.accountNameText
+    accountEmailText = snapshot.accountEmailText
+    accountPasswordText = ""
+    accountMessage = nil
+    syncAuthMessage = nil
+    vanityNameText = snapshot.vanityNameText
+    homeCityText = snapshot.homeCityText
+    homeCountryCode = snapshot.homeCountryCodeText
+    homeAddressText = snapshot.homeAddressText
+    homeLatitudeText = snapshot.homeLatitudeText
+    homeLongitudeText = snapshot.homeLongitudeText
+    homeLocationResults = []
+    quickAmountTexts = snapshot.quickAmountTexts
+    customIntervalText = snapshot.customIntervalText
+    quickAmountsError = nil
+    intervalError = nil
+    homeLocationError = nil
+    photoImportError = nil
+    saveState = .idle
+    nav.settingsHasUnsavedChanges = false
+    WidgetCenter.shared.reloadAllTimelines()
     Task { @MainActor in hasLoaded = true }
   }
 
@@ -1903,10 +2302,7 @@ struct SettingsView: View {
       return
     }
 
-    saveAll()
-    guard quickAmountsError == nil,
-          intervalError == nil,
-          homeLocationError == nil else { return }
+    guard saveAll() else { return }
 
     isSyncing = true
     Task { @MainActor in
@@ -1921,10 +2317,7 @@ struct SettingsView: View {
       return
     }
 
-    saveAll()
-    guard quickAmountsError == nil,
-          intervalError == nil,
-          homeLocationError == nil else { return }
+    guard saveAll() else { return }
 
     let fallbackEmail = settings.accountEmail.trimmingCharacters(in: .whitespacesAndNewlines)
     let email = (syncEmailText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -2248,6 +2641,11 @@ struct SettingsView: View {
 
   private func scrollToRequestedSection(_ proxy: ScrollViewProxy) {
     guard let target = nav.settingsScrollTarget else { return }
+    guard !hasChanges || target.settingsCategory == selectedSettingsCategory else {
+      requestSettingsCategory(target.settingsCategory, scrollTarget: target)
+      nav.settingsScrollTarget = nil
+      return
+    }
     selectedSettingsCategory = target.settingsCategory
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
       withAnimation(.snappy) {

@@ -30,8 +30,10 @@ struct ContentView: View {
   }
 
   private var iOSContent: some View {
-    @Bindable var nav = nav
-    return TabView(selection: $nav.selectedTab) {
+    return TabView(selection: Binding(
+      get: { nav.selectedTab },
+      set: { nav.selectTab($0) }
+    )) {
       ForEach(tabs) { tab in
         protectedContent(for: tab)
           .tabItem { Label(tab.title, systemImage: tab.systemImage) }
@@ -67,7 +69,7 @@ struct ContentView: View {
     HStack(spacing: 8) {
       ForEach(tabs) { tab in
         Button {
-          nav.selectedTab = tab.rawValue
+          nav.selectTab(tab.rawValue)
         } label: {
           HStack(spacing: 7) {
             Image(systemName: tab.systemImage)
