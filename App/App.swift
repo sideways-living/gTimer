@@ -190,6 +190,18 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.29",
+      build: 119,
+      category: .minorImprovements,
+      message: "Assisted Dose Logging settings now include a Shortcuts setup guide and an Open Shortcuts button."
+    ),
+    AppUpdateEntry(
+      version: "0.9.29",
+      build: 119,
+      category: .minorImprovements,
+      message: "The setup guide explains the bundled gTimer Shortcuts and how to customise them with details."
+    ),
+    AppUpdateEntry(
       version: "0.9.28",
       build: 118,
       category: .newFeatures,

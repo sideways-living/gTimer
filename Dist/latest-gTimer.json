@@ -1,21 +1,20 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.28",
-  "build": 118,
+  "version": "0.9.29",
+  "build": 119,
   "minimum_os": "14.0",
-  "published_at": "2026-09-15T13:29:02Z",
-  "summary": "Adds bundled ready-made Shortcuts for assisted dose logging.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.28/gTimer-macOS-0.9.28-118-local.pkg",
-  "sha256": "f66c964a2d2b2aa22767609034bd317293d95672b60172ea4fcdf16068eb5964",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.28/gTimer-macOS-0.9.28-118-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.28",
+  "published_at": "2026-09-15T13:56:31Z",
+  "summary": "Adds in-app setup help for bundled gTimer Shortcuts.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.29/gTimer-macOS-0.9.29-119-local.pkg",
+  "sha256": "0bf5396166b0bb93da45d18d112d6155682a68cf5cf8f1c19c4fb277647f4772",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.29/gTimer-macOS-0.9.29-119-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.29",
   "changes": {
-    "new_features": [
-      "gTimer now ships ready-made Shortcuts for assisted dose logging."
-    ],
+    "new_features": [],
     "minor_improvements": [
-      "Premade shortcuts include log dose, standard dose, missed dose, and 2.8ml dose actions."
+      "Assisted Dose Logging settings now include a Shortcuts setup guide and an Open Shortcuts button.",
+      "The setup guide explains the bundled gTimer Shortcuts and how to customise them with details."
     ],
     "bug_fixes": []
   }

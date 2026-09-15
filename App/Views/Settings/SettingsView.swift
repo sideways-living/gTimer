@@ -64,6 +64,8 @@ struct SettingsView: View {
   @State private var quickAmountsError: String? = nil
   @State private var intervalError: String? = nil
   @State private var notificationStatusMessage: String? = nil
+  @State private var showShortcutSetupHelp = false
+  @State private var shortcutOpenMessage: String? = nil
   @State private var hasLoaded = false
   @State private var showPaywall = false
   @State private var paywallFeature: ProFeature = .doseLocations
@@ -101,6 +103,9 @@ struct SettingsView: View {
       .sheet(isPresented: $showPaywall) { PaywallSheet(feature: paywallFeature) }
       .sheet(isPresented: $showCamera) {
         cameraSheet
+      }
+      .sheet(isPresented: $showShortcutSetupHelp) {
+        ShortcutSetupHelpSheet(openShortcuts: openShortcutsApp)
       }
       .photosPicker(isPresented: $showPhotoPicker, selection: $photoPickerItem, matching: .images)
       .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.image]) { result in
@@ -671,6 +676,31 @@ struct SettingsView: View {
               .font(.system(size: 12))
               .foregroundStyle(AppTheme.textMuted)
               .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+              Button {
+                openShortcutsApp()
+              } label: {
+                Label("Open Shortcuts", systemImage: "square.grid.2x2.fill")
+                  .font(.system(size: 13, weight: .semibold))
+              }
+              .buttonStyle(.borderedProminent)
+              .tint(AppTheme.accentBlue)
+
+              Button {
+                showShortcutSetupHelp = true
+              } label: {
+                Label("Set up Shortcuts", systemImage: "questionmark.circle")
+                  .font(.system(size: 13, weight: .semibold))
+              }
+              .buttonStyle(.bordered)
+              .tint(AppTheme.textMuted)
+            }
+            if let shortcutOpenMessage {
+              Text(shortcutOpenMessage)
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+            }
           } else {
             Text("Turn this on to let Siri, Shortcuts, and trusted automations create normal gTimer dose records.")
               .font(.system(size: 12))
@@ -2079,6 +2109,93 @@ struct SettingsView: View {
       openURL(url)
     }
     #endif
+  }
+
+  private func openShortcutsApp() {
+    guard let url = URL(string: "shortcuts://") else { return }
+    shortcutOpenMessage = "If Shortcuts does not open, launch Apple's Shortcuts app manually and search Apps for gTimer."
+    openURL(url)
+  }
+}
+
+private struct ShortcutSetupHelpSheet: View {
+  @Environment(\.dismiss) private var dismiss
+  let openShortcuts: () -> Void
+
+  private let setupSteps = [
+    "Activate gTimer Pro beta access.",
+    "Turn on Siri and Shortcuts in Assisted Dose Logging.",
+    "Open Apple's Shortcuts app.",
+    "Search Apps for gTimer.",
+    "Run or add Log Dose, Standard Dose, 2.8ml Dose, or Missed Dose.",
+    "For location, people, tags, notes, or time, customise the gTimer action parameters."
+  ]
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 18) {
+          VStack(alignment: .leading, spacing: 6) {
+            Text("Set up gTimer Shortcuts")
+              .font(.system(size: 24, weight: .bold))
+              .foregroundStyle(AppTheme.textPrimary)
+            Text("The ready-made shortcuts are bundled with gTimer. Apple may still ask you to approve Siri or Shortcuts access the first time you run one.")
+              .font(.system(size: 13))
+              .foregroundStyle(AppTheme.textMuted)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+
+          VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(setupSteps.enumerated()), id: \.offset) { index, step in
+              HStack(alignment: .top, spacing: 10) {
+                Text("\(index + 1)")
+                  .font(.system(size: 12, weight: .bold))
+                  .foregroundStyle(.white)
+                  .frame(width: 24, height: 24)
+                  .background(AppTheme.accentBlue)
+                  .clipShape(Circle())
+                Text(step)
+                  .font(.system(size: 14))
+                  .foregroundStyle(AppTheme.textPrimary)
+                  .fixedSize(horizontal: false, vertical: true)
+              }
+            }
+          }
+          .padding(14)
+          .background(AppTheme.backgroundCard)
+          .clipShape(RoundedRectangle(cornerRadius: 14))
+          .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
+
+          VStack(alignment: .leading, spacing: 8) {
+            Text("Included actions")
+              .font(.system(size: 15, weight: .semibold))
+              .foregroundStyle(AppTheme.textPrimary)
+            Text("Log Dose asks for an amount or spoken details. Standard Dose uses your Settings value. 2.8ml Dose is a quick preset. Missed Dose logs a backdated or missed dose using the same parser.")
+              .font(.system(size: 13))
+              .foregroundStyle(AppTheme.textMuted)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+
+          Button {
+            openShortcuts()
+          } label: {
+            Label("Open Shortcuts", systemImage: "square.grid.2x2.fill")
+              .font(.system(size: 15, weight: .semibold))
+              .frame(maxWidth: .infinity)
+          }
+          .buttonStyle(.borderedProminent)
+          .tint(AppTheme.accentBlue)
+        }
+        .padding(20)
+      }
+      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Close") { dismiss() }
+        }
+      }
+    }
+    .presentationDetents([.medium, .large])
   }
 }
 
