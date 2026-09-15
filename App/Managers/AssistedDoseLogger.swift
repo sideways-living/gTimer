@@ -12,6 +12,7 @@ struct AssistedDoseLoggingInput {
   var explicitTags: String?
   var explicitNotes: String?
   var missed: Bool
+  var useStandardDose = false
 }
 
 struct AssistedDoseLoggingResult {
@@ -156,8 +157,8 @@ private enum AssistedDoseCommandParser {
       .flatMap { capture(2, in: spoken, match: $0) }
       .map { $0.lowercased() }
 
-    let amountWasProvided = input.amount > 0 || parsedAmount != nil
-    let amount = input.amount > 0 ? input.amount : (parsedAmount ?? 0)
+    let amountWasProvided = input.amount > 0 || parsedAmount != nil || input.useStandardDose
+    let amount = input.amount > 0 ? input.amount : (parsedAmount ?? (input.useStandardDose ? settings.standardDose : 0))
     let unit = input.unit?.trimmedNonEmpty ?? parsedUnit ?? settings.unit
     let parsedTime = parseTime(in: spoken)
     let time = input.explicitTime ?? parsedTime ?? Date()

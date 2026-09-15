@@ -190,6 +190,18 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.28",
+      build: 118,
+      category: .newFeatures,
+      message: "Added bundled ready-made Shortcuts for assisted dose logging."
+    ),
+    AppUpdateEntry(
+      version: "0.9.28",
+      build: 118,
+      category: .minorImprovements,
+      message: "Premade shortcuts now include standard dose, missed dose, and 2.8ml dose actions."
+    ),
+    AppUpdateEntry(
       version: "0.9.27",
       build: 117,
       category: .newFeatures,

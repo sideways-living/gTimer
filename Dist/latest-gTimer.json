@@ -1,22 +1,21 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.27",
-  "build": 117,
+  "version": "0.9.28",
+  "build": 118,
   "minimum_os": "14.0",
-  "published_at": "2026-09-15T13:17:42Z",
-  "summary": "Adds Pro-gated Siri, Shortcuts, and trusted automation dose logging.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.27/gTimer-macOS-0.9.27-117-local.pkg",
-  "sha256": "d8c477aa3302f57781492156291761ff3893a5e5bfa10dd44ebfde1e6ce7f04a",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.27/gTimer-macOS-0.9.27-117-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.27",
+  "published_at": "2026-09-15T13:29:02Z",
+  "summary": "Adds bundled ready-made Shortcuts for assisted dose logging.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.28/gTimer-macOS-0.9.28-118-local.pkg",
+  "sha256": "f66c964a2d2b2aa22767609034bd317293d95672b60172ea4fcdf16068eb5964",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.28/gTimer-macOS-0.9.28-118-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.28",
   "changes": {
     "new_features": [
-      "Siri, Shortcuts, and trusted automations can now log doses through a Pro-gated gTimer intent and deep link."
+      "gTimer now ships ready-made Shortcuts for assisted dose logging."
     ],
     "minor_improvements": [
-      "Assisted dose commands can parse amount, time, location, people, and hashtag-style tags.",
-      "Settings now controls assisted dose logging, current-location capture, saved-place matching, and spoken-note capture."
+      "Premade shortcuts include log dose, standard dose, missed dose, and 2.8ml dose actions."
     ],
     "bug_fixes": []
   }

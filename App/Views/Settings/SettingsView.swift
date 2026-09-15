@@ -667,7 +667,7 @@ struct SettingsView: View {
                 .accessibilityLabel("Save spoken dose phrase as dose notes")
                 .onChange(of: settings.voiceDoseStoreSpokenPhraseInNotes) { markUnsaved() }
             }
-            Text("Examples: \"Log 2.8ml\", \"Log 2.8ml at Adina with Jake hashtag working away\", or \"Log 2.8ml at 9pm\".")
+            Text("gTimer includes ready-made Shortcuts for logging a dose, the standard dose, a 2.8ml dose, and a missed dose. Custom shortcuts can add spoken details such as location, people, tags, notes, and time.")
               .font(.system(size: 12))
               .foregroundStyle(AppTheme.textMuted)
               .fixedSize(horizontal: false, vertical: true)
