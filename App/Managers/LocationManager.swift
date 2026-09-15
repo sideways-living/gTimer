@@ -149,29 +149,12 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
   private func reverseGeocode(_ location: CLLocation) {
     Task {
-      guard let request = MKReverseGeocodingRequest(location: location),
-            let item = try? await request.mapItems.first
-      else { return }
-
-      let address = item.addressRepresentations
-      let locationName = address?.cityWithContext(.full)
-        ?? address?.fullAddress(includingRegion: true, singleLine: true)
-      let countryCode = Self.countryCode(for: address?.regionName)
+      let result = await MapItemLocationFormatter.reverseGeocodeSummary(for: location)
 
       await MainActor.run { [weak self] in
-        self?.countryCode = countryCode
-        self?.locationName = locationName
+        self?.countryCode = result.countryCode
+        self?.locationName = result.name
       }
     }
-  }
-
-  private static func countryCode(for regionName: String?) -> String? {
-    guard let regionName = regionName?.trimmingCharacters(in: .whitespacesAndNewlines),
-          !regionName.isEmpty
-    else { return nil }
-
-    return EmergencyNumberCatalogue.countries.first {
-      $0.name.caseInsensitiveCompare(regionName) == .orderedSame
-    }?.code
   }
 }

@@ -605,29 +605,7 @@ struct DoseFormSheet: View {
   }
 
   private func reverseGeocode(_ coordinate: CLLocationCoordinate2D) async -> String? {
-    guard let request = MKReverseGeocodingRequest(location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)) else {
-      return nil
-    }
-    do {
-      let mapItems = try await request.mapItems
-      guard let item = mapItems.first else { return nil }
-      let components = reverseGeocodeComponents(for: item)
-      return components.isEmpty ? nil : components.joined(separator: ", ")
-    } catch {
-      return nil
-    }
-  }
-
-  private func reverseGeocodeComponents(for item: MKMapItem) -> [String] {
-    [
-      item.name,
-      item.address?.shortAddress,
-      item.addressRepresentations?.cityWithContext(.full),
-      item.address?.fullAddress
-    ]
-      .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-      .filter { !$0.isEmpty }
-      .removingDuplicateStrings()
+    await MapItemLocationFormatter.reverseGeocodeName(for: coordinate)
   }
 
   private func focusMap(on coordinate: CLLocationCoordinate2D, meters: CLLocationDistance) {

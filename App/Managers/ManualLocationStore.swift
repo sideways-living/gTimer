@@ -156,28 +156,13 @@ final class ManualLocationStore {
     do {
       let response = try await MKLocalSearch(request: request).start()
       return response.mapItems.prefix(limit).map { item in
-        let coordinate = item.location.coordinate
-        let name = bestName(for: item, fallback: query)
+        let coordinate = MapItemLocationFormatter.coordinate(for: item)
+        let name = MapItemLocationFormatter.displayName(for: item, fallback: query)
         return ManualDoseLocation(name: name, latitude: coordinate.latitude, longitude: coordinate.longitude)
       }
     } catch {
       return []
     }
-  }
-
-  private func bestName(for item: MKMapItem, fallback: String) -> String {
-    let address = item.address
-    let addressRepresentations = item.addressRepresentations
-    let components = [
-      item.name,
-      address?.shortAddress,
-      addressRepresentations?.cityWithContext(.full),
-      address?.fullAddress
-    ]
-      .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-      .filter { !$0.isEmpty }
-    let name = components.removingDuplicates().joined(separator: ", ")
-    return name.isEmpty ? fallback : name
   }
 
   private func searchQueries(for query: String, context: ManualLocationSearchContext) -> [String] {
@@ -273,6 +258,106 @@ final class ManualLocationStore {
     }
 
     return score
+  }
+}
+
+enum MapItemLocationFormatter {
+  static func coordinate(for item: MKMapItem) -> CLLocationCoordinate2D {
+    item.placemark.coordinate
+  }
+
+  static func displayName(for item: MKMapItem, fallback: String) -> String {
+    let components = components(itemName: item.name, placemark: item.placemark)
+    let name = components.joined(separator: ", ")
+    return name.isEmpty ? fallback : name
+  }
+
+  static func reverseGeocodeSummary(for location: CLLocation) async -> (name: String?, countryCode: String?) {
+    if #available(iOS 26.0, macOS 26.0, *) {
+      guard let request = MKReverseGeocodingRequest(location: location),
+            let item = try? await request.mapItems.first
+      else { return (nil, nil) }
+
+      let placemark = item.placemark
+      return (
+        displayName(for: item, fallback: coordinateLabel(placemark.coordinate)),
+        countryCode(for: placemark)
+      )
+    }
+
+    guard let placemark = try? await CLGeocoder().reverseGeocodeLocation(location).first else {
+      return (nil, nil)
+    }
+    return (
+      components(itemName: nil, placemark: placemark).joined(separator: ", "),
+      countryCode(for: placemark)
+    )
+  }
+
+  static func reverseGeocodeName(for coordinate: CLLocationCoordinate2D) async -> String? {
+    let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+    let result = await reverseGeocodeSummary(for: location)
+    return cleaned(result.name)
+  }
+
+  static func components(itemName: String?, placemark: CLPlacemark) -> [String] {
+    [
+      itemName,
+      placemark.name,
+      streetAddress(for: placemark),
+      localityAddress(for: placemark),
+      placemark.country
+    ]
+      .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+      .removingDuplicates()
+  }
+
+  static func countryCode(for placemark: CLPlacemark) -> String? {
+    if let iso = placemark.isoCountryCode?.trimmingCharacters(in: .whitespacesAndNewlines),
+       !iso.isEmpty {
+      return iso.uppercased()
+    }
+
+    guard let country = placemark.country?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !country.isEmpty
+    else { return nil }
+    return EmergencyNumberCatalogue.countries.first {
+      $0.name.caseInsensitiveCompare(country) == .orderedSame
+    }?.code
+  }
+
+  private static func streetAddress(for placemark: CLPlacemark) -> String? {
+    let address = [
+      placemark.subThoroughfare,
+      placemark.thoroughfare
+    ]
+      .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+      .joined(separator: " ")
+    return cleaned(address)
+  }
+
+  private static func localityAddress(for placemark: CLPlacemark) -> String? {
+    let address = [
+      placemark.subLocality,
+      placemark.locality,
+      placemark.administrativeArea
+    ]
+      .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+      .removingDuplicates()
+      .joined(separator: ", ")
+    return cleaned(address)
+  }
+
+  private static func coordinateLabel(_ coordinate: CLLocationCoordinate2D) -> String {
+    String(format: "%.6f, %.6f", coordinate.latitude, coordinate.longitude)
+  }
+
+  private static func cleaned(_ string: String?) -> String? {
+    let value = string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return value.isEmpty ? nil : value
   }
 }
 
