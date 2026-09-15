@@ -148,6 +148,8 @@ Push local changes for the signed-in user.
         "time": "2026-09-13T08:30:00.000Z",
         "deviceName": "iPhone",
         "notes": "",
+        "tags": ["#hookup"],
+        "people": ["Alex"],
         "missed": false,
         "edited": false,
         "earlyBySeconds": 600,
@@ -213,6 +215,8 @@ Matches the Swift `DoseRecord` fields and adds sync metadata:
 - `time`
 - `deviceName`
 - `notes`
+- `tags`
+- `people`
 - `missed`
 - `edited`
 - `earlyBySeconds`

@@ -1,21 +1,22 @@
 {
   "app": "gTimer",
   "platform": "macOS",
-  "version": "0.9.25",
-  "build": 115,
+  "version": "0.9.26",
+  "build": 116,
   "minimum_os": "14.0",
-  "published_at": "2026-09-14T19:09:08Z",
-  "summary": "Adds a Pro time-since-safe counter for completed gTimers.",
-  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.25/gTimer-macOS-0.9.25-115-local.pkg",
-  "sha256": "8e04de827def7689af29b5a51a94edd4388fcfee59b748695bda3569ddb02fa8",
-  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.25/gTimer-macOS-0.9.25-115-local.pkg.sha256.txt",
-  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.25",
+  "published_at": "2026-09-15T12:59:59Z",
+  "summary": "Adds searchable dose tags and remembered people to dose records.",
+  "download_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.26/gTimer-macOS-0.9.26-116-local.pkg",
+  "sha256": "ad61a8a32e0c3b12ae2ecd6fd45a49e47371fe0c93f4c2ae3d70406d7676885f",
+  "sha256_url": "https://github.com/sideways-living/gTimer/releases/download/v0.9.26/gTimer-macOS-0.9.26-116-local.pkg.sha256.txt",
+  "release_notes_url": "https://github.com/sideways-living/gTimer/releases/tag/v0.9.26",
   "changes": {
     "new_features": [
-      "Added a Pro setting to show a time-since-safe counter after the minimum interval has passed."
+      "Dose forms now support hashtag-style tags and remembered people."
     ],
     "minor_improvements": [
-      "The completed gTimer status can now show elapsed time in matching status styling."
+      "History search can find matching doses by tag, person, note, location, amount, or device.",
+      "History exports can include tags and people fields."
     ],
     "bug_fixes": []
   }

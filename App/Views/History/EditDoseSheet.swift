@@ -15,6 +15,8 @@ struct EditDoseSheet: View {
       initialAmount: dose.amount,
       initialTime: dose.time,
       initialNotes: dose.notes,
+      initialTags: dose.tags,
+      initialPeople: dose.people,
       initialLocationName: dose.locationName,
       initialLatitude: dose.latitude,
       initialLongitude: dose.longitude
@@ -22,6 +24,8 @@ struct EditDoseSheet: View {
       dose.amount = result.amount
       dose.time = result.time
       dose.notes = result.notes
+      dose.tags = result.tags
+      dose.people = result.people
       dose.edited = true
 
       if result.location.isEmpty {

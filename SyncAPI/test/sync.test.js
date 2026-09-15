@@ -139,6 +139,57 @@ test("rejects invalid dose payloads", async () => {
   });
 });
 
+test("syncs searchable dose tags and people", async () => {
+  await withTestAPI(async ({ baseURL }) => {
+    const dose = sampleDose("dose-tagged", "2026-09-13T08:30:00.000Z", {
+      tags: ["#hookup", "#melbourne"],
+      people: ["Alex", "Sam"]
+    });
+
+    const push = await requestJSON(`${baseURL}/v1/sync/push`, {
+      method: "POST",
+      token: "token-a",
+      body: {
+        clientId: "iphone",
+        changes: { doses: [dose] }
+      }
+    });
+
+    assert.equal(push.status, 200);
+    assert.equal(push.json.accepted.doses, 1);
+
+    const pull = await requestJSON(`${baseURL}/v1/sync/pull?since=0`, {
+      method: "GET",
+      token: "token-a"
+    });
+
+    assert.deepEqual(pull.json.changes.doses[0].tags, ["#hookup", "#melbourne"]);
+    assert.deepEqual(pull.json.changes.doses[0].people, ["Alex", "Sam"]);
+  });
+});
+
+test("rejects malformed dose tags", async () => {
+  await withTestAPI(async ({ baseURL }) => {
+    const response = await requestJSON(`${baseURL}/v1/sync/push`, {
+      method: "POST",
+      token: "token-a",
+      body: {
+        clientId: "iphone",
+        changes: {
+          doses: [
+            sampleDose("dose-bad-tags", "2026-09-13T08:30:00.000Z", {
+              tags: "#hookup"
+            })
+          ]
+        }
+      }
+    });
+
+    assert.equal(response.status, 400);
+    assert.match(response.json.error, /tags/);
+  });
+});
+
 test("registers an account, then registers one sync device per app install", async () => {
   await withTestAPI(async ({ baseURL }) => {
     const registered = await requestJSON(`${baseURL}/v1/auth/register`, {
@@ -375,6 +426,8 @@ function sampleDose(id, updatedAt, overrides = {}) {
     time: "2026-09-13T08:30:00.000Z",
     deviceName: "iPhone",
     notes: "",
+    tags: [],
+    people: [],
     missed: false,
     edited: false,
     earlyBySeconds: null,

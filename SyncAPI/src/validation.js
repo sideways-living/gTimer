@@ -104,6 +104,8 @@ function validateDose(record) {
   record.time = cleanISODate(record.time, "doses.time", { required: true });
   record.deviceName = cleanString(record.deviceName ?? "", "doses.deviceName", { maxLength: 128 });
   record.notes = cleanString(record.notes ?? "", "doses.notes", { maxLength: 4000 });
+  record.tags = optionalStringArray(record.tags, "doses.tags", { maxItems: 50, maxLength: 64 });
+  record.people = optionalStringArray(record.people, "doses.people", { maxItems: 50, maxLength: 256 });
   record.missed = Boolean(record.missed);
   record.edited = Boolean(record.edited);
   record.earlyBySeconds = optionalNumber(record.earlyBySeconds, "doses.earlyBySeconds", { min: 0 });
@@ -153,6 +155,22 @@ function cleanString(value, label, options = {}) {
 function optionalString(value, label, options = {}) {
   if (value == null) return null;
   return cleanString(value, label, options);
+}
+
+function optionalStringArray(value, label, options = {}) {
+  if (value == null) return [];
+  if (!Array.isArray(value)) {
+    throw httpError(400, `${label} must be an array.`);
+  }
+  const maxItems = options.maxItems ?? 100;
+  if (value.length > maxItems) {
+    throw httpError(400, `${label} has too many entries.`);
+  }
+  return [...new Set(
+    value
+      .map((item, index) => cleanString(item, `${label}[${index}]`, { maxLength: options.maxLength ?? 1000 }))
+      .filter(Boolean)
+  )];
 }
 
 function cleanISODate(value, label, options = {}) {

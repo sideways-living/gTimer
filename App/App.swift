@@ -156,6 +156,24 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.26",
+      build: 116,
+      category: .newFeatures,
+      message: "Dose forms now support searchable hashtag-style tags and remembered people."
+    ),
+    AppUpdateEntry(
+      version: "0.9.26",
+      build: 116,
+      category: .minorImprovements,
+      message: "History search can now find doses by tag, person, note, location, amount, or device."
+    ),
+    AppUpdateEntry(
+      version: "0.9.26",
+      build: 116,
+      category: .minorImprovements,
+      message: "History exports can include tags and people fields."
+    ),
+    AppUpdateEntry(
       version: "0.9.25",
       build: 115,
       category: .newFeatures,

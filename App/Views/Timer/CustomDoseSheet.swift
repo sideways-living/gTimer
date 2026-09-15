@@ -13,6 +13,8 @@ struct CustomDoseSheet: View {
       initialAmount: settings.standardDose,
       initialTime: Date(),
       initialNotes: "",
+      initialTags: [],
+      initialPeople: [],
       initialLocationName: nil,
       initialLatitude: nil,
       initialLongitude: nil,

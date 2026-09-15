@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import MapKit
 import CoreLocation
 
@@ -35,12 +36,15 @@ struct DoseFormResult {
   var amount: Double
   var time: Date
   var notes: String
+  var tags: [String]
+  var people: [String]
   var location: DoseFormLocationSelection
 }
 
 struct DoseFormSheet: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.modelContext) private var modelContext
 
   var kind: DoseFormKind
   var title: String
@@ -48,6 +52,8 @@ struct DoseFormSheet: View {
   var initialAmount: Double
   var initialTime: Date
   var initialNotes: String
+  var initialTags: [String]
+  var initialPeople: [String]
   var initialLocationName: String?
   var initialLatitude: Double?
   var initialLongitude: Double?
@@ -56,6 +62,8 @@ struct DoseFormSheet: View {
   @State private var amountText = ""
   @State private var selectedTime = Date()
   @State private var notes = ""
+  @State private var tagsText = ""
+  @State private var peopleText = ""
   @State private var locationText = ""
   @State private var selectedCoordinate: CLLocationCoordinate2D?
   @State private var selectedLocationSource = "manual"
@@ -68,6 +76,8 @@ struct DoseFormSheet: View {
   @State private var placeSearchTask: Task<Void, Never>?
   @State private var suppressNextPlaceSearch = false
   @State private var mapPosition: MapCameraPosition = .automatic
+  @State private var knownTags: [String] = []
+  @State private var knownPeople: [String] = []
 
   private var parsedAmount: Double? {
     guard let amount = Double(amountText.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -81,6 +91,32 @@ struct DoseFormSheet: View {
 
   private var allLocationSuggestions: [ManualDoseLocation] {
     (savedLocationSuggestions + placeSearchResults).removingDuplicateLocations()
+  }
+
+  private var tagSuggestions: [String] {
+    tokenSuggestions(
+      allValues: knownTags,
+      typedText: tagsText,
+      separators: tagSeparators,
+      normalize: DoseRecord.normalizedTag
+    )
+  }
+
+  private var peopleSuggestions: [String] {
+    tokenSuggestions(
+      allValues: knownPeople,
+      typedText: peopleText,
+      separators: peopleSeparators,
+      normalize: DoseRecord.normalizedPerson
+    )
+  }
+
+  private var tagSeparators: CharacterSet {
+    CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ","))
+  }
+
+  private var peopleSeparators: CharacterSet {
+    CharacterSet(charactersIn: ",\n")
   }
 
   var body: some View {
@@ -159,6 +195,8 @@ struct DoseFormSheet: View {
     VStack(alignment: .leading, spacing: 14) {
       compactEntryRow
 
+      tagsAndPeopleSection
+
       VStack(alignment: .leading, spacing: 8) {
         Text("Notes")
           .font(.system(size: 13, weight: .medium))
@@ -166,7 +204,7 @@ struct DoseFormSheet: View {
         TextField("Optional note", text: $notes, axis: .vertical)
           .font(.system(size: 15))
           .foregroundStyle(AppTheme.textPrimary)
-          .lineLimit(3...6)
+          .lineLimit(2...4)
           .padding(12)
           .background(AppTheme.backgroundCard)
           .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -197,6 +235,68 @@ struct DoseFormSheet: View {
       .buttonStyle(.plain)
       .disabled(parsedAmount == nil)
     }
+  }
+
+  private var tagsAndPeopleSection: some View {
+    HStack(alignment: .top, spacing: 10) {
+      tokenField(
+        title: "Tags",
+        placeholder: "#hookup #late",
+        text: $tagsText,
+        suggestions: tagSuggestions,
+        appending: appendTag
+      )
+      tokenField(
+        title: "People",
+        placeholder: "Name",
+        text: $peopleText,
+        suggestions: peopleSuggestions,
+        appending: appendPerson
+      )
+    }
+  }
+
+  private func tokenField(
+    title: String,
+    placeholder: String,
+    text: Binding<String>,
+    suggestions: [String],
+    appending append: @escaping (String) -> Void
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 7) {
+      Text(title)
+        .font(.system(size: 13, weight: .medium))
+        .foregroundStyle(AppTheme.textSecondary)
+      TextField(placeholder, text: text)
+        .font(.system(size: 14))
+        .foregroundStyle(AppTheme.textPrimary)
+        .textFieldStyle(.plain)
+        .padding(10)
+        .background(AppTheme.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border))
+      if !suggestions.isEmpty {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 6) {
+            ForEach(suggestions, id: \.self) { suggestion in
+              Button {
+                append(suggestion)
+              } label: {
+                Text(suggestion)
+                  .font(.system(size: 11, weight: .semibold))
+                  .foregroundStyle(AppTheme.accentBlue)
+                  .padding(.horizontal, 8)
+                  .padding(.vertical, 5)
+                  .background(AppTheme.accentBlue.opacity(0.12))
+                  .clipShape(Capsule())
+              }
+              .buttonStyle(.plain)
+            }
+          }
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   private var compactEntryRow: some View {
@@ -359,7 +459,10 @@ struct DoseFormSheet: View {
     amountText = initialAmount.formatted(.number.precision(.fractionLength(1)))
     selectedTime = initialTime
     notes = initialNotes
+    tagsText = initialTags.joined(separator: " ")
+    peopleText = initialPeople.joined(separator: ", ")
     locationText = initialLocationName ?? ""
+    loadKnownTokens()
 
     if let latitude = initialLatitude, let longitude = initialLongitude {
       let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -373,6 +476,12 @@ struct DoseFormSheet: View {
     }
 
     refreshPlaceSearch()
+  }
+
+  private func loadKnownTokens() {
+    let records = (try? modelContext.fetch(FetchDescriptor<DoseRecord>())) ?? []
+    knownTags = records.flatMap(\.tags).removingDuplicateStrings()
+    knownPeople = records.flatMap(\.people).removingDuplicateStrings()
   }
 
   private func submit() {
@@ -390,6 +499,8 @@ struct DoseFormSheet: View {
         amount: amount,
         time: selectedTime,
         notes: notes,
+        tags: DoseRecord.normalizedTags(from: tagsText),
+        people: DoseRecord.normalizedPeople(from: peopleText),
         location: DoseFormLocationSelection(
           name: cleanLocation,
           coordinate: selectedCoordinate,
@@ -551,6 +662,73 @@ struct DoseFormSheet: View {
 
   private func coordinateLabel(_ coordinate: CLLocationCoordinate2D) -> String {
     String(format: "%.6f, %.6f", coordinate.latitude, coordinate.longitude)
+  }
+
+  private func tokenSuggestions(
+    allValues: [String],
+    typedText: String,
+    separators: CharacterSet,
+    normalize: (String) -> String
+  ) -> [String] {
+    let fragment = currentTokenFragment(in: typedText, separators: separators)
+    let normalizedFragment = normalize(fragment).lowercased()
+    let chosen = Set(
+      typedText
+        .components(separatedBy: separators)
+        .map(normalize)
+        .filter { !$0.isEmpty }
+    )
+
+    return allValues
+      .map(normalize)
+      .filter { !$0.isEmpty && !chosen.contains($0) }
+      .removingDuplicateStrings()
+      .filter { normalizedFragment.isEmpty || $0.lowercased().contains(normalizedFragment) }
+      .prefix(5)
+      .map { $0 }
+  }
+
+  private func currentTokenFragment(in text: String, separators: CharacterSet) -> String {
+    text
+      .components(separatedBy: separators)
+      .last?
+      .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+  }
+
+  private func appendTag(_ suggestion: String) {
+    tagsText = replacingCurrentToken(
+      with: suggestion,
+      in: tagsText,
+      separators: tagSeparators,
+      joinSeparator: " ",
+      normalize: DoseRecord.normalizedTag
+    )
+  }
+
+  private func appendPerson(_ suggestion: String) {
+    peopleText = replacingCurrentToken(
+      with: suggestion,
+      in: peopleText,
+      separators: peopleSeparators,
+      joinSeparator: ", ",
+      normalize: DoseRecord.normalizedPerson
+    )
+  }
+
+  private func replacingCurrentToken(
+    with suggestion: String,
+    in text: String,
+    separators: CharacterSet,
+    joinSeparator: String,
+    normalize: (String) -> String
+  ) -> String {
+    let hasOpenFragment = text.unicodeScalars.last.map { !separators.contains($0) } ?? false
+    let parts = text.components(separatedBy: separators)
+    let completedParts = hasOpenFragment ? parts.dropLast() : parts[...]
+    return (completedParts.map(normalize) + [normalize(suggestion)])
+      .filter { !$0.isEmpty }
+      .removingDuplicateStrings()
+      .joined(separator: joinSeparator)
   }
 }
 

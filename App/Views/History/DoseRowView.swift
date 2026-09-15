@@ -39,6 +39,9 @@ struct DoseRowView: View {
               .foregroundStyle(AppTheme.textMuted)
               .lineLimit(1)
           }
+          if !dose.tags.isEmpty || !dose.people.isEmpty {
+            tokenRow
+          }
           if let earlyBy = dose.formattedEarlyBy {
             HStack(spacing: 4) {
               Image(systemName: "exclamationmark.triangle.fill")
@@ -126,5 +129,17 @@ struct DoseRowView: View {
       .padding(.vertical, 2)
       .background(color.opacity(0.15))
       .clipShape(Capsule())
+  }
+
+  private var tokenRow: some View {
+    HStack(spacing: 5) {
+      ForEach(dose.tags.prefix(4), id: \.self) { tag in
+        pill(tag, color: AppTheme.accentBlue)
+      }
+      ForEach(dose.people.prefix(max(0, 4 - dose.tags.prefix(4).count)), id: \.self) { person in
+        pill(person, color: AppTheme.textSecondary)
+      }
+    }
+    .padding(.top, 2)
   }
 }

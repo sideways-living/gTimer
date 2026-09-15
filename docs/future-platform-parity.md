@@ -81,11 +81,11 @@ Future Android and Windows versions should match these features:
 | Timer | Start from logged dose time; support countdown and count-up modes; apply configured interval; show active/inactive state; keep six-hour active window. Pro users can optionally show a second status timer counting up from `00:00:00` once the minimum interval has passed. |
 | Countdown mode | Display remaining time; arc starts fully coloured and empties from the right as time elapses. |
 | Count-up mode | Display elapsed time; arc starts empty and fills from the left as time elapses. |
-| Dose logging | Standard-dose button, 0-4 quick-dose buttons, custom amount, early-log warning before interval has elapsed. Custom/add-dose entry uses the shared dose form pattern below. |
+| Dose logging | Standard-dose button, 0-4 quick-dose buttons, custom amount, early-log warning before interval has elapsed. Custom/add-dose entry uses the shared dose form pattern below, including notes, hashtag-style tags, and remembered people. |
 | Quick doses | Settings use four individual optional values. Main timer shows 4, 3, 2, 1, or setup-link states depending on saved values. |
-| History | Reverse chronological dose records; delete; delete all; free mode limits visible history; Pro unlocks full history. |
+| History | Reverse chronological dose records; search by tags, people, notes, locations, amounts, and device; delete; delete all; free mode limits visible history; Pro unlocks full history. |
 | Missed doses | Pro-gated backdated dose entry using the shared dose form pattern below. |
-| Edit dose | Pro-gated correction of amount, time, notes, and location fields using the shared dose form pattern below. |
+| Edit dose | Pro-gated correction of amount, time, notes, tags, people, and location fields using the shared dose form pattern below. |
 | Export | Pro-gated CSV export; warn clearly before exporting location data. |
 | Health content | Harm-reduction information and emergency guidance. Avoid medical certainty. |
 | Settings | Dose defaults, unit, substance, interval presets/custom interval, quick doses, timer mode, time format, notifications, device name, Pro profile, and location options. |
@@ -102,7 +102,8 @@ Add dose, missed dose, and edit dose should present the same core flow on every 
 
 - Desktop and large tablet layouts: wide modal or window, close button in the top-right of the header row, input column on the left, interactive local map on the right.
 - Phone layouts: same controls in a scrollable single-column sheet, with the map below the input fields.
-- Input column: amount and date/time controls together at the top, followed by one location text field for address, suburb, venue, hotel, or typed place name.
+- Input column: amount and date/time controls together at the top, followed by compact notes, then a full-width location text field for address, suburb, venue, hotel, or typed place name.
+- Tags and people: split the space above notes into hashtag-style tags and remembered people. Tags should normalize to `#tag` form and support searches such as `#hookup`. People entries should autocomplete from names previously used by the signed-in/local user.
 - Location field: autocomplete from saved user/history locations and platform geocoder/place search; bias search near saved home location and current location when available.
 - Location shortcuts: current-location and home-location icon buttons at the end of the location field, with accessible labels/tooltips.
 - Location permission: choosing current location should request native permission if it has not already been requested, and should explain when OS settings block access.
@@ -121,6 +122,8 @@ All future platforms should preserve these fields:
 | `time` | Date/time | Actual dose time; missed doses may be backdated. |
 | `deviceName` | String | Device label at logging time. |
 | `notes` | String | Optional free text. |
+| `tags` | String array | Optional hashtag-style tokens, normalized to `#tag`. Tags may be globally named but history/search results must remain scoped to the current user unless explicit dose sharing is later implemented. |
+| `people` | String array | Optional remembered person names for autocomplete and filtering. |
 | `missed` | Boolean | True for missed-dose flow. |
 | `edited` | Boolean | True after a manual edit. |
 | `latitude` | Decimal/double nullable | Optional saved latitude. |
@@ -245,7 +248,7 @@ The current Apple implementation can use Apple-only storage patterns. Android an
 
 Recommended long-term direction: build a cross-platform sync backend for dose history, settings, Pro entitlements, profile data, and saved locations. Apple-only iCloud sync can be useful for iPhone, iPad, Mac, Watch, and Widget handoff, but it must not be treated as the parity solution for Android or Windows.
 
-Current beta direction: `SyncAPI` is the chosen custom API starting point and is deployed at `https://sync.gtimer.app`. App version 0.9.17 adds opt-in Apple client support for dose-history sync against this API. App version 0.9.19 adds beta email/password accounts with per-device tokens and device removal. App version 0.9.20 makes account sync optional, positions it as a gTimer Pro benefit, and adds a 14-day free device-sync trial. App version 0.9.24 separates local account setup from sync-device registration: first launch collects a local name, email address, and password for data protection and optional PIN recovery, while a sync device id is only created when the user starts a sync trial or has gTimer Pro and explicitly registers that install for sync.
+Current beta direction: `SyncAPI` is the chosen custom API starting point and is deployed at `https://sync.gtimer.app`. App version 0.9.17 adds opt-in Apple client support for dose-history sync against this API. App version 0.9.19 adds beta email/password accounts with per-device tokens and device removal. App version 0.9.20 makes account sync optional, positions it as a gTimer Pro benefit, and adds a 14-day free device-sync trial. App version 0.9.24 separates local account setup from sync-device registration: first launch collects a local name, email address, and password for data protection and optional PIN recovery, while a sync device id is only created when the user starts a sync trial or has gTimer Pro and explicitly registers that install for sync. App version 0.9.26 adds synced dose tags and people fields for future cross-device search parity.
 
 Before Android or Windows implementation begins, keep this decision unless there is an explicit product/security review that replaces it:
 

@@ -24,12 +24,16 @@ struct HistoryView: View {
   @State private var exportOutcome: HistoryExportOutcome = .export
   @State private var handledExportRequestID = 0
   @State private var handledDoseMapRequestID = 0
+  @State private var searchText = ""
 
   private var activeDoses: [DoseRecord] { allDoses.filter { !$0.isDeletedForSync } }
-  private var visibleDoses: [DoseRecord] {
+  private var baseVisibleDoses: [DoseRecord] {
     if settings.proBetaAccepted { return activeDoses }
     let cutoff = Date().addingTimeInterval(-24 * 3600)
     return activeDoses.filter { $0.time >= cutoff }
+  }
+  private var visibleDoses: [DoseRecord] {
+    baseVisibleDoses.filter { $0.matchesHistorySearch(searchText) }
   }
 
   private var locatedDoses: [DoseRecord] { activeDoses.filter { $0.hasLocation } }
@@ -124,6 +128,7 @@ struct HistoryView: View {
         if !settings.proBetaAccepted {
           proNudge
         }
+        historySearchField
 
         // Map button: visible to all users; Pro+locations → full map,
         // Pro+no-locations → empty map, free → paywall.
@@ -133,7 +138,9 @@ struct HistoryView: View {
         }
 
         if visibleDoses.isEmpty {
-          Text("Older records are hidden in free mode.")
+          Text(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+               ? "Older records are hidden in free mode."
+               : "No matching dose records.")
             .font(.system(size: 14))
             .foregroundStyle(AppTheme.textMuted)
             .padding(.top, 32)
@@ -159,6 +166,34 @@ struct HistoryView: View {
   }
 
   // MARK: - Map button
+
+  private var historySearchField: some View {
+    HStack(spacing: 8) {
+      Image(systemName: "magnifyingglass")
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(AppTheme.textMuted)
+      TextField("Search tags, people, notes or locations", text: $searchText)
+        .textFieldStyle(.plain)
+        .font(.system(size: 14))
+        .foregroundStyle(AppTheme.textPrimary)
+        .autocorrectionDisabled()
+      if !searchText.isEmpty {
+        Button {
+          searchText = ""
+        } label: {
+          Image(systemName: "xmark.circle.fill")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(AppTheme.textMuted)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Clear history search")
+      }
+    }
+    .padding(11)
+    .background(AppTheme.backgroundCard)
+    .clipShape(RoundedRectangle(cornerRadius: 10))
+    .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
+  }
 
   private var mapButton: some View {
     let isPro = settings.proBetaAccepted
@@ -356,6 +391,8 @@ private enum HistoryExportField: String, CaseIterable, Identifiable {
   case edited = "Edited"
   case earlyBy = "Early by"
   case notes = "Notes"
+  case tags = "Tags"
+  case people = "People"
   case device = "Device"
   case locationName = "Location"
   case coordinates = "Coordinates"
@@ -737,6 +774,10 @@ private struct HistoryExportDocument {
       return "Early by: \(dose.formattedEarlyBy ?? "")"
     case .notes:
       return "Notes: \(dose.notes)"
+    case .tags:
+      return "Tags: \(dose.tags.joined(separator: " "))"
+    case .people:
+      return "People: \(dose.people.joined(separator: ", "))"
     case .device:
       return "Device: \(dose.deviceName)"
     case .locationName:

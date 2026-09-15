@@ -10,6 +10,8 @@ final class DoseStore {
     unit: String,
     time: Date = Date(),
     notes: String = "",
+    tags: [String] = [],
+    people: [String] = [],
     missed: Bool = false,
     earlyBySeconds: Double? = nil,
     capturedLocation: CLLocation? = nil,
@@ -34,6 +36,8 @@ final class DoseStore {
       time: time,
       deviceName: deviceName,
       notes: notes,
+      tags: tags,
+      people: people,
       missed: missed,
       earlyBySeconds: earlyBySeconds,
       latitude: lat,
@@ -455,6 +459,8 @@ final class DoseSyncManager {
           time: date(from: remote.time) ?? remoteUpdatedAt,
           deviceName: remote.deviceName,
           notes: remote.notes,
+          tags: remote.tags ?? [],
+          people: remote.people ?? [],
           missed: remote.missed,
           edited: remote.edited,
           earlyBySeconds: remote.earlyBySeconds,
@@ -482,6 +488,8 @@ final class DoseSyncManager {
     record.time = date(from: remote.time) ?? record.time
     record.deviceName = remote.deviceName
     record.notes = remote.notes
+    record.tags = remote.tags ?? []
+    record.people = remote.people ?? []
     record.missed = remote.missed
     record.edited = remote.edited
     record.earlyBySeconds = remote.earlyBySeconds
@@ -504,6 +512,8 @@ final class DoseSyncManager {
       time: string(from: record.time),
       deviceName: record.deviceName,
       notes: record.notes,
+      tags: record.tags,
+      people: record.people,
       missed: record.missed,
       edited: record.edited,
       earlyBySeconds: record.earlyBySeconds,
@@ -629,6 +639,8 @@ private struct SyncDosePayload: Codable {
   var time: String
   var deviceName: String
   var notes: String
+  var tags: [String]?
+  var people: [String]?
   var missed: Bool
   var edited: Bool
   var earlyBySeconds: Double?

@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct MissedDoseSheet: View {
   @Environment(SettingsManager.self) private var settings
@@ -12,6 +13,8 @@ struct MissedDoseSheet: View {
       initialAmount: settings.standardDose,
       initialTime: Date(),
       initialNotes: "Missed dose",
+      initialTags: [],
+      initialPeople: [],
       initialLocationName: nil,
       initialLatitude: nil,
       initialLongitude: nil
@@ -21,6 +24,8 @@ struct MissedDoseSheet: View {
         unit: settings.unit,
         time: result.time,
         notes: result.notes,
+        tags: result.tags,
+        people: result.people,
         missed: true,
         capturedLocation: result.location.clLocation,
         locationName: result.location.name.isEmpty ? nil : result.location.name,
