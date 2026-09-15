@@ -1,5 +1,6 @@
 import http from "node:http";
 import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AuthStore, cleanAuthRequest, cleanDeviceAuthRequest } from "./auth-store.js";
 import { FileSyncStore } from "./store.js";
@@ -7,7 +8,7 @@ import { httpError, normalizePullQuery, normalizePushBody } from "./validation.j
 
 loadDotEnv();
 
-const port = Number(process.env.PORT ?? 8787);
+const port = readPort();
 const tokens = loadTokenMap();
 const authStore = new AuthStore({ dataDir: process.env.GTIMER_SYNC_DATA_DIR });
 const store = new FileSyncStore({ dataDir: process.env.GTIMER_SYNC_DATA_DIR });
@@ -195,7 +196,38 @@ function unquoteEnvValue(value) {
   return value;
 }
 
-if (fileURLToPath(import.meta.url) === process.argv[1]) {
+function readPort() {
+  const configuredPort = process.env.PORT ?? readArgumentValue("--port") ?? "8787";
+  const parsedPort = Number(configuredPort);
+
+  if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
+    console.error(`Invalid port: ${configuredPort}`);
+    process.exit(1);
+  }
+
+  return parsedPort;
+}
+
+function readArgumentValue(name) {
+  for (let index = 2; index < process.argv.length; index += 1) {
+    const argument = process.argv[index];
+    if (argument === name) {
+      return process.argv[index + 1];
+    }
+
+    if (argument.startsWith(`${name}=`)) {
+      return argument.slice(name.length + 1);
+    }
+  }
+
+  return undefined;
+}
+
+function isMainModule() {
+  return Boolean(process.argv[1]) && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+}
+
+if (isMainModule()) {
   createServer().listen(port, () => {
     console.log(`gTimer Sync API listening on http://localhost:${port}`);
   });
