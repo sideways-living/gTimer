@@ -61,6 +61,8 @@ private extension SettingsScrollTarget {
   }
 }
 
+private let maxStoredProfilePhotoDimension: CGFloat = 512
+
 struct SettingsView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(AppNavigation.self) private var nav
@@ -2195,20 +2197,52 @@ struct SettingsView: View {
   #endif
 
   private func saveProfilePhotoData(_ data: Data) {
-    guard canLoadProfileImage(from: data) else {
+    guard let profileData = normalizedProfilePhotoData(from: data) else {
       photoImportError = "That image format could not be used."
       return
     }
-    settings.profilePictureData = data
+    settings.profilePictureData = profileData
     photoImportError = nil
     markUnsaved()
   }
 
-  private func canLoadProfileImage(from data: Data) -> Bool {
+  private func scaledProfilePhotoSize(from size: CGSize) -> CGSize {
+    guard size.width > 0, size.height > 0 else {
+      return CGSize(width: maxStoredProfilePhotoDimension, height: maxStoredProfilePhotoDimension)
+    }
+    let largestSide = max(size.width, size.height)
+    guard largestSide > maxStoredProfilePhotoDimension else { return size }
+    let scale = maxStoredProfilePhotoDimension / largestSide
+    return CGSize(width: size.width * scale, height: size.height * scale)
+  }
+
+  private func normalizedProfilePhotoData(from data: Data) -> Data? {
     #if os(macOS)
-    NSImage(data: data) != nil
+    guard let image = NSImage(data: data) else { return nil }
+    let targetSize = scaledProfilePhotoSize(from: image.size)
+    let output = NSImage(size: targetSize)
+    output.lockFocus()
+    NSGraphicsContext.current?.imageInterpolation = .high
+    image.draw(
+      in: NSRect(origin: .zero, size: targetSize),
+      from: NSRect(origin: .zero, size: image.size),
+      operation: .copy,
+      fraction: 1
+    )
+    output.unlockFocus()
+    guard
+      let tiffData = output.tiffRepresentation,
+      let bitmap = NSBitmapImageRep(data: tiffData)
+    else { return nil }
+    return bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.82])
     #else
-    UIImage(data: data) != nil
+    guard let image = UIImage(data: data) else { return nil }
+    let targetSize = scaledProfilePhotoSize(from: image.size)
+    let renderer = UIGraphicsImageRenderer(size: targetSize)
+    let output = renderer.image { _ in
+      image.draw(in: CGRect(origin: .zero, size: targetSize))
+    }
+    return output.jpegData(compressionQuality: 0.82)
     #endif
   }
 

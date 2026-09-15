@@ -590,10 +590,11 @@ private struct HistoryExportDocument {
     return url
   }
 
+  @MainActor
   func print() async {
     let data = await makePDFData()
     #if os(macOS)
-    await printPDFDataOnMac(data)
+    printPDFDataOnMac(data)
     #elseif os(iOS)
     let controller = UIPrintInteractionController.shared
     controller.printingItem = data

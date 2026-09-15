@@ -190,6 +190,18 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.30",
+      build: 120,
+      category: .minorImprovements,
+      message: "Profile photo imports are now resized before storage to reduce memory and settings storage overhead."
+    ),
+    AppUpdateEntry(
+      version: "0.9.30",
+      build: 120,
+      category: .bugFixes,
+      message: "Cleaned up the history print/export path for stricter Swift concurrency checks."
+    ),
+    AppUpdateEntry(
       version: "0.9.29",
       build: 119,
       category: .minorImprovements,
