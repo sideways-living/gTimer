@@ -14,6 +14,36 @@ import AVFoundation
 
 enum SaveState { case idle, unsaved, saved }
 
+private enum SettingsCategory: String, CaseIterable, Identifiable {
+  case timer
+  case account
+  case sync
+  case location
+  case app
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .timer: "Timer"
+    case .account: "Account"
+    case .sync: "Sync"
+    case .location: "Location"
+    case .app: "App"
+    }
+  }
+
+  var systemImage: String {
+    switch self {
+    case .timer: "timer"
+    case .account: "person.crop.circle"
+    case .sync: "arrow.triangle.2.circlepath"
+    case .location: "location"
+    case .app: "slider.horizontal.3"
+    }
+  }
+}
+
 struct SettingsView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(AppNavigation.self) private var nav
@@ -69,6 +99,7 @@ struct SettingsView: View {
   @State private var hasLoaded = false
   @State private var showPaywall = false
   @State private var paywallFeature: ProFeature = .doseLocations
+  @State private var selectedSettingsCategory: SettingsCategory = .timer
 
   private let intervalPresets = [60, 90, 120]
   private var hasChanges: Bool { saveState == .unsaved }
@@ -155,29 +186,81 @@ struct SettingsView: View {
 
   private var settingsSections: some View {
     VStack(spacing: 16) {
-      primarySettingsSections
-      accountAndSyncSections
-      locationSettingsSections
+      settingsCategoryTabs
+      selectedSettingsSections
     }
   }
 
-  private var primarySettingsSections: some View {
+  private var selectedSettingsSections: some View {
+    VStack(spacing: 16) {
+      switch selectedSettingsCategory {
+      case .timer:
+        timerSettingsSections
+      case .account:
+        accountSettingsSections
+      case .sync:
+        syncSettingsSections
+      case .location:
+        locationSettingsSections
+      case .app:
+        appSettingsSections
+      }
+    }
+  }
+
+  private var settingsCategoryTabs: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 8) {
+        ForEach(SettingsCategory.allCases) { category in
+          settingsCategoryButton(category)
+        }
+      }
+      .padding(4)
+    }
+    .background(AppTheme.backgroundCard)
+    .clipShape(RoundedRectangle(cornerRadius: 14))
+    .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppTheme.border, lineWidth: 0.5))
+  }
+
+  private func settingsCategoryButton(_ category: SettingsCategory) -> some View {
+    let isSelected = selectedSettingsCategory == category
+    return Button {
+      withAnimation(.snappy) {
+        selectedSettingsCategory = category
+      }
+    } label: {
+      Label(category.title, systemImage: category.systemImage)
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(isSelected ? .white : AppTheme.textSecondary)
+        .lineLimit(1)
+        .padding(.horizontal, 12)
+        .frame(height: 36)
+        .background(isSelected ? AppTheme.accentBlue : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("\(category.title) settings")
+  }
+
+  private var timerSettingsSections: some View {
     Group {
       doseSection
       intervalSection
       quickAmountsSection
         .id(SettingsScrollTarget.quickAmounts)
-      displaySection
-      colourSection
       notificationsSection
-      assistedDoseSection
     }
   }
 
-  private var accountAndSyncSections: some View {
+  private var accountSettingsSections: some View {
     Group {
       accountSection
       privacySection
+    }
+  }
+
+  private var syncSettingsSections: some View {
+    Group {
       deviceSection
       syncSection
     }
@@ -187,6 +270,14 @@ struct SettingsView: View {
     Group {
       locationSection
       homeLocationSection
+    }
+  }
+
+  private var appSettingsSections: some View {
+    Group {
+      displaySection
+      colourSection
+      assistedDoseSection
       if settings.proBetaAccepted { profileSection }
     }
   }
@@ -2091,6 +2182,7 @@ struct SettingsView: View {
 
   private func scrollToRequestedSection(_ proxy: ScrollViewProxy) {
     guard nav.settingsScrollTarget == .quickAmounts else { return }
+    selectedSettingsCategory = .timer
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
       withAnimation(.snappy) {
         proxy.scrollTo(SettingsScrollTarget.quickAmounts, anchor: .top)
