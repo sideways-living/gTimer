@@ -32,6 +32,59 @@ cd SyncAPI
 npm test
 ```
 
+## CloudPanel / PM2 Deployment
+
+The production CloudPanel site is expected to run the API from:
+
+```sh
+/home/gtimer-sync/htdocs/sync.gtimer.app/app/SyncAPI
+```
+
+Start or reload the process with the checked-in PM2 ecosystem file:
+
+```sh
+cd /home/gtimer-sync/htdocs/sync.gtimer.app/app/SyncAPI
+npm test
+pm2 startOrReload ecosystem.config.cjs --env production
+pm2 save
+curl http://127.0.0.1:8787/health
+curl https://sync.gtimer.app/health
+```
+
+### Reboot Persistence
+
+Preferred setup is PM2's systemd integration. It must be installed by a user with root privileges:
+
+```sh
+sudo env PATH=$PATH:$(dirname "$(command -v node)") "$(command -v pm2)" startup systemd -u gtimer-sync --hp /home/gtimer-sync
+```
+
+Then, as `gtimer-sync`, save the current process list:
+
+```sh
+cd /home/gtimer-sync/htdocs/sync.gtimer.app/app/SyncAPI
+pm2 startOrReload ecosystem.config.cjs --env production
+pm2 save
+```
+
+If root access is not available, install the no-root crontab fallback as `gtimer-sync`:
+
+```sh
+cd /home/gtimer-sync/htdocs/sync.gtimer.app/app/SyncAPI
+chmod +x scripts/install-reboot-cron.sh
+scripts/install-reboot-cron.sh
+crontab -l | grep gtimer-sync-api
+```
+
+After a VPS reboot, verify:
+
+```sh
+pm2 status
+ss -ltnp | grep ':8787'
+curl http://127.0.0.1:8787/health
+curl https://sync.gtimer.app/health
+```
+
 ## Sync Model
 
 Clients are local-first:
