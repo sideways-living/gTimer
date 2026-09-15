@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProView: View {
   @Environment(SettingsManager.self) private var settings
+  @Environment(AppNavigation.self) private var nav
   @State private var firstName = ""
   @State private var lastName = ""
   @State private var email = ""
@@ -68,6 +69,30 @@ struct ProView: View {
         if !settings.vanityName.isEmpty {
           Text("Welcome, \(settings.vanityName)")
             .font(.system(size: 15)).foregroundStyle(AppTheme.textSecondary)
+        }
+
+        HStack(spacing: 10) {
+          Button("Account settings") {
+            nav.openSettings(.account)
+          }
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(AppTheme.accentBlue)
+          .padding(.horizontal, 12)
+          .padding(.vertical, 8)
+          .background(AppTheme.accentBlue.opacity(0.10))
+          .clipShape(RoundedRectangle(cornerRadius: 10))
+          .buttonStyle(.plain)
+
+          Button("Profile settings") {
+            nav.openSettings(.profile)
+          }
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(AppTheme.proAmber)
+          .padding(.horizontal, 12)
+          .padding(.vertical, 8)
+          .background(AppTheme.proAmber.opacity(0.12))
+          .clipShape(RoundedRectangle(cornerRadius: 10))
+          .buttonStyle(.plain)
         }
       }
       .padding(.top, 36)

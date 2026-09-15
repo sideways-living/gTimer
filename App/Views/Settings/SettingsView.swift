@@ -44,6 +44,23 @@ private enum SettingsCategory: String, CaseIterable, Identifiable {
   }
 }
 
+private extension SettingsScrollTarget {
+  var settingsCategory: SettingsCategory {
+    switch self {
+    case .doseDefaults, .safeInterval, .quickAmounts, .notifications:
+      .timer
+    case .account, .privacy:
+      .account
+    case .device, .sync:
+      .sync
+    case .doseLocations, .homeLocation:
+      .location
+    case .display, .colours, .assistedDoseLogging, .profile:
+      .app
+    }
+  }
+}
+
 struct SettingsView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(AppNavigation.self) private var nav
@@ -245,40 +262,55 @@ struct SettingsView: View {
   private var timerSettingsSections: some View {
     Group {
       doseSection
+        .id(SettingsScrollTarget.doseDefaults)
       intervalSection
+        .id(SettingsScrollTarget.safeInterval)
       quickAmountsSection
         .id(SettingsScrollTarget.quickAmounts)
       notificationsSection
+        .id(SettingsScrollTarget.notifications)
     }
   }
 
   private var accountSettingsSections: some View {
     Group {
       accountSection
+        .id(SettingsScrollTarget.account)
       privacySection
+        .id(SettingsScrollTarget.privacy)
     }
   }
 
   private var syncSettingsSections: some View {
     Group {
       deviceSection
+        .id(SettingsScrollTarget.device)
       syncSection
+        .id(SettingsScrollTarget.sync)
     }
   }
 
   private var locationSettingsSections: some View {
     Group {
       locationSection
+        .id(SettingsScrollTarget.doseLocations)
       homeLocationSection
+        .id(SettingsScrollTarget.homeLocation)
     }
   }
 
   private var appSettingsSections: some View {
     Group {
       displaySection
+        .id(SettingsScrollTarget.display)
       colourSection
+        .id(SettingsScrollTarget.colours)
       assistedDoseSection
-      if settings.proBetaAccepted { profileSection }
+        .id(SettingsScrollTarget.assistedDoseLogging)
+      if settings.proBetaAccepted {
+        profileSection
+          .id(SettingsScrollTarget.profile)
+      }
     }
   }
 
@@ -2181,11 +2213,11 @@ struct SettingsView: View {
   }
 
   private func scrollToRequestedSection(_ proxy: ScrollViewProxy) {
-    guard nav.settingsScrollTarget == .quickAmounts else { return }
-    selectedSettingsCategory = .timer
+    guard let target = nav.settingsScrollTarget else { return }
+    selectedSettingsCategory = target.settingsCategory
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
       withAnimation(.snappy) {
-        proxy.scrollTo(SettingsScrollTarget.quickAmounts, anchor: .top)
+        proxy.scrollTo(target, anchor: .top)
       }
       nav.settingsScrollTarget = nil
     }

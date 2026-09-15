@@ -1,7 +1,20 @@
 import SwiftUI
 
 enum SettingsScrollTarget: Hashable {
+  case doseDefaults
+  case safeInterval
   case quickAmounts
+  case notifications
+  case account
+  case privacy
+  case device
+  case sync
+  case doseLocations
+  case homeLocation
+  case display
+  case colours
+  case assistedDoseLogging
+  case profile
 }
 
 enum HistoryExportOutcome {
@@ -32,7 +45,8 @@ final class AppNavigation {
     selectedTab = 3
   }
 
-  func openSettings() {
+  func openSettings(_ target: SettingsScrollTarget? = nil) {
+    settingsScrollTarget = target
     selectedTab = 4
   }
 

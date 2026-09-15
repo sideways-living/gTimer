@@ -43,6 +43,7 @@ struct DoseFormResult {
 
 struct DoseFormSheet: View {
   @Environment(SettingsManager.self) private var settings
+  @Environment(AppNavigation.self) private var nav
   @Environment(\.dismiss) private var dismiss
   @Environment(\.modelContext) private var modelContext
 
@@ -70,6 +71,7 @@ struct DoseFormSheet: View {
   @State private var selectedAccuracy: Double?
   @State private var selectedCapturedAt: Date?
   @State private var locationError: String?
+  @State private var locationErrorSettingsTarget: SettingsScrollTarget?
   @State private var isCapturingLocation = false
   @State private var isResolvingMapPin = false
   @State private var placeSearchResults: [ManualDoseLocation] = []
@@ -161,6 +163,7 @@ struct DoseFormSheet: View {
         selectedLocationSource = "manual"
         selectedAccuracy = nil
         selectedCapturedAt = nil
+        locationErrorSettingsTarget = nil
         if locationText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
           selectedCoordinate = nil
         }
@@ -214,9 +217,20 @@ struct DoseFormSheet: View {
       locationSection
 
       if let locationError {
-        Text(locationError)
-          .font(.system(size: 12, weight: .medium))
-          .foregroundStyle(AppTheme.statusAmber)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+          Text(locationError)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(AppTheme.statusAmber)
+          Spacer(minLength: 0)
+          if let locationErrorSettingsTarget {
+            Button("Open settings") {
+              openSettings(locationErrorSettingsTarget)
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(AppTheme.accentBlue)
+            .buttonStyle(.plain)
+          }
+        }
       }
 
       Spacer(minLength: 0)
@@ -540,6 +554,7 @@ struct DoseFormSheet: View {
     selectedCapturedAt = nil
     placeSearchResults = []
     locationError = nil
+    locationErrorSettingsTarget = nil
     focusMap(on: coordinate, meters: 900)
   }
 
@@ -553,12 +568,14 @@ struct DoseFormSheet: View {
         locationError = LocationManager.shared.needsSystemSettingsForPermission
           ? "Location access is blocked. Open gTimer location permission in Settings."
           : "Location permission is needed to use current location."
+        locationErrorSettingsTarget = .doseLocations
         return
       }
       let captured = await LocationManager.shared.captureForDose()
       isCapturingLocation = false
       guard let captured else {
         locationError = "Current location is not available yet."
+        locationErrorSettingsTarget = nil
         return
       }
 
@@ -583,6 +600,7 @@ struct DoseFormSheet: View {
         apply(location: home, source: "home-fallback")
       } else {
         locationError = "Add a home location in Settings first."
+        locationErrorSettingsTarget = .homeLocation
       }
     }
   }
@@ -601,7 +619,13 @@ struct DoseFormSheet: View {
       suppressNextPlaceSearch = true
       locationText = name
       locationError = nil
+      locationErrorSettingsTarget = nil
     }
+  }
+
+  private func openSettings(_ target: SettingsScrollTarget) {
+    nav.openSettings(target)
+    dismiss()
   }
 
   private func reverseGeocode(_ coordinate: CLLocationCoordinate2D) async -> String? {

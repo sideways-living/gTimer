@@ -510,8 +510,7 @@ struct TimerView: View {
 
   private var quickAmountSettingsButton: some View {
     Button {
-      nav.selectedTab = 3
-      nav.settingsScrollTarget = .quickAmounts
+      nav.openSettings(.quickAmounts)
     } label: {
       VStack(spacing: 7) {
         Image(systemName: "slider.horizontal.3")

@@ -409,6 +409,13 @@ private struct HistoryPrivacyGate<Content: View>: View {
           .foregroundStyle(AppTheme.statusAmber)
       }
 
+      Button("Open privacy settings") {
+        nav.openSettings(.privacy)
+      }
+      .font(.system(size: 13, weight: .semibold))
+      .foregroundStyle(AppTheme.accentBlue)
+      .buttonStyle(.plain)
+
       Button("Open gTimer") {
         nav.openTimer()
       }
