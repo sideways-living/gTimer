@@ -27,10 +27,14 @@ struct HistoryView: View {
   @State private var searchText = ""
 
   private var activeDoses: [DoseRecord] { allDoses.filter { !$0.isDeletedForSync } }
+  private var deletedDoses: [DoseRecord] { allDoses.filter(\.isDeletedForSync) }
+  private var historySourceDoses: [DoseRecord] {
+    settings.includeDeletedDosesInHistory ? allDoses : activeDoses
+  }
   private var baseVisibleDoses: [DoseRecord] {
-    if settings.proBetaAccepted { return activeDoses }
+    if settings.proBetaAccepted { return historySourceDoses }
     let cutoff = Date().addingTimeInterval(-24 * 3600)
-    return activeDoses.filter { $0.time >= cutoff }
+    return historySourceDoses.filter { $0.time >= cutoff }
   }
   private var visibleDoses: [DoseRecord] {
     baseVisibleDoses.filter { $0.matchesHistorySearch(searchText) }
@@ -64,7 +68,7 @@ struct HistoryView: View {
   var body: some View {
     NavigationStack {
       Group {
-        if activeDoses.isEmpty {
+        if allDoses.isEmpty {
           emptyState
         } else {
           doseList
@@ -74,7 +78,7 @@ struct HistoryView: View {
       .platformNavigationBarStyle()
       .toolbar {
         ToolbarItemGroup(placement: .primaryAction) {
-          if !activeDoses.isEmpty {
+          if !historySourceDoses.isEmpty {
             exportButton
           }
           if !activeDoses.isEmpty {
@@ -85,19 +89,20 @@ struct HistoryView: View {
           }
         }
       }
-      .confirmationDialog(
-        "Delete all dose records?",
-        isPresented: $showDeleteAll,
-        titleVisibility: .visible
-      ) {
-        Button("Delete All", role: .destructive) { DoseStore.deleteAll(context: context, settings: settings) }
-        Button("Cancel", role: .cancel) {}
-      } message: {
-        Text("This cannot be undone.")
+      .sheet(isPresented: $showDeleteAll) {
+        DeletionReasonSheet(
+          title: "Delete all active doses",
+          message: "Deleted records will be kept in history with the reason you enter.",
+          actionTitle: "Delete All",
+          example: "Bulk cleanup or duplicate records"
+        ) { reason in
+          DoseStore.deleteAll(reason: reason, context: context, settings: settings)
+          showDeleteAll = false
+        }
       }
       .sheet(isPresented: $showHistoryExport) {
         HistoryExportSheet(
-          doses: activeDoses,
+          doses: historySourceDoses,
           locationApproximate: settings.locationApproximate,
           initialOutcome: exportOutcome
         )
@@ -129,6 +134,9 @@ struct HistoryView: View {
           proNudge
         }
         historySearchField
+        if !deletedDoses.isEmpty {
+          deletedHistoryToggle
+        }
 
         // Map button: visible to all users; Pro+locations → full map,
         // Pro+no-locations → empty map, free → paywall.
@@ -138,9 +146,7 @@ struct HistoryView: View {
         }
 
         if visibleDoses.isEmpty {
-          Text(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-               ? "Older records are hidden in free mode."
-               : "No matching dose records.")
+          Text(emptyHistoryMessage)
             .font(.system(size: 14))
             .foregroundStyle(AppTheme.textMuted)
             .padding(.top, 32)
@@ -152,8 +158,8 @@ struct HistoryView: View {
               locationApproximate: settings.locationApproximate
             ) {
               if settings.proBetaAccepted { editingDose = dose }
-            } onDelete: {
-              DoseStore.delete(dose, context: context, settings: settings)
+            } onDelete: { reason in
+              DoseStore.delete(dose, reason: reason, context: context, settings: settings)
             }
           }
         }
@@ -163,6 +169,16 @@ struct HistoryView: View {
     }
     .tabBarScrollClearance()
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+  }
+
+  private var emptyHistoryMessage: String {
+    if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      return "No matching dose records."
+    }
+    if !settings.includeDeletedDosesInHistory && activeDoses.isEmpty && !deletedDoses.isEmpty {
+      return "Deleted dose records are hidden. Turn on Include deleted doses to view them."
+    }
+    return "Older records are hidden in free mode."
   }
 
   // MARK: - Map button
@@ -236,6 +252,28 @@ struct HistoryView: View {
         lineWidth: 0.5))
     }
     .buttonStyle(.plain)
+  }
+
+  private var deletedHistoryToggle: some View {
+    Toggle(isOn: Binding {
+      settings.includeDeletedDosesInHistory
+    } set: { newValue in
+      settings.includeDeletedDosesInHistory = newValue
+    }) {
+      VStack(alignment: .leading, spacing: 3) {
+        Text("Include deleted doses")
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundStyle(AppTheme.textPrimary)
+        Text("\(deletedDoses.count) deleted dose record\(deletedDoses.count == 1 ? "" : "s") retained with deletion reasons.")
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
+      }
+    }
+    .toggleStyle(.switch)
+    .padding(12)
+    .background(AppTheme.backgroundCard)
+    .clipShape(RoundedRectangle(cornerRadius: 10))
+    .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
   }
 
   // MARK: - Location insights card
@@ -390,6 +428,8 @@ private enum HistoryExportField: String, CaseIterable, Identifiable {
   case missed = "Missed"
   case edited = "Edited"
   case earlyBy = "Early by"
+  case deleted = "Deleted"
+  case deletionReason = "Deletion reason"
   case notes = "Notes"
   case tags = "Tags"
   case people = "People"
@@ -773,6 +813,10 @@ private struct HistoryExportDocument {
       return "Edited: \(dose.edited ? "Yes" : "No")"
     case .earlyBy:
       return "Early by: \(dose.formattedEarlyBy ?? "")"
+    case .deleted:
+      return "Deleted: \(dose.deletedAt.map { dateTime($0) } ?? "No")"
+    case .deletionReason:
+      return "Deletion reason: \(dose.deletionReason ?? "")"
     case .notes:
       return "Notes: \(dose.notes)"
     case .tags:

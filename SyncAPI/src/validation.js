@@ -109,6 +109,7 @@ function validateDose(record) {
   record.missed = Boolean(record.missed);
   record.edited = Boolean(record.edited);
   record.earlyBySeconds = optionalNumber(record.earlyBySeconds, "doses.earlyBySeconds", { min: 0 });
+  record.deletionReason = optionalString(record.deletionReason, "doses.deletionReason", { maxLength: 1000 });
   record.latitude = optionalNumber(record.latitude, "doses.latitude", { min: -90, max: 90 });
   record.longitude = optionalNumber(record.longitude, "doses.longitude", { min: -180, max: 180 });
   record.locationName = optionalString(record.locationName, "doses.locationName", { maxLength: 512 });

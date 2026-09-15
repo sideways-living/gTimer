@@ -190,6 +190,18 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.31",
+      build: 121,
+      category: .newFeatures,
+      message: "Deleted doses are now retained with a deletion reason and can be shown again from History."
+    ),
+    AppUpdateEntry(
+      version: "0.9.31",
+      build: 121,
+      category: .minorImprovements,
+      message: "History search, export, and sync now preserve deletion reasons for removed doses."
+    ),
+    AppUpdateEntry(
       version: "0.9.30",
       build: 120,
       category: .minorImprovements,

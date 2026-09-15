@@ -27,6 +27,7 @@ final class DoseRecord {
   var createdAt: Date?
   var updatedAt: Date?
   var deletedAt: Date?
+  var deletionReason: String?
   var lastSyncedAt: Date?
 
   init(
@@ -50,6 +51,7 @@ final class DoseRecord {
     createdAt: Date? = nil,
     updatedAt: Date? = nil,
     deletedAt: Date? = nil,
+    deletionReason: String? = nil,
     lastSyncedAt: Date? = nil
   ) {
     self.id = id
@@ -72,6 +74,7 @@ final class DoseRecord {
     self.createdAt = createdAt
     self.updatedAt = updatedAt
     self.deletedAt = deletedAt
+    self.deletionReason = deletionReason
     self.lastSyncedAt = lastSyncedAt
   }
 
@@ -133,6 +136,7 @@ final class DoseRecord {
       deviceName,
       notes,
       locationName ?? "",
+      deletionReason ?? "",
       tags.joined(separator: " "),
       people.joined(separator: " ")
     ].joined(separator: " ").lowercased()

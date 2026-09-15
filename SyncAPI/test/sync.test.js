@@ -91,7 +91,8 @@ test("keeps newer records when an older edit arrives later", async () => {
 test("returns tombstones for deleted records", async () => {
   await withTestAPI(async ({ baseURL }) => {
     const deletedDose = sampleDose("dose-1", "2026-09-13T10:00:00.000Z", {
-      deletedAt: "2026-09-13T10:00:00.000Z"
+      deletedAt: "2026-09-13T10:00:00.000Z",
+      deletionReason: "duplicate recording of dose"
     });
 
     await requestJSON(`${baseURL}/v1/sync/push`, {
@@ -109,6 +110,7 @@ test("returns tombstones for deleted records", async () => {
     });
 
     assert.equal(pull.json.changes.doses[0].deletedAt, "2026-09-13T10:00:00.000Z");
+    assert.equal(pull.json.changes.doses[0].deletionReason, "duplicate recording of dose");
   });
 });
 
@@ -431,6 +433,7 @@ function sampleDose(id, updatedAt, overrides = {}) {
     missed: false,
     edited: false,
     earlyBySeconds: null,
+    deletionReason: null,
     latitude: -37.8136,
     longitude: 144.9631,
     locationName: "Melbourne",

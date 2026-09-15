@@ -292,8 +292,8 @@ struct TimerView: View {
                 locationApproximate: settings.locationApproximate
               ) {
                 if settings.proBetaAccepted { editingDose = dose }
-              } onDelete: {
-                DoseStore.delete(dose, context: context, settings: settings)
+              } onDelete: { reason in
+                DoseStore.delete(dose, reason: reason, context: context, settings: settings)
               }
             }
 

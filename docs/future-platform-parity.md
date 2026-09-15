@@ -84,7 +84,7 @@ Future Android and Windows versions should match these features:
 | Dose logging | Standard-dose button, 0-4 quick-dose buttons, custom amount, early-log warning before interval has elapsed. Custom/add-dose entry uses the shared dose form pattern below, including notes, hashtag-style tags, and remembered people. |
 | Assisted logging | Pro-gated Siri, Shortcuts, deep-link, and trusted automation logging. Spoken commands should create the same canonical dose records as the app UI, including amount, unit, optional time, missed-dose detection for backdated times, spoken/saved/current location, hashtag-style tags, people, notes, early-dose metadata, notification rescheduling, widget refresh, and sync queuing. |
 | Quick doses | Settings use four individual optional values. Main timer shows 4, 3, 2, 1, or setup-link states depending on saved values. |
-| History | Reverse chronological dose records; search by tags, people, notes, locations, amounts, and device; delete; delete all; free mode limits visible history; Pro unlocks full history. |
+| History | Reverse chronological dose records; search by tags, people, notes, locations, deletion reasons, amounts, and device; delete; delete all; free mode limits visible history; Pro unlocks full history. Deleted dose records are retained with `deletedAt` and a user-entered deletion reason, and History has a toggle for including or hiding deleted records. |
 | Missed doses | Pro-gated backdated dose entry using the shared dose form pattern below. |
 | Edit dose | Pro-gated correction of amount, time, notes, tags, people, and location fields using the shared dose form pattern below. |
 | Export | Pro-gated CSV export; warn clearly before exporting location data. |
@@ -133,6 +133,8 @@ All future platforms should preserve these fields:
 | `locationAccuracyMeters` | Decimal/double nullable | Optional accuracy metadata. |
 | `locationCapturedAt` | Date/time nullable | Optional location capture time. |
 | `locationSource` | String nullable | `automatic`, `current`, `manual`, `home-fallback`, `none`; nil should be treated as `none`. |
+| `deletedAt` | Date/time nullable | Soft-delete tombstone timestamp for sync and deletion audit history. |
+| `deletionReason` | String nullable | User-entered deletion reason, for example duplicate recording. Preserve with tombstones and include in history search/export when deleted records are shown. |
 
 CSV exports/imports should use the same field names unless a migration map is explicitly documented.
 

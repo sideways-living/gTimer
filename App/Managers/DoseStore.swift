@@ -58,12 +58,13 @@ final class DoseStore {
     DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
   }
 
-  static func delete(_ record: DoseRecord, context: ModelContext, settings: SettingsManager? = nil) {
-    if settings?.syncEnabled == true {
-      markDeletedForSync(record)
-    } else {
-      context.delete(record)
-    }
+  static func delete(
+    _ record: DoseRecord,
+    reason: String,
+    context: ModelContext,
+    settings: SettingsManager? = nil
+  ) {
+    markDeleted(record, reason: reason)
     try? context.save()
     refreshSharedAfterDeletion(context: context)
     if let settings {
@@ -75,14 +76,10 @@ final class DoseStore {
     }
   }
 
-  static func deleteAll(context: ModelContext, settings: SettingsManager? = nil) {
+  static func deleteAll(reason: String, context: ModelContext, settings: SettingsManager? = nil) {
     let all = (try? context.fetch(FetchDescriptor<DoseRecord>())) ?? []
-    for r in all {
-      if settings?.syncEnabled == true {
-        markDeletedForSync(r)
-      } else {
-        context.delete(r)
-      }
+    for r in all where !r.isDeletedForSync {
+      markDeleted(r, reason: reason)
     }
     try? context.save()
     updateShared(amount: nil, unit: nil, time: nil, settings: nil)
@@ -105,7 +102,7 @@ final class DoseStore {
     let desc = FetchDescriptor<DoseRecord>(
       sortBy: [SortDescriptor(\.time, order: .reverse)]
     )
-    if let newest = (try? context.fetch(desc))?.first {
+    if let newest = ((try? context.fetch(desc)) ?? []).first(where: { !$0.isDeletedForSync }) {
       updateShared(amount: newest.amount, unit: newest.unit,
                    time: newest.time, settings: settings)
     }
@@ -210,11 +207,12 @@ final class DoseStore {
     record.updatedAt = Date()
   }
 
-  private static func markDeletedForSync(_ record: DoseRecord) {
+  private static func markDeleted(_ record: DoseRecord, reason: String) {
     let now = Date()
     if record.createdAt == nil { record.createdAt = record.time }
     record.updatedAt = now
     record.deletedAt = now
+    record.deletionReason = reason.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 }
 
@@ -473,6 +471,7 @@ final class DoseSyncManager {
           createdAt: date(from: remote.createdAt) ?? remoteUpdatedAt,
           updatedAt: remoteUpdatedAt,
           deletedAt: remote.deletedAt.flatMap(date(from:)),
+          deletionReason: remote.deletionReason,
           lastSyncedAt: Date()
         )
         context.insert(record)
@@ -502,6 +501,7 @@ final class DoseSyncManager {
     record.createdAt = date(from: remote.createdAt) ?? record.createdAt ?? record.time
     record.updatedAt = updatedAt
     record.deletedAt = remote.deletedAt.flatMap(date(from:))
+    record.deletionReason = remote.deletionReason
   }
 
   private func syncPayload(for record: DoseRecord) -> SyncDosePayload {
@@ -525,7 +525,8 @@ final class DoseSyncManager {
       locationSource: record.locationSource,
       createdAt: string(from: record.createdAt ?? record.time),
       updatedAt: string(from: effectiveUpdatedAt(for: record)),
-      deletedAt: record.deletedAt.map(string(from:))
+      deletedAt: record.deletedAt.map(string(from:)),
+      deletionReason: record.deletionReason
     )
   }
 
@@ -653,4 +654,5 @@ private struct SyncDosePayload: Codable {
   var createdAt: String
   var updatedAt: String
   var deletedAt: String?
+  var deletionReason: String?
 }

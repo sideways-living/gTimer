@@ -5,7 +5,7 @@ struct DoseRowView: View {
   let isPro: Bool
   let locationApproximate: Bool
   var onEdit: () -> Void
-  var onDelete: () -> Void
+  var onDelete: (String) -> Void
 
   @State private var showDeleteConfirm = false
   @State private var showMapSheet = false
@@ -16,7 +16,7 @@ struct DoseRowView: View {
       HStack(spacing: 12) {
         // Color indicator
         RoundedRectangle(cornerRadius: 2)
-          .fill(dose.missed ? AppTheme.statusAmber : AppTheme.accentBlue)
+          .fill(dose.isDeletedForSync ? AppTheme.statusRed : (dose.missed ? AppTheme.statusAmber : AppTheme.accentBlue))
           .frame(width: 4, height: 44)
 
         VStack(alignment: .leading, spacing: 3) {
@@ -27,6 +27,7 @@ struct DoseRowView: View {
             if dose.wasTakenEarly { pill("Early", color: AppTheme.statusRed) }
             if dose.missed { pill("Missed", color: AppTheme.statusAmber) }
             if dose.edited { pill("Edited", color: AppTheme.textMuted) }
+            if dose.isDeletedForSync { pill("Deleted", color: AppTheme.statusRed) }
           }
           HStack(spacing: 4) {
             Text(dose.time.formatted(date: .abbreviated, time: .shortened))
@@ -51,30 +52,14 @@ struct DoseRowView: View {
             }
             .foregroundStyle(AppTheme.statusRed)
           }
+          if dose.isDeletedForSync {
+            deletedSummary
+          }
         }
 
         Spacer()
 
-        HStack(spacing: 12) {
-          if isPro {
-            Button {
-              onEdit()
-            } label: {
-              Image(systemName: "pencil")
-                .foregroundStyle(AppTheme.accentBlue)
-                .font(.system(size: 15))
-            }
-            .accessibilityLabel("Edit dose")
-          }
-          Button(role: .destructive) {
-            showDeleteConfirm = true
-          } label: {
-            Image(systemName: "trash")
-              .foregroundStyle(AppTheme.statusRed.opacity(0.7))
-              .font(.system(size: 15))
-          }
-          .accessibilityLabel("Delete dose")
-        }
+        rowActions
       }
       .padding(.horizontal, 14)
       .padding(.top, 10)
@@ -109,9 +94,16 @@ struct DoseRowView: View {
     .clipShape(RoundedRectangle(cornerRadius: 12))
     .overlay(RoundedRectangle(cornerRadius: 12).stroke(AppTheme.border, lineWidth: 0.5))
     .padding(.bottom, 6)
-    .confirmationDialog("Delete this dose record?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-      Button("Delete", role: .destructive) { onDelete() }
-      Button("Cancel", role: .cancel) {}
+    .sheet(isPresented: $showDeleteConfirm) {
+      DeletionReasonSheet(
+        title: "Delete dose record",
+        message: "The record will be kept in deleted history with the reason you enter.",
+        actionTitle: "Delete",
+        example: "Duplicate recording of dose"
+      ) { reason in
+        onDelete(reason)
+        showDeleteConfirm = false
+      }
     }
     .sheet(isPresented: $showMapSheet) {
       DoseDetailMapSheet(dose: dose)
@@ -141,5 +133,103 @@ struct DoseRowView: View {
       }
     }
     .padding(.top, 2)
+  }
+
+  @ViewBuilder
+  private var rowActions: some View {
+    if !dose.isDeletedForSync {
+      HStack(spacing: 12) {
+        if isPro {
+          Button {
+            onEdit()
+          } label: {
+            Image(systemName: "pencil")
+              .foregroundStyle(AppTheme.accentBlue)
+              .font(.system(size: 15))
+          }
+          .accessibilityLabel("Edit dose")
+        }
+        Button {
+          showDeleteConfirm = true
+        } label: {
+          Image(systemName: "trash")
+            .foregroundStyle(AppTheme.statusRed.opacity(0.7))
+            .font(.system(size: 15))
+        }
+        .accessibilityLabel("Delete dose")
+      }
+    }
+  }
+
+  private var deletedSummary: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      if let deletedAt = dose.deletedAt {
+        Text("Deleted \(deletedAt.formatted(date: .abbreviated, time: .shortened))")
+      }
+      if let reason = dose.deletionReason, !reason.isEmpty {
+        Text("Reason: \(reason)")
+      }
+    }
+    .font(.system(size: 12, weight: .medium))
+    .foregroundStyle(AppTheme.statusRed)
+  }
+}
+
+struct DeletionReasonSheet: View {
+  @Environment(\.dismiss) private var dismiss
+  let title: String
+  let message: String
+  let actionTitle: String
+  let example: String
+  var onSubmit: (String) -> Void
+
+  @State private var reason = ""
+
+  private var cleanReason: String {
+    reason.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  var body: some View {
+    NavigationStack {
+      VStack(alignment: .leading, spacing: 16) {
+        Text(message)
+          .font(.system(size: 14))
+          .foregroundStyle(AppTheme.textSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Reason")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(AppTheme.textPrimary)
+          TextField(text: $reason, axis: .vertical) {
+            Text(example)
+          }
+            .textFieldStyle(.roundedBorder)
+            .lineLimit(2...4)
+        }
+
+        Spacer(minLength: 0)
+      }
+      .padding(20)
+      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+      .navigationTitle(title)
+      .platformInlineNavigationTitle()
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Cancel") { dismiss() }
+        }
+        ToolbarItem(placement: .confirmationAction) {
+          Button(role: .destructive) {
+            onSubmit(cleanReason)
+            dismiss()
+          } label: {
+            Text(actionTitle)
+          }
+          .disabled(cleanReason.isEmpty)
+        }
+      }
+    }
+    .presentationBackground(AppTheme.backgroundPrimary)
+    .frame(minWidth: 380, minHeight: 240)
   }
 }

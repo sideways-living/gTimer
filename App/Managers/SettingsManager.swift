@@ -458,6 +458,9 @@ final class SettingsManager {
   var showSafeElapsedTimer: Bool {
     didSet { UserDefaults.standard.set(showSafeElapsedTimer, forKey: "showSafeElapsedTimer") }
   }
+  var includeDeletedDosesInHistory: Bool {
+    didSet { UserDefaults.standard.set(includeDeletedDosesInHistory, forKey: "includeDeletedDosesInHistory") }
+  }
   var voiceDoseLoggingEnabled: Bool {
     didSet { UserDefaults.standard.set(voiceDoseLoggingEnabled, forKey: "voiceDoseLoggingEnabled") }
   }
@@ -630,6 +633,7 @@ final class SettingsManager {
     countdownMode     = ud.object(forKey: "countdownMode") as? Bool ?? true
     timeFormat        = ud.string(forKey: "timeFormat") ?? "hours"
     showSafeElapsedTimer = ud.bool(forKey: "showSafeElapsedTimer")
+    includeDeletedDosesInHistory = ud.bool(forKey: "includeDeletedDosesInHistory")
     voiceDoseLoggingEnabled = ud.bool(forKey: "voiceDoseLoggingEnabled")
     voiceDoseAttachCurrentLocation = ud.object(forKey: "voiceDoseAttachCurrentLocation") as? Bool ?? true
     voiceDoseMatchSavedLocations = ud.object(forKey: "voiceDoseMatchSavedLocations") as? Bool ?? true
