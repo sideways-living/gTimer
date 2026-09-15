@@ -224,7 +224,11 @@ function readArgumentValue(name) {
 }
 
 function isMainModule() {
-  return Boolean(process.argv[1]) && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+  const modulePath = fileURLToPath(import.meta.url);
+  const launchedPath = process.argv[1] ? resolve(process.argv[1]) : undefined;
+  const pm2Path = process.env.pm_exec_path ? resolve(process.env.pm_exec_path) : undefined;
+
+  return modulePath === launchedPath || modulePath === pm2Path;
 }
 
 if (isMainModule()) {
