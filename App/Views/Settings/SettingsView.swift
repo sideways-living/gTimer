@@ -165,6 +165,7 @@ struct SettingsView: View {
       displaySection
       colourSection
       notificationsSection
+      assistedDoseSection
     }
   }
 
@@ -609,6 +610,108 @@ struct SettingsView: View {
 
   private func rescheduleNotificationsIfNeeded() {
     DoseStore.scheduleReminderForMostRecentDose(context: context, settings: settings)
+  }
+
+  private var assistedDoseSection: some View {
+    settingsCard(title: "Assisted Dose Logging") {
+      if settings.proBetaAccepted {
+        VStack(alignment: .leading, spacing: 10) {
+          row(label: "Siri and Shortcuts") {
+            @Bindable var s = settings
+            Toggle("Siri and Shortcuts", isOn: $s.voiceDoseLoggingEnabled)
+              .labelsHidden()
+              .tint(AppTheme.accentBlue)
+              .accessibilityLabel("Siri and Shortcuts dose logging")
+              .onChange(of: settings.voiceDoseLoggingEnabled) {
+                markUnsaved()
+                if settings.voiceDoseLoggingEnabled && settings.voiceDoseAttachCurrentLocation {
+                  Task {
+                    await requestLocationPermissionFromSettings()
+                  }
+                }
+              }
+          }
+
+          if settings.voiceDoseLoggingEnabled {
+            cardDivider
+            row(label: "Attach current location") {
+              @Bindable var s = settings
+              Toggle("Attach current location", isOn: $s.voiceDoseAttachCurrentLocation)
+                .labelsHidden()
+                .tint(AppTheme.accentBlue)
+                .accessibilityLabel("Attach current location to assisted dose logs")
+                .onChange(of: settings.voiceDoseAttachCurrentLocation) {
+                  markUnsaved()
+                  if settings.voiceDoseAttachCurrentLocation {
+                    Task {
+                      await requestLocationPermissionFromSettings()
+                    }
+                  }
+                }
+            }
+            cardDivider
+            row(label: "Match saved places") {
+              @Bindable var s = settings
+              Toggle("Match saved places", isOn: $s.voiceDoseMatchSavedLocations)
+                .labelsHidden()
+                .tint(AppTheme.accentBlue)
+                .accessibilityLabel("Match spoken places to saved and recent dose locations")
+                .onChange(of: settings.voiceDoseMatchSavedLocations) { markUnsaved() }
+            }
+            cardDivider
+            row(label: "Save spoken phrase") {
+              @Bindable var s = settings
+              Toggle("Save spoken phrase", isOn: $s.voiceDoseStoreSpokenPhraseInNotes)
+                .labelsHidden()
+                .tint(AppTheme.accentBlue)
+                .accessibilityLabel("Save spoken dose phrase as dose notes")
+                .onChange(of: settings.voiceDoseStoreSpokenPhraseInNotes) { markUnsaved() }
+            }
+            Text("Examples: \"Log 2.8ml\", \"Log 2.8ml at Adina with Jake hashtag working away\", or \"Log 2.8ml at 9pm\".")
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.textMuted)
+              .fixedSize(horizontal: false, vertical: true)
+          } else {
+            Text("Turn this on to let Siri, Shortcuts, and trusted automations create normal gTimer dose records.")
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.textMuted)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
+      } else {
+        Button {
+          paywallFeature = .assistedDoseLogging
+          showPaywall = true
+        } label: {
+          HStack(spacing: 10) {
+            Image(systemName: "mic.fill")
+              .font(.system(size: 16))
+              .foregroundStyle(AppTheme.proAmber)
+            VStack(alignment: .leading, spacing: 2) {
+              Text("Log doses with Siri")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(AppTheme.textPrimary)
+              Text("Use voice, Shortcuts, or trusted automations to log doses with optional tags, people, time, and location.")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            HStack(spacing: 4) {
+              Image(systemName: "lock.fill").font(.system(size: 10))
+              Text("Pro")
+                .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(AppTheme.proAmber)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(AppTheme.proAmber.opacity(0.12))
+            .clipShape(Capsule())
+          }
+        }
+        .buttonStyle(.plain)
+      }
+    }
   }
 
   private var locationStatusColour: Color {

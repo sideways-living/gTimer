@@ -43,6 +43,8 @@ Clients are local-first:
 - The server returns a monotonically increasing `cursor`.
 - The first production implementation should encrypt transport with HTTPS and use a proper account identity provider.
 
+Assistant, Siri, Shortcuts, and bot logging must create the same canonical dose object as in-app logging. The preferred pattern is to parse the spoken/typed command on the trusted client, write the local record, and let normal sync push it. On Apple platforms, trusted automations can use the App Intent or the local deep link `gtimer://log?details=2.8ml%20at%20Adina%20with%20Jake%20hashtag%20working%20away`. Supported deep-link query fields are `amount`, `unit`, `details`, `time` as ISO-8601, `location`, `people`, `tags`, `notes`, and `missed=true`. A future server-side bot endpoint must be authenticated to the user/device and must still emit a normal `doses` change through `POST /v1/sync/push`; it should not create a parallel dose format.
+
 ## Auth
 
 The normal beta flow is email/password login. Registering or logging in returns a device token. The app stores that token locally and uses it as the bearer token for sync.

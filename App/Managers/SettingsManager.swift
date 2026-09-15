@@ -3,6 +3,7 @@ import PhotosUI
 import WidgetKit
 import Security
 import CryptoKit
+import CoreLocation
 #if os(iOS)
 import UIKit
 #endif
@@ -457,6 +458,18 @@ final class SettingsManager {
   var showSafeElapsedTimer: Bool {
     didSet { UserDefaults.standard.set(showSafeElapsedTimer, forKey: "showSafeElapsedTimer") }
   }
+  var voiceDoseLoggingEnabled: Bool {
+    didSet { UserDefaults.standard.set(voiceDoseLoggingEnabled, forKey: "voiceDoseLoggingEnabled") }
+  }
+  var voiceDoseAttachCurrentLocation: Bool {
+    didSet { UserDefaults.standard.set(voiceDoseAttachCurrentLocation, forKey: "voiceDoseAttachCurrentLocation") }
+  }
+  var voiceDoseMatchSavedLocations: Bool {
+    didSet { UserDefaults.standard.set(voiceDoseMatchSavedLocations, forKey: "voiceDoseMatchSavedLocations") }
+  }
+  var voiceDoseStoreSpokenPhraseInNotes: Bool {
+    didSet { UserDefaults.standard.set(voiceDoseStoreSpokenPhraseInNotes, forKey: "voiceDoseStoreSpokenPhraseInNotes") }
+  }
   var syncEnabled: Bool {
     didSet { UserDefaults.standard.set(syncEnabled, forKey: "syncEnabled") }
   }
@@ -585,6 +598,11 @@ final class SettingsManager {
     proBetaAccepted || isSyncTrialActive
   }
 
+  var homeCoordinate: CLLocationCoordinate2D? {
+    guard let homeLatitude, let homeLongitude else { return nil }
+    return CLLocationCoordinate2D(latitude: homeLatitude, longitude: homeLongitude)
+  }
+
   var hasLocalAccountPassword: Bool {
     KeychainStore.string(for: "gtimer.accountPasswordHash") != nil
   }
@@ -612,6 +630,10 @@ final class SettingsManager {
     countdownMode     = ud.object(forKey: "countdownMode") as? Bool ?? true
     timeFormat        = ud.string(forKey: "timeFormat") ?? "hours"
     showSafeElapsedTimer = ud.bool(forKey: "showSafeElapsedTimer")
+    voiceDoseLoggingEnabled = ud.bool(forKey: "voiceDoseLoggingEnabled")
+    voiceDoseAttachCurrentLocation = ud.object(forKey: "voiceDoseAttachCurrentLocation") as? Bool ?? true
+    voiceDoseMatchSavedLocations = ud.object(forKey: "voiceDoseMatchSavedLocations") as? Bool ?? true
+    voiceDoseStoreSpokenPhraseInNotes = ud.bool(forKey: "voiceDoseStoreSpokenPhraseInNotes")
     syncEnabled       = ud.bool(forKey: "syncEnabled")
     syncServerURL     = ud.string(forKey: "syncServerURL") ?? "https://sync.gtimer.app"
     let savedSyncAccountEmail = ud.string(forKey: "syncAccountEmail") ?? ""
@@ -691,5 +713,15 @@ final class SettingsManager {
 
   func verifyAccountPassword(_ password: String) -> Bool {
     SecureHashing.verify(password, encodedHash: KeychainStore.string(for: "gtimer.accountPasswordHash"))
+  }
+
+  func manualLocationSearchContext(currentCoordinate: CLLocationCoordinate2D? = nil) -> ManualLocationSearchContext {
+    ManualLocationSearchContext(
+      homeCity: homeCity,
+      homeCountryCode: homeCountryCode,
+      homeAddress: homeAddress,
+      homeCoordinate: homeCoordinate,
+      currentCoordinate: currentCoordinate
+    )
   }
 }

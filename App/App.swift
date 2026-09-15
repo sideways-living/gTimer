@@ -68,9 +68,7 @@ struct GTimerApp: App {
           upgrade.checkForUpdates()
         }
         .onOpenURL { url in
-          if url.scheme == "gtimer" && url.host == "timer" {
-            nav.selectedTab = 0
-          }
+          handleAppURL(url)
         }
     }
     .commands {
@@ -125,6 +123,42 @@ struct GTimerApp: App {
       }
     }
   }
+
+  private func handleAppURL(_ url: URL) {
+    guard url.scheme == "gtimer" else { return }
+    switch url.host {
+    case "timer":
+      nav.selectedTab = 0
+    case "log":
+      Task { @MainActor in
+        _ = try? await AssistedDoseLogger.log(assistedLoggingInput(from: url))
+        nav.selectedTab = 0
+      }
+    default:
+      break
+    }
+  }
+
+  private func assistedLoggingInput(from url: URL) -> AssistedDoseLoggingInput {
+    let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+    var query: [String: String] = [:]
+    for item in components?.queryItems ?? [] {
+      guard let value = item.value else { continue }
+      query[item.name.lowercased()] = value
+    }
+    let time = query["time"].flatMap { ISO8601DateFormatter().date(from: $0) }
+    return AssistedDoseLoggingInput(
+      amount: query["amount"].flatMap(Double.init) ?? 0,
+      unit: query["unit"],
+      spokenDetails: query["details"] ?? query["detail"] ?? query["q"],
+      explicitTime: time,
+      explicitLocationName: query["location"],
+      explicitPeople: query["people"] ?? query["with"],
+      explicitTags: query["tags"] ?? query["tag"],
+      explicitNotes: query["notes"],
+      missed: query["missed"].map { ["1", "true", "yes"].contains($0.lowercased()) } ?? false
+    )
+  }
 }
 
 enum AppUpdateCategory: String, CaseIterable, Identifiable {
@@ -155,6 +189,24 @@ final class AppUpdateManager {
   var shouldShowUpdateNotes = false
 
   let entries: [AppUpdateEntry] = [
+    AppUpdateEntry(
+      version: "0.9.27",
+      build: 117,
+      category: .newFeatures,
+      message: "Added Pro-gated Siri, Shortcuts, and trusted automation dose logging."
+    ),
+    AppUpdateEntry(
+      version: "0.9.27",
+      build: 117,
+      category: .minorImprovements,
+      message: "Assisted dose commands can parse spoken dose amount, time, location, people, and hashtag-style tags."
+    ),
+    AppUpdateEntry(
+      version: "0.9.27",
+      build: 117,
+      category: .minorImprovements,
+      message: "Settings now controls assisted dose logging, current-location capture, saved-place matching, and spoken-note capture."
+    ),
     AppUpdateEntry(
       version: "0.9.26",
       build: 116,

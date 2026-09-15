@@ -1,6 +1,6 @@
 # Future Platform Parity Plan
 
-Last updated: 2026-09-14
+Last updated: 2026-09-15
 
 ## Scope
 
@@ -82,6 +82,7 @@ Future Android and Windows versions should match these features:
 | Countdown mode | Display remaining time; arc starts fully coloured and empties from the right as time elapses. |
 | Count-up mode | Display elapsed time; arc starts empty and fills from the left as time elapses. |
 | Dose logging | Standard-dose button, 0-4 quick-dose buttons, custom amount, early-log warning before interval has elapsed. Custom/add-dose entry uses the shared dose form pattern below, including notes, hashtag-style tags, and remembered people. |
+| Assisted logging | Pro-gated Siri, Shortcuts, deep-link, and trusted automation logging. Spoken commands should create the same canonical dose records as the app UI, including amount, unit, optional time, missed-dose detection for backdated times, spoken/saved/current location, hashtag-style tags, people, notes, early-dose metadata, notification rescheduling, widget refresh, and sync queuing. |
 | Quick doses | Settings use four individual optional values. Main timer shows 4, 3, 2, 1, or setup-link states depending on saved values. |
 | History | Reverse chronological dose records; search by tags, people, notes, locations, amounts, and device; delete; delete all; free mode limits visible history; Pro unlocks full history. |
 | Missed doses | Pro-gated backdated dose entry using the shared dose form pattern below. |
@@ -148,6 +149,7 @@ CSV exports/imports should use the same field names unless a migration map is ex
 | Timer mode | Countdown/count-up | Match display and arc behavior exactly. |
 | Time format | Setting exists | Preserve until product decision removes or uses it consistently. |
 | Time since safe | Pro-gated and off by default | When enabled, show an elapsed timer under the safe-to-redose status only after the configured minimum interval has passed. |
+| Assisted dose logging | Pro-gated and off by default | Controls whether Siri/assistant/automation logging is allowed. Separate settings control current-location capture, saved/recent-place matching, and whether the spoken phrase is saved into notes. |
 | Device name | Editable | Same semantics. |
 | Pro beta | Local entitlement currently | Replace only through a cross-platform entitlement decision. |
 | Profile | Pro-gated display name/photo | Same gate or documented store-specific equivalent. |
@@ -210,6 +212,7 @@ Android-specific substitutions:
 - Replace iOS local notifications with Android notification channels and runtime notification permission.
 - Replace iOS location permission flow with Android foreground location permission.
 - Replace WidgetKit with Android Glance/AppWidget widgets that show timer status, last dose amount/time, safe interval progress, and open the app to the timer. Direct widget logging is only parity-complete if it writes the canonical history record and triggers the same update/notification flow.
+- Replace Siri/App Shortcuts with Android App Actions, Shortcuts, widgets, or a trusted assistant integration that calls the same local assisted-dose command parser before writing the canonical dose record.
 - On keyboard-capable Android devices, expose equivalent shortcuts where practical. On touch-only devices, preserve the same export options through visible controls rather than relying on keyboard commands.
 - If cross-platform sync is needed, do not use an Android-only sync backend unless the product decision explicitly allows it.
 - Use the retained launcher and Play Store icon assets in `FuturePlatformAssets/Android` so the Android release matches the Apple app icon.
@@ -229,6 +232,7 @@ Windows-specific substitutions:
 
 - If Windows Widgets are not suitable, document a tray/live-tile/taskbar equivalent before claiming widget parity. The equivalent must show timer status, last dose amount/time, safe interval progress, and open the app to the timer.
 - Direct widget/tray logging is only parity-complete if it writes the canonical history record and triggers the same update/notification flow.
+- Provide a trusted assistant/automation route, such as a protocol handler, command-line helper, Power Automate action, or local API, that uses the same assisted-dose command parser before writing the canonical dose record.
 - Match the macOS desktop command set with Windows menu/ribbon/keyboard equivalents: open app sections, new dose, export PDF, print, settings, and quit confirmation.
 - Location capture depends on Windows device/location permissions and hardware availability.
 - Do not silently omit Pro, export, location, or history behavior; mark unsupported items as product decisions.
@@ -248,7 +252,7 @@ The current Apple implementation can use Apple-only storage patterns. Android an
 
 Recommended long-term direction: build a cross-platform sync backend for dose history, settings, Pro entitlements, profile data, and saved locations. Apple-only iCloud sync can be useful for iPhone, iPad, Mac, Watch, and Widget handoff, but it must not be treated as the parity solution for Android or Windows.
 
-Current beta direction: `SyncAPI` is the chosen custom API starting point and is deployed at `https://sync.gtimer.app`. App version 0.9.17 adds opt-in Apple client support for dose-history sync against this API. App version 0.9.19 adds beta email/password accounts with per-device tokens and device removal. App version 0.9.20 makes account sync optional, positions it as a gTimer Pro benefit, and adds a 14-day free device-sync trial. App version 0.9.24 separates local account setup from sync-device registration: first launch collects a local name, email address, and password for data protection and optional PIN recovery, while a sync device id is only created when the user starts a sync trial or has gTimer Pro and explicitly registers that install for sync. App version 0.9.26 adds synced dose tags and people fields for future cross-device search parity.
+Current beta direction: `SyncAPI` is the chosen custom API starting point and is deployed at `https://sync.gtimer.app`. App version 0.9.17 adds opt-in Apple client support for dose-history sync against this API. App version 0.9.19 adds beta email/password accounts with per-device tokens and device removal. App version 0.9.20 makes account sync optional, positions it as a gTimer Pro benefit, and adds a 14-day free device-sync trial. App version 0.9.24 separates local account setup from sync-device registration: first launch collects a local name, email address, and password for data protection and optional PIN recovery, while a sync device id is only created when the user starts a sync trial or has gTimer Pro and explicitly registers that install for sync. App version 0.9.26 adds synced dose tags and people fields for future cross-device search parity. App version 0.9.27 adds the Apple App Intents layer and local `gtimer://log?...` deep link for Pro-gated assisted dose logging. Android and Windows should expose equivalent assistant/automation entry points through the same normalized command contract: parse spoken amount, unit, time, location phrase, tags, people, notes, and missed-dose intent; resolve location against saved/recent/home/current context; then write one normal local dose record and sync it through `SyncAPI`.
 
 Before Android or Windows implementation begins, keep this decision unless there is an explicit product/security review that replaces it:
 

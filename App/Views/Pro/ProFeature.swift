@@ -11,6 +11,7 @@ enum ProFeature: String, CaseIterable {
   case deviceSync
   case profile
   case safeElapsedTimer
+  case assistedDoseLogging
 
   var title: String {
     switch self {
@@ -24,6 +25,7 @@ enum ProFeature: String, CaseIterable {
     case .deviceSync:       return "Device Sync"
     case .profile:          return "Profile"
     case .safeElapsedTimer: return "Safe Elapsed Timer"
+    case .assistedDoseLogging: return "Siri & AI Logging"
     }
   }
 
@@ -49,6 +51,8 @@ enum ProFeature: String, CaseIterable {
       return "Set a display name and profile photo."
     case .safeElapsedTimer:
       return "Show how long it has been since your minimum time between doses passed."
+    case .assistedDoseLogging:
+      return "Log doses by voice or trusted automations, including spoken tags, people, times, and locations."
     }
   }
 
@@ -64,6 +68,7 @@ enum ProFeature: String, CaseIterable {
     case .deviceSync:       return "icloud.fill"
     case .profile:          return "person.crop.circle.fill"
     case .safeElapsedTimer: return "timer.circle.fill"
+    case .assistedDoseLogging: return "mic.fill"
     }
   }
 
