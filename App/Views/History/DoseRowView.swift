@@ -123,13 +123,33 @@ struct DoseRowView: View {
       .clipShape(Capsule())
   }
 
+  private func personPill(_ name: String) -> some View {
+    HStack(spacing: 4) {
+      Image(systemName: "person.fill")
+        .font(.system(size: 8, weight: .semibold))
+      Text(name)
+        .font(.system(size: 10, weight: .semibold))
+    }
+    .foregroundStyle(AppTheme.textSecondary)
+    .padding(.horizontal, 7)
+    .padding(.vertical, 2)
+    .background(AppTheme.textSecondary.opacity(0.15))
+    .clipShape(Capsule())
+  }
+
+  private func displayedTag(_ tag: String) -> String {
+    let trimmed = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return "" }
+    return trimmed.hasPrefix("#") ? trimmed : "#\(trimmed)"
+  }
+
   private var tokenRow: some View {
     HStack(spacing: 5) {
       ForEach(dose.tags.prefix(4), id: \.self) { tag in
-        pill(tag, color: AppTheme.accentBlue)
+        pill(displayedTag(tag), color: AppTheme.accentBlue)
       }
       ForEach(dose.people.prefix(max(0, 4 - dose.tags.prefix(4).count)), id: \.self) { person in
-        pill(person, color: AppTheme.textSecondary)
+        personPill(person)
       }
     }
     .padding(.top, 2)

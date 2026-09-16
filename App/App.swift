@@ -190,6 +190,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.33",
+      build: 123,
+      category: .minorImprovements,
+      message: "Dose history now displays tags with a # prefix and people with a person icon."
+    ),
+    AppUpdateEntry(
       version: "0.9.32",
       build: 122,
       category: .minorImprovements,
