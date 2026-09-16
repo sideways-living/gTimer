@@ -39,6 +39,8 @@
 	<string>public.app-category.healthcare-fitness</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>gTimer uses your location only when you choose to attach locations to dose logs for your own reference.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>gTimer uses your location only when you choose to attach locations to dose logs for your own reference.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>gTimer uses your photo library to set a profile picture.</string>
 	<key>NSCameraUsageDescription</key>
