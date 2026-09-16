@@ -1,8 +1,10 @@
 import UserNotifications
 import Foundation
+import os
 
 final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
   static let shared = NotificationManager()
+  private static let logger = Logger(subsystem: "app.gtimer", category: "notifications")
   private let reminderIdentifier = "redose_reminder"
   private let messageIndexKey = "redoseReminderMessageIndex"
   private let harmReductionMessages = [
@@ -49,7 +51,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     let request = UNNotificationRequest(identifier: reminderIdentifier, content: content, trigger: trigger)
     UNUserNotificationCenter.current().add(request) { error in
       if let error {
-        print("Failed to schedule redose reminder: \(error.localizedDescription)")
+        Self.logger.error("Failed to schedule redose reminder: \(error.localizedDescription, privacy: .public)")
       }
     }
   }

@@ -5,7 +5,8 @@ import SwiftData
 struct DoseMapView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(\.dismiss) private var dismiss
-  @Query(sort: \DoseRecord.time, order: .reverse) private var allDoses: [DoseRecord]
+  @Query(filter: #Predicate<DoseRecord> { $0.deletedAt == nil }, sort: \DoseRecord.time, order: .reverse)
+  private var activeDoses: [DoseRecord]
 
   var showsDismissButton = true
   var bottomBarClearance: CGFloat = 0
@@ -16,7 +17,6 @@ struct DoseMapView: View {
   @State private var pinnedDoseID: UUID? = nil
   @State private var markerFrames: [UUID: CGRect] = [:]
 
-  private var activeDoses: [DoseRecord] { allDoses.filter { !$0.isDeletedForSync } }
   private var locatedDoses: [DoseRecord] { activeDoses.filter { $0.hasLocation } }
   private var activeCalloutDoseID: UUID? { pinnedDoseID ?? hoveredDoseID }
 

@@ -13,7 +13,10 @@ struct HistoryView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(AppNavigation.self) private var nav
   @Environment(\.modelContext) private var context
-  @Query(sort: \DoseRecord.time, order: .reverse) private var allDoses: [DoseRecord]
+  @Query(filter: #Predicate<DoseRecord> { $0.deletedAt == nil }, sort: \DoseRecord.time, order: .reverse)
+  private var activeDoses: [DoseRecord]
+  @Query(filter: #Predicate<DoseRecord> { $0.deletedAt != nil }, sort: \DoseRecord.time, order: .reverse)
+  private var deletedDoses: [DoseRecord]
 
   @State private var showDeleteAll = false
   @State private var editingDose: DoseRecord?
@@ -26,8 +29,9 @@ struct HistoryView: View {
   @State private var handledDoseMapRequestID = 0
   @State private var searchText = ""
 
-  private var activeDoses: [DoseRecord] { allDoses.filter { !$0.isDeletedForSync } }
-  private var deletedDoses: [DoseRecord] { allDoses.filter(\.isDeletedForSync) }
+  private var allDoses: [DoseRecord] {
+    (activeDoses + deletedDoses).sorted { $0.time > $1.time }
+  }
   private var historySourceDoses: [DoseRecord] {
     settings.includeDeletedDosesInHistory ? allDoses : activeDoses
   }

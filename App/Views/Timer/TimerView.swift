@@ -6,7 +6,8 @@ struct TimerView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(AppNavigation.self) private var nav
   @Environment(\.modelContext) private var context
-  @Query(sort: \DoseRecord.time, order: .reverse) private var doses: [DoseRecord]
+  @Query(filter: #Predicate<DoseRecord> { $0.deletedAt == nil }, sort: \DoseRecord.time, order: .reverse)
+  private var activeDoses: [DoseRecord]
 
   @State private var now = Date()
   @State private var showCustomSheet = false
@@ -22,7 +23,6 @@ struct TimerView: View {
   @State private var recentHistoryLimit = 10
   @State private var security = AppSecurityManager.shared
 
-  private var activeDoses: [DoseRecord] { doses.filter { !$0.isDeletedForSync } }
   private var lastDose: DoseRecord? { activeDoses.first }
   private var visibleDoses: [DoseRecord] {
     if settings.proBetaAccepted { return activeDoses }

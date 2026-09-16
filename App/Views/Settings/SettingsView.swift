@@ -134,13 +134,19 @@ private extension SettingsScrollTarget {
 }
 
 private let maxStoredProfilePhotoDimension: CGFloat = 512
+private let maxProfilePhotoImportBytes = 20 * 1024 * 1024
 
 struct SettingsView: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(AppNavigation.self) private var nav
   @Environment(\.openURL) private var openURL
   @Environment(\.modelContext) private var context
-  @Query(sort: \DoseRecord.time, order: .reverse) private var doseRecords: [DoseRecord]
+  @Query(
+    filter: #Predicate<DoseRecord> { $0.deletedAt == nil && $0.latitude != nil && $0.longitude != nil },
+    sort: \DoseRecord.time,
+    order: .reverse
+  )
+  private var locatedDoseRecords: [DoseRecord]
   @State private var locationManager = LocationManager.shared
   @State private var security = AppSecurityManager.shared
   @State private var saveState: SaveState = .idle
@@ -2131,7 +2137,7 @@ struct SettingsView: View {
     homeAddressText = settings.homeAddress
     homeLatitudeText = coordinateText(settings.homeLatitude)
     homeLongitudeText = coordinateText(settings.homeLongitude)
-    ManualLocationStore.shared.absorbHistoryLocations(from: doseRecords)
+    ManualLocationStore.shared.absorbHistoryLocations(from: locatedDoseRecords)
     let amountStrings = settings.quickAmounts.prefix(4).map {
       $0.formatted(.number.precision(.fractionLength(1)))
     }
@@ -2543,6 +2549,11 @@ struct SettingsView: View {
         if didStartAccessing { url.stopAccessingSecurityScopedResource() }
       }
       do {
+        let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        if let fileSize = values.fileSize, fileSize > maxProfilePhotoImportBytes {
+          photoImportError = "Choose an image under 20 MB."
+          return
+        }
         saveProfilePhotoData(try Data(contentsOf: url))
       } catch {
         photoImportError = "That file could not be loaded."
