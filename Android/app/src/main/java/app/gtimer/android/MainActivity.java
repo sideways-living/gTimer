@@ -45,8 +45,6 @@ import java.util.UUID;
 public final class MainActivity extends Activity {
     private static final String PREFS = "gtimer_android";
     private static final String DOSES_KEY = "doses";
-    private static final String CHANNEL_ID = "safe_to_redose";
-
     private static final int BACKGROUND = Color.rgb(11, 17, 24);
     private static final int PANEL = Color.rgb(17, 25, 36);
     private static final int SURFACE = Color.rgb(31, 41, 55);
@@ -80,6 +78,7 @@ public final class MainActivity extends Activity {
         settings = Settings.load(prefs);
         loadDoses();
         createNotificationChannel();
+        updateScheduledReminder();
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -288,7 +287,12 @@ public final class MainActivity extends Activity {
             settings.notificationsEnabled = notifications.isChecked();
             settings.showSafeElapsedTimer = settings.proBeta && showSafeElapsed.isChecked();
             settings.save(prefs);
-            if (settings.notificationsEnabled) requestNotificationPermissionIfNeeded();
+            if (settings.notificationsEnabled) {
+                requestNotificationPermissionIfNeeded();
+                updateScheduledReminder();
+            } else {
+                ReminderScheduler.cancel(this);
+            }
             renderTimer();
         });
         page.addView(save, new LinearLayout.LayoutParams(-1, dp(56)));
@@ -332,7 +336,10 @@ public final class MainActivity extends Activity {
     private void logDose(double amount, long earlySeconds) {
         doses.add(0, new DoseRecord(UUID.randomUUID().toString(), amount, System.currentTimeMillis(), earlySeconds, ""));
         saveDoses();
-        if (settings.notificationsEnabled) requestNotificationPermissionIfNeeded();
+        if (settings.notificationsEnabled) {
+            requestNotificationPermissionIfNeeded();
+            updateScheduledReminder();
+        }
         renderTimer();
     }
 
@@ -350,6 +357,7 @@ public final class MainActivity extends Activity {
     private TimerState timerState(DoseRecord latest) {
         if (latest == null) return TimerState.inactive();
         long elapsed = Math.max(0, (System.currentTimeMillis() - latest.timeMillis) / 1000);
+        if (elapsed >= 6 * 3600L) return TimerState.inactive();
         long interval = settings.intervalMinutes * 60L;
         boolean safe = elapsed >= interval;
         long display = settings.countdownMode ? Math.max(interval - elapsed, 0) : elapsed;
@@ -384,15 +392,30 @@ public final class MainActivity extends Activity {
     }
 
     private void createNotificationChannel() {
-        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Safe to redose", NotificationManager.IMPORTANCE_DEFAULT);
-        channel.setDescription("Reminders when your configured minimum time between doses has passed.");
-        getSystemService(NotificationManager.class).createNotificationChannel(channel);
+        ReminderScheduler.ensureNotificationChannel(this);
     }
 
     private void requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1001);
         }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 1001 && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            updateScheduledReminder();
+        }
+    }
+
+    private void updateScheduledReminder() {
+        DoseRecord latest = latestDose();
+        if (!settings.notificationsEnabled || latest == null) {
+            ReminderScheduler.cancel(this);
+            return;
+        }
+        ReminderScheduler.schedule(this, latest.timeMillis, settings.intervalMinutes);
     }
 
     private LinearLayout page() {

@@ -18,7 +18,7 @@ The iOS SwiftUI app is the canonical implementation. Future Android and Windows 
 | macOS | Debug build and installer flow passing | App builds for `My Mac` with a Mac sidebar shell, responsive timer/history layout, GitHub update metadata, and package output; store readiness and Mac-specific QA still need work. |
 | macOS Widget | Buildable and embedded in app | WidgetKit extension embeds in the Mac app bundle, reads the same App Group timer data, supports small/medium/large widgets, and opens gTimer through `gtimer://timer`. |
 | tvOS | No target | Not configured in the Xcode project. Would be a new platform port with limited feature fit. |
-| Android | Initial native project build passing | Java/Android Gradle project now lives in `Android/`. Current milestone has local-first timer, quick-dose logging, history, settings, Pro beta gate, Android icons, and a debug APK build. Location, maps, widgets, full edit/missed-dose forms, billing, and SyncAPI integration remain pending parity slices. |
+| Android | Initial native project build passing | Java/Android Gradle project now lives in `Android/`. Current milestone has local-first timer, quick-dose logging, history, settings, Pro beta gate, Android icons, and functional minimum-interval notifications that survive reboot. Location, maps, widgets, full edit/missed-dose forms, billing, and SyncAPI integration remain pending parity slices. |
 | Windows | Future planned | No implementation started. |
 
 ## macOS Finding
@@ -198,6 +198,7 @@ Current Android milestone:
 - Storage: temporary `SharedPreferences` JSON store, to be replaced with Room or SQLDelight before broad testing.
 - Implemented screens: gTimer, History, Map placeholder, Health, Settings, and gTimer Pro.
 - Implemented timer behavior: standard dose, configured quick doses, early-dose warning/history note, countdown/count-up display, and Pro-gated time-since-safe status counter.
+- Implemented notifications: Android 13+ runtime permission request, notification channel, rotating harm-reduction messages, cancellation/rescheduling from the latest dose, and reboot restoration.
 
 Recommended stack:
 
