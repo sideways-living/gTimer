@@ -23,6 +23,16 @@ struct TimerView: View {
   @State private var recentHistoryLimit = 10
   @State private var security = AppSecurityManager.shared
 
+  init() {
+    var descriptor = FetchDescriptor<DoseRecord>(
+      predicate: #Predicate { $0.deletedAt == nil },
+      sortBy: [SortDescriptor(\.time, order: .reverse)]
+    )
+    // This screen renders at most 30 history rows plus the current dose.
+    descriptor.fetchLimit = 31
+    _activeDoses = Query(descriptor)
+  }
+
   private var lastDose: DoseRecord? { activeDoses.first }
   private var visibleDoses: [DoseRecord] {
     if settings.proBetaAccepted { return activeDoses }
@@ -814,6 +824,20 @@ struct TimerView: View {
         settings: settings
       )
     } else if captureLocation {
+      // Commit first so the timer and history acknowledge the tap immediately.
+      // Location capture can take several seconds indoors and must not block logging.
+      let record = DoseStore.logDose(
+        amount: result.amount,
+        unit: settings.unit,
+        time: result.time,
+        notes: result.notes,
+        tags: result.tags,
+        people: result.people,
+        earlyBySeconds: earlyBySeconds,
+        deviceName: settings.deviceName,
+        context: context,
+        settings: settings
+      )
       Task { @MainActor in
         _ = await loc.requestWhenInUsePermissionIfNeeded()
         let captured = await loc.captureForDose()
@@ -827,18 +851,12 @@ struct TimerView: View {
         let doseLocationName = loc.locationName
         let doseLocationSource = "automatic"
         #endif
-        DoseStore.logDose(
-          amount: result.amount,
-          unit: settings.unit,
-          time: result.time,
-          notes: result.notes,
-          tags: result.tags,
-          people: result.people,
-          earlyBySeconds: earlyBySeconds,
-          capturedLocation: doseLocation,
-          locationName: doseLocationName,
-          locationSource: doseLocationSource,
-          deviceName: settings.deviceName,
+        guard let doseLocation else { return }
+        DoseStore.attachLocation(
+          doseLocation,
+          name: doseLocationName,
+          source: doseLocationSource,
+          to: record,
           context: context,
           settings: settings
         )

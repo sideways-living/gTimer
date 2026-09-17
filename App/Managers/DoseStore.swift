@@ -5,6 +5,7 @@ import WidgetKit
 
 @MainActor
 final class DoseStore {
+  @discardableResult
   static func logDose(
     amount: Double,
     unit: String,
@@ -20,7 +21,7 @@ final class DoseStore {
     deviceName: String,
     context: ModelContext,
     settings: SettingsManager
-  ) {
+  ) -> DoseRecord {
     let lat = capturedLocation?.coordinate.latitude
     let lon = capturedLocation?.coordinate.longitude
     let rawAccuracy = capturedLocation?.horizontalAccuracy
@@ -55,6 +56,29 @@ final class DoseStore {
 
     scheduleReminderForMostRecentDose(context: context, settings: settings)
     WidgetCenter.shared.reloadAllTimelines()
+    DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
+    return record
+  }
+
+  static func attachLocation(
+    _ location: CLLocation,
+    name: String?,
+    source: String,
+    to record: DoseRecord,
+    context: ModelContext,
+    settings: SettingsManager
+  ) {
+    guard !record.isDeletedForSync else { return }
+
+    let cleanName = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+    record.latitude = location.coordinate.latitude
+    record.longitude = location.coordinate.longitude
+    record.locationName = cleanName?.isEmpty == false ? cleanName : nil
+    record.locationAccuracyMeters = location.horizontalAccuracy >= 0 ? location.horizontalAccuracy : nil
+    record.locationCapturedAt = location.timestamp
+    record.locationSource = source
+    markChangedForSync(record)
+    try? context.save()
     DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
   }
 
@@ -119,10 +143,12 @@ final class DoseStore {
       return
     }
 
-    let desc = FetchDescriptor<DoseRecord>(
+    var desc = FetchDescriptor<DoseRecord>(
+      predicate: #Predicate { $0.deletedAt == nil },
       sortBy: [SortDescriptor(\.time, order: .reverse)]
     )
-    let newest = ((try? context.fetch(desc)) ?? []).first { !$0.isDeletedForSync }
+    desc.fetchLimit = 1
+    let newest = (try? context.fetch(desc))?.first
     guard let newest else {
       NotificationManager.shared.cancelRedoseReminder()
       return
@@ -235,6 +261,9 @@ final class DoseSyncManager {
   func syncAfterLocalChange(context: ModelContext, settings: SettingsManager) {
     guard settings.syncEnabled, settings.canUseDeviceSync else { return }
     Task { @MainActor in
+      // Give SwiftUI time to render the local change before sync performs its
+      // SwiftData fetches on the main actor.
+      try? await Task.sleep(for: .milliseconds(150))
       await syncNow(context: context, settings: settings)
     }
   }
