@@ -70,6 +70,7 @@ final class DoseStore {
     settings: SettingsManager
   ) {
     guard !record.isDeletedForSync else { return }
+    guard record.resolvedLocationSource != "manual" else { return }
 
     let cleanName = name?.trimmingCharacters(in: .whitespacesAndNewlines)
     record.latitude = location.coordinate.latitude

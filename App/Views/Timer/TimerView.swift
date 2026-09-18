@@ -17,6 +17,8 @@ struct TimerView: View {
   @State private var showWarning = false
   @State private var pendingDoseResult: DoseFormResult?
   @State private var pendingEarlyBySeconds: TimeInterval?
+  @State private var pendingQuickConfirmation = false
+  @State private var quickDoseConfirmation: DoseRecord?
   @State private var ticker: Timer?
   @State private var editingDose: DoseRecord?
   @State private var handledNewDoseRequestID = 0
@@ -136,15 +138,23 @@ struct TimerView: View {
     .sheet(isPresented: $showPaywall) {
       PaywallSheet(feature: paywallFeature)
     }
+    .sheet(item: $quickDoseConfirmation) { dose in
+      QuickDoseConfirmationSheet(dose: dose)
+    }
     .sheet(item: $editingDose) { EditDoseSheet(dose: $0) }
     .alert("Log Early?", isPresented: $showWarning) {
       Button("Cancel", role: .cancel) {
         pendingDoseResult = nil
         pendingEarlyBySeconds = nil
+        pendingQuickConfirmation = false
       }
       Button("Log Anyway", role: .destructive) {
         if let pendingDoseResult {
-          confirmLog(result: pendingDoseResult, earlyBySeconds: pendingEarlyBySeconds)
+          confirmLog(
+            result: pendingDoseResult,
+            earlyBySeconds: pendingEarlyBySeconds,
+            showsQuickConfirmation: pendingQuickConfirmation
+          )
         }
       }
     } message: {
@@ -788,56 +798,52 @@ struct TimerView: View {
           accuracyMeters: nil,
           capturedAt: nil
         )
-      )
+      ),
+      showsQuickConfirmation: true
     )
   }
 
-  private func attemptLog(result: DoseFormResult) {
+  private func attemptLog(result: DoseFormResult, showsQuickConfirmation: Bool = false) {
     if isActive && !isSafe {
       pendingDoseResult = result
       pendingEarlyBySeconds = max(intervalSeconds - elapsed, 0)
+      pendingQuickConfirmation = showsQuickConfirmation
       showWarning = true
     } else {
-      confirmLog(result: result)
+      confirmLog(result: result, showsQuickConfirmation: showsQuickConfirmation)
     }
   }
 
-  private func confirmLog(result: DoseFormResult, earlyBySeconds: TimeInterval? = nil) {
+  private func confirmLog(
+    result: DoseFormResult,
+    earlyBySeconds: TimeInterval? = nil,
+    showsQuickConfirmation: Bool = false
+  ) {
     let loc = LocationManager.shared
     let captureLocation = settings.proBetaAccepted && settings.attachLocationToDoses
     let earlyBySeconds = earlyBySeconds.flatMap { $0 > 0 ? $0 : nil }
 
-    if !result.location.isEmpty {
-      DoseStore.logDose(
-        amount: result.amount,
-        unit: settings.unit,
-        time: result.time,
-        notes: result.notes,
-        tags: result.tags,
-        people: result.people,
-        earlyBySeconds: earlyBySeconds,
-        capturedLocation: result.location.clLocation,
-        locationName: result.location.name.isEmpty ? nil : result.location.name,
-        locationSource: result.location.source,
-        deviceName: settings.deviceName,
-        context: context,
-        settings: settings
-      )
-    } else if captureLocation {
-      // Commit first so the timer and history acknowledge the tap immediately.
-      // Location capture can take several seconds indoors and must not block logging.
-      let record = DoseStore.logDose(
-        amount: result.amount,
-        unit: settings.unit,
-        time: result.time,
-        notes: result.notes,
-        tags: result.tags,
-        people: result.people,
-        earlyBySeconds: earlyBySeconds,
-        deviceName: settings.deviceName,
-        context: context,
-        settings: settings
-      )
+    // Commit first so the timer, history, and confirmation acknowledge the tap immediately.
+    let record = DoseStore.logDose(
+      amount: result.amount,
+      unit: settings.unit,
+      time: result.time,
+      notes: result.notes,
+      tags: result.tags,
+      people: result.people,
+      earlyBySeconds: earlyBySeconds,
+      capturedLocation: result.location.clLocation,
+      locationName: result.location.name.isEmpty ? nil : result.location.name,
+      locationSource: result.location.source,
+      deviceName: settings.deviceName,
+      context: context,
+      settings: settings
+    )
+    if showsQuickConfirmation {
+      quickDoseConfirmation = record
+    }
+
+    if result.location.isEmpty && captureLocation {
       Task { @MainActor in
         _ = await loc.requestWhenInUsePermissionIfNeeded()
         let captured = await loc.captureForDose()
@@ -888,22 +894,10 @@ struct TimerView: View {
           settings: settings
         )
       }
-    } else {
-      DoseStore.logDose(
-        amount: result.amount,
-        unit: settings.unit,
-        time: result.time,
-        notes: result.notes,
-        tags: result.tags,
-        people: result.people,
-        earlyBySeconds: earlyBySeconds,
-        deviceName: settings.deviceName,
-        context: context,
-        settings: settings
-      )
     }
     pendingDoseResult = nil
     pendingEarlyBySeconds = nil
+    pendingQuickConfirmation = false
   }
 
   private func formattedEarlyBy(_ seconds: TimeInterval?) -> String {
@@ -961,5 +955,296 @@ struct TimerView: View {
       .joined(separator: ", ")
     guard !name.isEmpty else { return nil }
     return ManualDoseLocation(name: name, latitude: latitude, longitude: longitude)
+  }
+}
+
+private struct QuickDoseConfirmationSheet: View {
+  @Environment(SettingsManager.self) private var settings
+  @Environment(\.modelContext) private var context
+  @Environment(\.dismiss) private var dismiss
+
+  @Bindable var dose: DoseRecord
+  @State private var locationText: String
+  @State private var tagsText: String
+  @State private var peopleText: String
+  @State private var selectedLocation: ManualDoseLocation?
+  @State private var locationWasEdited = false
+  @State private var hasCommitted = false
+  @State private var secondsRemaining = 30
+
+  init(dose: DoseRecord) {
+    self.dose = dose
+    _locationText = State(initialValue: dose.locationName ?? "")
+    _tagsText = State(initialValue: dose.tags.joined(separator: " "))
+    _peopleText = State(initialValue: dose.people.joined(separator: ", "))
+    if let latitude = dose.latitude, let longitude = dose.longitude {
+      _selectedLocation = State(
+        initialValue: ManualDoseLocation(
+          name: dose.locationName ?? "",
+          latitude: latitude,
+          longitude: longitude
+        )
+      )
+    } else {
+      _selectedLocation = State(initialValue: nil)
+    }
+  }
+
+  var body: some View {
+    #if os(macOS)
+    confirmationContent
+      .frame(width: 560)
+    #else
+    confirmationContent
+      .presentationDetents([.medium, .large])
+      .presentationDragIndicator(.visible)
+    #endif
+  }
+
+  private var confirmationContent: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 16) {
+          loggedHeader
+          locationEditor
+          metadataEditors
+
+          Button {
+            commitAndDismiss()
+          } label: {
+            Text("Save Dose Details")
+              .font(.system(size: 15, weight: .bold))
+              .foregroundStyle(.white)
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 12)
+              .background(AppTheme.accentBlue)
+              .clipShape(RoundedRectangle(cornerRadius: 10))
+          }
+          .buttonStyle(.plain)
+
+          HStack(spacing: 8) {
+            ProgressView(value: Double(30 - secondsRemaining), total: 30)
+              .tint(AppTheme.accentBlue)
+            Text("Saving in \(secondsRemaining)s")
+              .font(.system(size: 11, weight: .medium))
+              .foregroundStyle(AppTheme.textMuted)
+              .monospacedDigit()
+          }
+        }
+        .padding(20)
+      }
+      .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+      .navigationTitle("Dose Logged")
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          Button {
+            commitAndDismiss()
+          } label: {
+            Image(systemName: "xmark")
+          }
+          .accessibilityLabel("Save and close")
+        }
+      }
+    }
+    .interactiveDismissDisabled()
+    .onChange(of: dose.locationName) { _, newName in
+      guard !locationWasEdited else { return }
+      locationText = newName ?? ""
+      refreshSelectedLocationFromDose()
+    }
+    .onChange(of: dose.latitude) { _, _ in
+      guard !locationWasEdited else { return }
+      refreshSelectedLocationFromDose()
+    }
+    .task {
+      while secondsRemaining > 0 && !Task.isCancelled {
+        try? await Task.sleep(for: .seconds(1))
+        guard !Task.isCancelled else { return }
+        secondsRemaining -= 1
+      }
+      if !Task.isCancelled {
+        commitAndDismiss()
+      }
+    }
+  }
+
+  private var loggedHeader: some View {
+    HStack(spacing: 12) {
+      Image(systemName: "checkmark.circle.fill")
+        .font(.system(size: 28, weight: .semibold))
+        .foregroundStyle(AppTheme.statusGreen)
+      VStack(alignment: .leading, spacing: 2) {
+        Text("\(dose.amount.formatted(.number.precision(.fractionLength(0...3))))\(dose.unit) logged")
+          .font(.system(size: 18, weight: .bold))
+          .foregroundStyle(AppTheme.textPrimary)
+        Text(dose.hasLocation ? "Location added to this dose." : "Its location will be added shortly.")
+          .font(.system(size: 13))
+          .foregroundStyle(dose.hasLocation ? AppTheme.statusGreen : AppTheme.textSecondary)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(14)
+    .background(AppTheme.backgroundCard)
+    .clipShape(RoundedRectangle(cornerRadius: 12))
+  }
+
+  private var locationEditor: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Label("Location", systemImage: "location.fill")
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(AppTheme.textSecondary)
+
+      TextField(
+        "Location will appear when resolved",
+        text: Binding(
+          get: { locationText },
+          set: { newValue in
+            locationText = newValue
+            locationWasEdited = true
+            selectedLocation = nil
+          }
+        )
+      )
+        .textFieldStyle(.plain)
+        .padding(.horizontal, 12)
+        .frame(height: 44)
+        .background(AppTheme.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
+
+      let suggestions = locationSuggestions
+      if !suggestions.isEmpty {
+        VStack(spacing: 6) {
+          ForEach(suggestions) { location in
+            Button {
+              locationWasEdited = true
+              selectedLocation = location
+              locationText = location.name
+            } label: {
+              HStack(spacing: 8) {
+                Image(systemName: "mappin.and.ellipse")
+                  .foregroundStyle(AppTheme.accentBlue)
+                Text(location.name)
+                  .font(.system(size: 12, weight: .medium))
+                  .foregroundStyle(AppTheme.textPrimary)
+                  .lineLimit(2)
+                Spacer()
+              }
+              .padding(9)
+              .background(AppTheme.backgroundCard)
+              .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+          }
+        }
+      }
+    }
+  }
+
+  private var metadataEditors: some View {
+    HStack(alignment: .top, spacing: 12) {
+      confirmationField(
+        title: "Tags",
+        systemImage: "number",
+        placeholder: "#tag #another",
+        text: $tagsText
+      )
+      confirmationField(
+        title: "People",
+        systemImage: "person.fill",
+        placeholder: "Name, Name",
+        text: $peopleText
+      )
+    }
+  }
+
+  private func confirmationField(
+    title: String,
+    systemImage: String,
+    placeholder: String,
+    text: Binding<String>
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Label(title, systemImage: systemImage)
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(AppTheme.textSecondary)
+      TextField(placeholder, text: text)
+        .textFieldStyle(.plain)
+        .padding(.horizontal, 12)
+        .frame(height: 44)
+        .background(AppTheme.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
+    }
+    .frame(maxWidth: .infinity)
+  }
+
+  private var locationSuggestions: [ManualDoseLocation] {
+    guard locationWasEdited, locationText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 else {
+      return []
+    }
+    return ManualLocationStore.shared.suggestions(matching: locationText, limit: 3)
+  }
+
+  private func refreshSelectedLocationFromDose() {
+    guard let latitude = dose.latitude, let longitude = dose.longitude else {
+      selectedLocation = nil
+      return
+    }
+    selectedLocation = ManualDoseLocation(
+      name: dose.locationName ?? "",
+      latitude: latitude,
+      longitude: longitude
+    )
+  }
+
+  private func commitAndDismiss() {
+    guard !hasCommitted else { return }
+    hasCommitted = true
+
+    dose.tags = DoseRecord.normalizedTags(from: tagsText)
+    dose.people = DoseRecord.normalizedPeople(from: peopleText)
+
+    let cleanLocation = locationText.trimmingCharacters(in: .whitespacesAndNewlines)
+    if locationWasEdited {
+      dose.locationName = cleanLocation.isEmpty ? nil : cleanLocation
+      if let selectedLocation {
+        dose.latitude = selectedLocation.latitude
+        dose.longitude = selectedLocation.longitude
+        dose.locationAccuracyMeters = nil
+        dose.locationCapturedAt = Date()
+      } else if cleanLocation.isEmpty {
+        dose.latitude = nil
+        dose.longitude = nil
+        dose.locationAccuracyMeters = nil
+        dose.locationCapturedAt = nil
+      }
+      dose.locationSource = cleanLocation.isEmpty ? "none" : "manual"
+    }
+
+    DoseStore.markChangedForSync(dose)
+    try? context.save()
+    DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
+
+    if locationWasEdited, selectedLocation == nil, !cleanLocation.isEmpty, !dose.hasLocation {
+      Task { @MainActor in
+        guard let resolved = await ManualLocationStore.shared.lookUp(cleanLocation) else { return }
+        dose.latitude = resolved.latitude
+        dose.longitude = resolved.longitude
+        dose.locationName = cleanLocation
+        dose.locationCapturedAt = Date()
+        dose.locationSource = "manual"
+        DoseStore.markChangedForSync(dose)
+        try? context.save()
+        ManualLocationStore.shared.save(
+          name: cleanLocation,
+          latitude: resolved.latitude,
+          longitude: resolved.longitude
+        )
+        DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
+      }
+    }
+
+    dismiss()
   }
 }
