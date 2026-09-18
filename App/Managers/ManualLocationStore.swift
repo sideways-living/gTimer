@@ -129,6 +129,37 @@ final class ManualLocationStore {
     return await lookUpWithMapSearch(name, region: nil, limit: 1).first
   }
 
+  func nearestKnownLocation(
+    to currentLocation: CLLocation,
+    home: ManualDoseLocation?,
+    historyRecords: [DoseRecord],
+    maximumDistanceMeters: CLLocationDistance = 150
+  ) -> ManualDoseLocation? {
+    if let home,
+       distance(from: currentLocation, to: home) <= maximumDistanceMeters {
+      return home
+    }
+
+    let historyLocations = historyRecords.compactMap { record -> ManualDoseLocation? in
+      guard record.deletedAt == nil,
+            let latitude = record.latitude,
+            let longitude = record.longitude,
+            let name = record.locationName?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !name.isEmpty
+      else { return nil }
+      return ManualDoseLocation(name: name, latitude: latitude, longitude: longitude)
+    }
+    let candidates = deduplicated(savedLocations() + historyLocations)
+      .filter { distance(from: currentLocation, to: $0) <= maximumDistanceMeters }
+
+    return candidates.min { first, second in
+      let firstUses = historyUseCount(for: first.name, in: historyLocations)
+      let secondUses = historyUseCount(for: second.name, in: historyLocations)
+      if firstUses != secondUses { return firstUses > secondUses }
+      return distance(from: currentLocation, to: first) < distance(from: currentLocation, to: second)
+    }
+  }
+
   private func savedLocations() -> [ManualDoseLocation] {
     guard let data = defaults.data(forKey: storageKey),
           let decoded = try? JSONDecoder().decode([ManualDoseLocation].self, from: data)
@@ -139,6 +170,18 @@ final class ManualLocationStore {
   private func persist(_ locations: [ManualDoseLocation]) {
     guard let data = try? JSONEncoder().encode(locations) else { return }
     defaults.set(data, forKey: storageKey)
+  }
+
+  private func distance(from current: CLLocation, to location: ManualDoseLocation) -> CLLocationDistance {
+    current.distance(from: CLLocation(latitude: location.latitude, longitude: location.longitude))
+  }
+
+  private func historyUseCount(for name: String, in locations: [ManualDoseLocation]) -> Int {
+    locations.reduce(into: 0) { count, location in
+      if location.name.caseInsensitiveCompare(name) == .orderedSame {
+        count += 1
+      }
+    }
   }
 
   private func lookUpWithMapSearch(

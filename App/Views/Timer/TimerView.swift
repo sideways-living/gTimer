@@ -852,10 +852,37 @@ struct TimerView: View {
         let doseLocationSource = "automatic"
         #endif
         guard let doseLocation else { return }
+
+        let locatedDoseDescriptor = FetchDescriptor<DoseRecord>(
+          predicate: #Predicate {
+            $0.deletedAt == nil && $0.latitude != nil && $0.longitude != nil
+          }
+        )
+        let locationHistory = (try? context.fetch(locatedDoseDescriptor)) ?? []
+        let knownLocation = ManualLocationStore.shared.nearestKnownLocation(
+          to: doseLocation,
+          home: homeKnownLocation,
+          historyRecords: locationHistory,
+          maximumDistanceMeters: 150
+        )
+        let resolvedLocation: CLLocation
+        let resolvedLocationName: String?
+        if let knownLocation {
+          resolvedLocation = CLLocation(
+            latitude: knownLocation.latitude,
+            longitude: knownLocation.longitude
+          )
+          resolvedLocationName = knownLocation.name
+        } else {
+          resolvedLocation = doseLocation
+          let geocodedName = await MapItemLocationFormatter.reverseGeocodeSummary(for: doseLocation).name
+          resolvedLocationName = geocodedName ?? doseLocationName
+        }
         DoseStore.attachLocation(
-          doseLocation,
-          name: doseLocationName,
+          resolvedLocation,
+          name: resolvedLocationName,
           source: doseLocationSource,
+          captureMetadataFrom: doseLocation,
           to: record,
           context: context,
           settings: settings
@@ -919,4 +946,20 @@ struct TimerView: View {
     return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
   }
   #endif
+
+  private var homeKnownLocation: ManualDoseLocation? {
+    guard let latitude = settings.homeLatitude,
+          let longitude = settings.homeLongitude,
+          (-90...90).contains(latitude),
+          (-180...180).contains(longitude)
+    else { return nil }
+
+    let country = EmergencyNumberCatalogue.country(for: settings.homeCountryCode)?.name ?? ""
+    let name = [settings.homeAddress, settings.homeCity, country]
+      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+      .filter { !$0.isEmpty }
+      .joined(separator: ", ")
+    guard !name.isEmpty else { return nil }
+    return ManualDoseLocation(name: name, latitude: latitude, longitude: longitude)
+  }
 }

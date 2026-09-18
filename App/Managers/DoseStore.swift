@@ -64,6 +64,7 @@ final class DoseStore {
     _ location: CLLocation,
     name: String?,
     source: String,
+    captureMetadataFrom capturedLocation: CLLocation? = nil,
     to record: DoseRecord,
     context: ModelContext,
     settings: SettingsManager
@@ -74,8 +75,9 @@ final class DoseStore {
     record.latitude = location.coordinate.latitude
     record.longitude = location.coordinate.longitude
     record.locationName = cleanName?.isEmpty == false ? cleanName : nil
-    record.locationAccuracyMeters = location.horizontalAccuracy >= 0 ? location.horizontalAccuracy : nil
-    record.locationCapturedAt = location.timestamp
+    let metadataLocation = capturedLocation ?? location
+    record.locationAccuracyMeters = metadataLocation.horizontalAccuracy >= 0 ? metadataLocation.horizontalAccuracy : nil
+    record.locationCapturedAt = metadataLocation.timestamp
     record.locationSource = source
     markChangedForSync(record)
     try? context.save()
