@@ -345,19 +345,13 @@ private struct HistoryPrivacyGate<Content: View>: View {
         .multilineTextAlignment(.center)
         .frame(maxWidth: 420)
 
-      SecureField("PIN", text: $pin)
-        .platformKeyboardType(.numberPad)
-        .font(.system(size: 18, weight: .semibold, design: .monospaced))
-        .multilineTextAlignment(.center)
-        .padding(12)
-        .background(AppTheme.backgroundElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .frame(maxWidth: 220)
-        .privacySensitive()
+      PINPad(title: "Enter PIN", pin: $pin) {
+        unlockHistory()
+      }
+      .frame(maxWidth: 280)
 
       Button("Unlock") {
-        _ = security.unlockHistory(pin: pin)
-        pin = ""
+        unlockHistory()
       }
       .font(.system(size: 15, weight: .semibold))
       .foregroundStyle(.white)
@@ -375,19 +369,11 @@ private struct HistoryPrivacyGate<Content: View>: View {
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .frame(maxWidth: 260)
             .privacySensitive()
-          HStack(spacing: 8) {
-            SecureField("New PIN", text: $newPIN)
-              .platformKeyboardType(.numberPad)
-            SecureField("Confirm", text: $confirmPIN)
-              .platformKeyboardType(.numberPad)
+          HStack(alignment: .top, spacing: 12) {
+            PINPad(title: "New PIN", pin: $newPIN)
+            PINPad(title: "Confirm PIN", pin: $confirmPIN)
           }
-          .textFieldStyle(.plain)
-          .font(.system(size: 14, weight: .semibold, design: .monospaced))
-          .padding(10)
-          .background(AppTheme.backgroundElevated)
-          .clipShape(RoundedRectangle(cornerRadius: 10))
-          .frame(maxWidth: 260)
-          .privacySensitive()
+          .frame(maxWidth: 560)
           Button("Reset PIN") {
             guard newPIN == confirmPIN else {
               security.authMessage = "New PIN entries do not match."
@@ -428,5 +414,75 @@ private struct HistoryPrivacyGate<Content: View>: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding(24)
     .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+  }
+
+  private func unlockHistory() {
+    _ = security.unlockHistory(pin: pin)
+    pin = ""
+  }
+}
+
+struct PINPad: View {
+  let title: String
+  @Binding var pin: String
+  var onComplete: (() -> Void)? = nil
+
+  private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+  private let digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+
+  var body: some View {
+    VStack(spacing: 10) {
+      Text(title)
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(AppTheme.textSecondary)
+
+      HStack(spacing: 8) {
+        ForEach(0..<max(4, pin.count), id: \.self) { index in
+          Circle()
+            .fill(index < pin.count ? AppTheme.accentBlue : AppTheme.border)
+            .frame(width: 10, height: 10)
+        }
+      }
+      .frame(height: 18)
+      .accessibilityLabel(pin.isEmpty ? "No digits entered" : "\(pin.count) digits entered")
+
+      LazyVGrid(columns: columns, spacing: 8) {
+        ForEach(digits, id: \.self) { digit in
+          pinButton(digit) { append(digit) }
+        }
+        Color.clear.frame(height: 42)
+        pinButton("0") { append("0") }
+        Button {
+          if !pin.isEmpty { pin.removeLast() }
+        } label: {
+          Image(systemName: "delete.left")
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundStyle(AppTheme.textSecondary)
+            .frame(maxWidth: .infinity, minHeight: 42)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Delete last digit")
+      }
+    }
+    .privacySensitive()
+  }
+
+  private func pinButton(_ digit: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Text(digit)
+        .font(.system(size: 18, weight: .semibold, design: .rounded))
+        .foregroundStyle(AppTheme.textPrimary)
+        .frame(maxWidth: .infinity, minHeight: 42)
+        .background(AppTheme.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 9))
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(digit)
+  }
+
+  private func append(_ digit: String) {
+    guard pin.count < 8 else { return }
+    pin.append(digit)
+    if pin.count == 8 { onComplete?() }
   }
 }

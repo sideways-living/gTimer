@@ -56,7 +56,7 @@ export class AuthStore {
     });
   }
 
-  async registerDevice({ email, password, deviceName, deviceKey }) {
+  async registerDevice({ email, password, deviceName, deviceKey, platform }) {
     return this.#withLock(async () => {
       const state = await this.#readState();
       const userId = state.usersByEmail[normalizeEmail(email)];
@@ -67,7 +67,7 @@ export class AuthStore {
 
       const now = new Date().toISOString();
       ensureSyncTrial(user, now);
-      const session = addDeviceSession(state, user.id, deviceName, deviceKey);
+      const session = addDeviceSession(state, user.id, deviceName, deviceKey, platform);
       user.updatedAt = now;
       await this.#writeState(state);
       return authResponse(user, session);
@@ -101,6 +101,26 @@ export class AuthStore {
         .sort((a, b) => Date.parse(b.lastSeenAt ?? b.createdAt) - Date.parse(a.lastSeenAt ?? a.createdAt))
         .map(publicDevice);
       return { devices };
+    });
+  }
+
+  async changePassword(userId, body) {
+    const currentPassword = cleanString(body?.currentPassword, "currentPassword", { required: true, maxLength: 512 });
+    const newPassword = cleanString(body?.newPassword, "newPassword", { required: true, maxLength: 512 });
+    if (newPassword.length < 8) {
+      throw authError(400, "New password must be at least 8 characters.");
+    }
+
+    return this.#withLock(async () => {
+      const state = await this.#readState();
+      const user = state.users[userId];
+      if (!user || !verifyPassword(currentPassword, user.password)) {
+        throw authError(401, "Current password is incorrect.");
+      }
+      user.password = hashPassword(newPassword);
+      user.updatedAt = new Date().toISOString();
+      await this.#writeState(state);
+      return { updated: true };
     });
   }
 
@@ -184,8 +204,16 @@ export function cleanDeviceAuthRequest(body) {
   return {
     ...cleaned,
     deviceName: cleanString(body.deviceName ?? "gTimer", "deviceName", { maxLength: 128 }) || "gTimer",
-    deviceKey
+    deviceKey,
+    platform: cleanPlatform(body.platform)
   };
+}
+
+function cleanPlatform(value) {
+  const platform = cleanString(value ?? "unknown", "platform", { maxLength: 32 }).toLowerCase();
+  return ["macos", "ios", "ipados", "android", "windows", "web"].includes(platform)
+    ? platform
+    : "unknown";
 }
 
 export function authError(status, message) {
@@ -254,7 +282,7 @@ function verifyPassword(password, encoded) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-function addDeviceSession(state, userId, deviceName, deviceKey) {
+function addDeviceSession(state, userId, deviceName, deviceKey, platform = "unknown") {
   const now = new Date().toISOString();
   let device = Object.values(state.devices).find((candidate) => {
     return candidate.userId === userId &&
@@ -267,6 +295,7 @@ function addDeviceSession(state, userId, deviceName, deviceKey) {
       userId,
       deviceKey,
       name: deviceName,
+      platform,
       createdAt: now,
       updatedAt: now,
       lastSeenAt: now,
@@ -275,6 +304,7 @@ function addDeviceSession(state, userId, deviceName, deviceKey) {
     state.devices[device.id] = device;
   } else {
     device.name = deviceName;
+    device.platform = platform;
     device.updatedAt = now;
     device.lastSeenAt = now;
   }
@@ -306,6 +336,7 @@ function publicDevice(device) {
   return {
     id: device.id,
     name: device.name,
+    platform: device.platform ?? "unknown",
     createdAt: device.createdAt,
     lastSeenAt: device.lastSeenAt,
     revokedAt: device.revokedAt ?? null

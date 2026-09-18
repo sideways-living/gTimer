@@ -396,6 +396,23 @@ final class DoseSyncManager {
     try validateHTTPResponse(response, data: data)
   }
 
+  func changePassword(
+    currentPassword: String,
+    newPassword: String,
+    settings: SettingsManager
+  ) async throws {
+    let baseURL = try syncBaseURL(settings)
+    var request = URLRequest(url: baseURL.appending(path: "v1/auth/password"))
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.addValue("Bearer \(settings.syncToken)", forHTTPHeaderField: "Authorization")
+    request.httpBody = try JSONEncoder().encode(
+      SyncPasswordChangeRequest(currentPassword: currentPassword, newPassword: newPassword)
+    )
+    let (data, response) = try await URLSession.shared.data(for: request)
+    try validateHTTPResponse(response, data: data)
+  }
+
   private func push(records: [DoseRecord], to baseURL: URL, settings: SettingsManager) async throws {
     var request = URLRequest(url: baseURL.appending(path: "v1/sync/push"))
     request.httpMethod = "POST"
@@ -447,13 +464,24 @@ final class DoseSyncManager {
         email: email,
         password: password,
         deviceName: deviceName.isEmpty ? "gTimer" : deviceName,
-        deviceKey: deviceKey
+        deviceKey: deviceKey,
+        platform: deviceKey == nil ? nil : Self.currentPlatform
       )
     )
 
     let (data, response) = try await URLSession.shared.data(for: request)
     try validateHTTPResponse(response, data: data)
     return try JSONDecoder().decode(SyncAuthResponse.self, from: data)
+  }
+
+  private static var currentPlatform: String {
+    #if os(macOS)
+    "macos"
+    #elseif os(iOS)
+    "ios"
+    #else
+    "unknown"
+    #endif
   }
 
   private func syncBaseURL(_ settings: SettingsManager) throws -> URL {
@@ -615,8 +643,19 @@ struct SyncDevice: Codable, Identifiable, Hashable {
   var createdAt: String
   var lastSeenAt: String?
   var revokedAt: String?
+  var platform: String?
 
   var isRevoked: Bool { revokedAt != nil }
+
+  var systemImage: String {
+    switch platform?.lowercased() {
+    case "macos", "mac": "desktopcomputer"
+    case "ios", "iphone": "iphone"
+    case "ipados", "ipad": "ipad"
+    case "web": "globe"
+    default: "desktopcomputer.and.macbook"
+    }
+  }
 }
 
 struct SyncAuthResponse: Codable {
@@ -635,6 +674,12 @@ private struct SyncAuthRequest: Codable {
   var password: String
   var deviceName: String
   var deviceKey: String?
+  var platform: String?
+}
+
+private struct SyncPasswordChangeRequest: Codable {
+  var currentPassword: String
+  var newPassword: String
 }
 
 private struct SyncDevicesResponse: Codable {

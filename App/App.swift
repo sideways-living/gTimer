@@ -190,6 +190,24 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.35",
+      build: 125,
+      category: .newFeatures,
+      message: "Account settings now use keypad-based privacy PIN entry and show platform-specific icons for registered devices."
+    ),
+    AppUpdateEntry(
+      version: "0.9.35",
+      build: 125,
+      category: .minorImprovements,
+      message: "The Pro profile now appears at the top of Account settings, while sync hides server and token details."
+    ),
+    AppUpdateEntry(
+      version: "0.9.35",
+      build: 125,
+      category: .bugFixes,
+      message: "Assisted dose logging is now automatically switched off when gTimer Pro access is unavailable."
+    ),
+    AppUpdateEntry(
       version: "0.9.34",
       build: 124,
       category: .minorImprovements,

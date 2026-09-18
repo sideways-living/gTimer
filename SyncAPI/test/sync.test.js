@@ -216,13 +216,15 @@ test("registers an account, then registers one sync device per app install", asy
         email: "person@example.com",
         password: "correct horse battery staple",
         deviceName: "Dan's Mac",
-        deviceKey: "mac-install-1"
+        deviceKey: "mac-install-1",
+        platform: "macos"
       }
     });
 
     assert.equal(device.status, 200);
     assert.equal(device.json.user.entitlement.hasSyncAccess, true);
     assert.equal(device.json.device.name, "Dan's Mac");
+    assert.equal(device.json.device.platform, "macos");
     assert.match(device.json.token, /^gtimer_/);
 
     const sameDevice = await requestJSON(`${baseURL}/v1/auth/device`, {
@@ -231,7 +233,8 @@ test("registers an account, then registers one sync device per app install", asy
         email: "person@example.com",
         password: "correct horse battery staple",
         deviceName: "Dan's MacBook",
-        deviceKey: "mac-install-1"
+        deviceKey: "mac-install-1",
+        platform: "macos"
       }
     });
 
@@ -265,6 +268,44 @@ test("registers an account, then registers one sync device per app install", asy
 
     assert.equal(push.status, 200);
     assert.equal(push.json.accepted.doses, 1);
+  });
+});
+
+test("changes an authenticated account password", async () => {
+  await withTestAPI(async ({ baseURL }) => {
+    await requestJSON(`${baseURL}/v1/auth/register`, {
+      method: "POST",
+      body: { email: "password@example.com", password: "old password value" }
+    });
+    const device = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "password@example.com",
+        password: "old password value",
+        deviceName: "Mac",
+        deviceKey: "password-test",
+        platform: "macos"
+      }
+    });
+
+    const changed = await requestJSON(`${baseURL}/v1/auth/password`, {
+      method: "POST",
+      token: device.json.token,
+      body: { currentPassword: "old password value", newPassword: "new password value" }
+    });
+    assert.equal(changed.status, 200);
+
+    const oldLogin = await requestJSON(`${baseURL}/v1/auth/login`, {
+      method: "POST",
+      body: { email: "password@example.com", password: "old password value" }
+    });
+    assert.equal(oldLogin.status, 401);
+
+    const newLogin = await requestJSON(`${baseURL}/v1/auth/login`, {
+      method: "POST",
+      body: { email: "password@example.com", password: "new password value" }
+    });
+    assert.equal(newLogin.status, 200);
   });
 });
 

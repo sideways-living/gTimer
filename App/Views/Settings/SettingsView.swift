@@ -46,8 +46,8 @@ private enum SettingsCategory: String, CaseIterable, Identifiable {
   var summary: String {
     switch self {
     case .timer: "Dose defaults, intervals, quick buttons, reminders"
-    case .account: "Profile details and history privacy"
-    case .sync: "Device name, server, sign-in, active devices"
+    case .account: "Profile, sign-in, security, and history privacy"
+    case .sync: "Cross-device sync and active devices"
     case .location: "Location access, home address, emergency country"
     case .app: "Appearance, colours, Shortcuts, Pro profile"
     }
@@ -127,8 +127,10 @@ private extension SettingsScrollTarget {
       .sync
     case .doseLocations, .homeLocation:
       .location
-    case .display, .colours, .assistedDoseLogging, .profile:
+    case .display, .colours, .assistedDoseLogging:
       .app
+    case .profile:
+      .account
     }
   }
 }
@@ -164,6 +166,7 @@ struct SettingsView: View {
   @State private var accountNameText = ""
   @State private var accountEmailText = ""
   @State private var accountPasswordText = ""
+  @State private var currentAccountPasswordText = ""
   @State private var accountMessage: String? = nil
   @State private var historyPINText = ""
   @State private var historyPINConfirmText = ""
@@ -219,7 +222,6 @@ struct SettingsView: View {
       syncEmailText,
       accountNameText,
       accountEmailText,
-      accountPasswordText,
       vanityNameText,
       homeCityText,
       homeCountryCode
@@ -504,6 +506,10 @@ struct SettingsView: View {
 
   private var accountSettingsSections: some View {
     Group {
+      if settings.proBetaAccepted {
+        profileSection
+          .id(SettingsScrollTarget.profile)
+      }
       accountSection
         .id(SettingsScrollTarget.account)
       privacySection
@@ -537,10 +543,6 @@ struct SettingsView: View {
         .id(SettingsScrollTarget.colours)
       assistedDoseSection
         .id(SettingsScrollTarget.assistedDoseLogging)
-      if settings.proBetaAccepted {
-        profileSection
-          .id(SettingsScrollTarget.profile)
-      }
     }
   }
 
@@ -1240,7 +1242,17 @@ struct SettingsView: View {
       name: $accountNameText,
       email: $accountEmailText,
       password: $accountPasswordText,
-      message: accountMessage
+      currentPassword: $currentAccountPasswordText,
+      syncEmail: $syncEmailText,
+      syncPassword: $syncPasswordText,
+      message: accountMessage,
+      authMessage: syncAuthMessage,
+      isSignedIn: !settings.syncToken.isEmpty,
+      canAuthenticate: settings.syncTrialStartedAt == nil || canUseDeviceSync,
+      isAuthenticating: isAuthenticatingSync,
+      changePassword: changeAccountPassword,
+      login: { authenticateSyncAccount(register: false) },
+      createAccount: { authenticateSyncAccount(register: true) }
     )
   }
 
@@ -1283,82 +1295,23 @@ struct SettingsView: View {
             }
         }
 
-        VStack(alignment: .leading, spacing: 7) {
-          Text("Server")
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(AppTheme.textSecondary)
-          TextField("https://sync.gtimer.app", text: $syncServerURLText)
-            .platformPlainTextEntry()
-            .font(.system(size: 14, design: .monospaced))
-            .foregroundStyle(AppTheme.textPrimary)
-            .padding(10)
-            .background(AppTheme.backgroundElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 9))
-            .disabled(!canUseDeviceSync)
-        }
-
-        VStack(alignment: .leading, spacing: 7) {
-          Text("Advanced token")
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(AppTheme.textSecondary)
-          SecureField(settings.syncToken.isEmpty ? "Created after account login" : "Saved in keychain", text: $syncTokenText)
-            .platformPlainTextEntry()
-            .font(.system(size: 14))
-            .foregroundStyle(AppTheme.textPrimary)
-            .padding(10)
-            .background(AppTheme.backgroundElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 9))
-            .privacySensitive()
-            .disabled(!canUseDeviceSync)
-        }
-
-        VStack(alignment: .leading, spacing: 7) {
-          Text("Sync account")
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(AppTheme.textSecondary)
-          TextField(settings.accountEmail.isEmpty ? "Email" : settings.accountEmail, text: $syncEmailText)
-            .platformKeyboardType(.emailAddress)
-            .platformPlainTextEntry()
-            .font(.system(size: 15))
-            .foregroundStyle(AppTheme.textPrimary)
-            .padding(10)
-            .background(AppTheme.backgroundElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 9))
-            .disabled(!canUseDeviceSync)
-          SecureField("Password", text: $syncPasswordText)
-            .font(.system(size: 15))
-            .foregroundStyle(AppTheme.textPrimary)
-            .padding(10)
-            .background(AppTheme.backgroundElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 9))
-            .privacySensitive()
-            .disabled(!canUseDeviceSync)
-          HStack(spacing: 8) {
-            Button {
-              authenticateSyncAccount(register: false)
-            } label: {
-              syncAuthButtonLabel(settings.syncToken.isEmpty ? "Register this device" : "Refresh device sign-in")
+        if settings.syncToken.isEmpty {
+          Button {
+            nav.openSettings(.account)
+          } label: {
+            HStack {
+              Image(systemName: "person.crop.circle.badge.exclamationmark")
+              Text("Sign in from Account settings to register this device.")
+              Spacer()
+              Image(systemName: "chevron.right")
             }
-            .buttonStyle(.plain)
-            .disabled(isAuthenticatingSync || !canUseDeviceSync)
-
-            Button {
-              authenticateSyncAccount(register: true)
-            } label: {
-              syncAuthButtonLabel("Create account and sync")
-            }
-            .buttonStyle(.plain)
-            .disabled(isAuthenticatingSync || !canUseDeviceSync)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(AppTheme.accentBlue)
+            .padding(10)
+            .background(AppTheme.accentBlue.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
           }
-          if let syncAuthMessage {
-            Text(syncAuthMessage)
-              .font(.system(size: 12))
-              .foregroundStyle(AppTheme.textMuted)
-          } else if !settings.syncAccountEmail.isEmpty {
-            Text("Signed in as \(settings.syncAccountEmail).")
-              .font(.system(size: 12))
-              .foregroundStyle(AppTheme.textMuted)
-          }
+          .buttonStyle(.plain)
         }
 
         if !syncDevices.isEmpty {
@@ -1480,25 +1433,9 @@ struct SettingsView: View {
     )
   }
 
-  private func syncAuthButtonLabel(_ title: String) -> some View {
-    HStack(spacing: 6) {
-      if isAuthenticatingSync {
-        ProgressView()
-          .controlSize(.small)
-      }
-      Text(title)
-        .font(.system(size: 13, weight: .semibold))
-    }
-    .foregroundStyle(.white)
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 10)
-    .background(AppTheme.accentBlue)
-    .clipShape(RoundedRectangle(cornerRadius: 10))
-  }
-
   private func syncDeviceRow(_ device: SyncDevice) -> some View {
     HStack(spacing: 10) {
-      Image(systemName: device.isRevoked ? "iphone.slash" : "desktopcomputer.and.macbook")
+      Image(systemName: device.isRevoked ? "xmark.circle" : device.systemImage)
         .font(.system(size: 13, weight: .semibold))
         .foregroundStyle(device.isRevoked ? AppTheme.textMuted : AppTheme.accentBlue)
       VStack(alignment: .leading, spacing: 2) {
@@ -2137,13 +2074,13 @@ struct SettingsView: View {
       accountMessage = "Enter a valid account email address."
       return false
     }
-    if !accountPasswordText.isEmpty && accountPasswordText.count < 8 {
+    if settings.syncToken.isEmpty && !accountPasswordText.isEmpty && accountPasswordText.count < 8 {
       accountMessage = "Password must be at least 8 characters."
       return false
     }
     settings.accountName = cleanAccountName
     settings.accountEmail = cleanAccountEmail
-    if !accountPasswordText.isEmpty {
+    if settings.syncToken.isEmpty && !accountPasswordText.isEmpty {
       settings.setAccountPassword(accountPasswordText)
       accountPasswordText = ""
     }
@@ -2209,6 +2146,7 @@ struct SettingsView: View {
     accountNameText = settings.accountName
     accountEmailText = settings.accountEmail
     accountPasswordText = ""
+    currentAccountPasswordText = ""
     accountMessage = nil
     clearPINFields()
     vanityNameText = settings.vanityName
@@ -2348,6 +2286,7 @@ struct SettingsView: View {
     accountNameText = snapshot.accountNameText
     accountEmailText = snapshot.accountEmailText
     accountPasswordText = ""
+    currentAccountPasswordText = ""
     accountMessage = nil
     syncAuthMessage = nil
     vanityNameText = snapshot.vanityNameText
@@ -2398,6 +2337,7 @@ struct SettingsView: View {
   }
 
   private func authenticateSyncAccount(register: Bool) {
+    settings.startSyncTrialIfNeeded()
     guard settings.canUseDeviceSync else {
       syncAuthMessage = "Start the free sync trial or activate gTimer Pro before signing in for device sync."
       return
@@ -2473,6 +2413,29 @@ struct SettingsView: View {
         await DoseSyncManager.shared.syncNow(context: context, settings: settings)
       } catch {
         syncAuthMessage = error.localizedDescription
+      }
+    }
+  }
+
+  private func changeAccountPassword() {
+    guard currentAccountPasswordText.count >= 8, accountPasswordText.count >= 8 else {
+      accountMessage = "Enter your current password and a new password of at least 8 characters."
+      return
+    }
+    accountMessage = "Changing password..."
+    Task { @MainActor in
+      do {
+        try await DoseSyncManager.shared.changePassword(
+          currentPassword: currentAccountPasswordText,
+          newPassword: accountPasswordText,
+          settings: settings
+        )
+        settings.setAccountPassword(accountPasswordText)
+        currentAccountPasswordText = ""
+        accountPasswordText = ""
+        accountMessage = "Password changed."
+      } catch {
+        accountMessage = error.localizedDescription
       }
     }
   }
@@ -2851,45 +2814,117 @@ private struct AccountSettingsSection: View {
   @Binding var name: String
   @Binding var email: String
   @Binding var password: String
+  @Binding var currentPassword: String
+  @Binding var syncEmail: String
+  @Binding var syncPassword: String
   let message: String?
+  let authMessage: String?
+  let isSignedIn: Bool
+  let canAuthenticate: Bool
+  let isAuthenticating: Bool
+  let changePassword: () -> Void
+  let login: () -> Void
+  let createAccount: () -> Void
+  @State private var showsPasswordChange = false
 
   var body: some View {
     SettingsSectionCard(title: "Account") {
       VStack(alignment: .leading, spacing: 10) {
-        Text("gTimer can run local only. Account details are used to protect your data and to support PIN recovery. Device sync remains off until you start a trial or activate gTimer Pro.")
+        Text(isSignedIn ? "Your gTimer account is active on this device." : "gTimer can run locally without signing in. Enter an email in Device Sync when you want to log in or create an account.")
           .font(.system(size: 12))
           .foregroundStyle(AppTheme.textMuted)
           .fixedSize(horizontal: false, vertical: true)
 
-        SettingsSectionDivider()
-        SettingsRow(label: "Name") {
-          TextField("Your name", text: $name)
-            .multilineTextAlignment(.trailing)
-            .font(.system(size: 15))
-            .foregroundStyle(AppTheme.textPrimary)
-            .frame(maxWidth: 220)
-        }
-        SettingsSectionDivider()
-        SettingsRow(label: "Email") {
-          TextField("you@example.com", text: $email)
+        if isSignedIn {
+          SettingsSectionDivider()
+          SettingsRow(label: "User name") {
+            Text(name.isEmpty ? "Not set" : name)
+              .font(.system(size: 15, weight: .medium))
+              .foregroundStyle(AppTheme.textPrimary)
+          }
+          SettingsSectionDivider()
+          SettingsRow(label: "Email") {
+            Text(settings.syncAccountEmail.isEmpty ? email : settings.syncAccountEmail)
+              .font(.system(size: 15, weight: .medium))
+              .foregroundStyle(AppTheme.textPrimary)
+          }
+          SettingsSectionDivider()
+          Button("Change password") {
+            showsPasswordChange.toggle()
+          }
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(AppTheme.accentBlue)
+          .buttonStyle(.plain)
+
+          if showsPasswordChange {
+            SecureField("Current password", text: $currentPassword)
+              .font(.system(size: 15))
+              .foregroundStyle(AppTheme.textPrimary)
+              .padding(10)
+              .background(AppTheme.backgroundElevated)
+              .clipShape(RoundedRectangle(cornerRadius: 9))
+              .privacySensitive()
+            SecureField("New password (at least 8 characters)", text: $password)
+              .font(.system(size: 15))
+              .foregroundStyle(AppTheme.textPrimary)
+              .padding(10)
+              .background(AppTheme.backgroundElevated)
+              .clipShape(RoundedRectangle(cornerRadius: 9))
+              .privacySensitive()
+            Button("Update password", action: changePassword)
+              .font(.system(size: 13, weight: .semibold))
+              .foregroundStyle(.white)
+              .padding(.horizontal, 12)
+              .padding(.vertical, 8)
+              .background(AppTheme.accentBlue)
+              .clipShape(RoundedRectangle(cornerRadius: 9))
+              .buttonStyle(.plain)
+          }
+
+          SettingsSectionDivider()
+          VStack(alignment: .leading, spacing: 8) {
+            securityOption("Passkey", detail: "Secure password-free sign-in", icon: "person.badge.key.fill")
+            securityOption("Authenticator app", detail: "Two-factor authentication", icon: "checkmark.shield.fill")
+            Text("These options require the matching server security rollout before setup can be enabled.")
+              .font(.system(size: 11))
+              .foregroundStyle(AppTheme.textMuted)
+          }
+        } else {
+          SettingsSectionDivider()
+          TextField("Email address", text: $syncEmail)
             .platformKeyboardType(.emailAddress)
-            .multilineTextAlignment(.trailing)
-            .font(.system(size: 15))
-            .foregroundStyle(AppTheme.textPrimary)
-            .frame(maxWidth: 260)
-        }
-        SettingsSectionDivider()
-        VStack(alignment: .leading, spacing: 7) {
-          Text(settings.hasLocalAccountPassword ? "Change password" : "Password")
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(AppTheme.textSecondary)
-          SecureField(settings.hasLocalAccountPassword ? "Leave blank to keep current password" : "At least 8 characters", text: $password)
+            .platformPlainTextEntry()
             .font(.system(size: 15))
             .foregroundStyle(AppTheme.textPrimary)
             .padding(10)
             .background(AppTheme.backgroundElevated)
             .clipShape(RoundedRectangle(cornerRadius: 9))
-            .privacySensitive()
+            .disabled(!canAuthenticate)
+
+          if syncEmail.contains("@") {
+            SecureField("Password", text: $syncPassword)
+              .font(.system(size: 15))
+              .foregroundStyle(AppTheme.textPrimary)
+              .padding(10)
+              .background(AppTheme.backgroundElevated)
+              .clipShape(RoundedRectangle(cornerRadius: 9))
+              .privacySensitive()
+              .disabled(!canAuthenticate)
+
+            HStack(spacing: 8) {
+              accountActionButton("Log in", action: login)
+              accountActionButton("Create account", action: createAccount)
+            }
+            Text("For privacy, gTimer does not reveal whether an email is registered until you attempt to log in or create the account.")
+              .font(.system(size: 11))
+              .foregroundStyle(AppTheme.textMuted)
+          }
+
+          if let authMessage {
+            Text(authMessage)
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.textMuted)
+          }
         }
 
         if let message {
@@ -2899,6 +2934,38 @@ private struct AccountSettingsSection: View {
         }
       }
     }
+  }
+
+  private func securityOption(_ title: String, detail: String, icon: String) -> some View {
+    HStack(spacing: 10) {
+      Image(systemName: icon)
+        .foregroundStyle(AppTheme.textMuted)
+        .frame(width: 24)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(AppTheme.textPrimary)
+        Text(detail).font(.system(size: 11)).foregroundStyle(AppTheme.textMuted)
+      }
+      Spacer()
+      Text("Not set up")
+        .font(.system(size: 11, weight: .medium))
+        .foregroundStyle(AppTheme.textMuted)
+    }
+  }
+
+  private func accountActionButton(_ title: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      HStack(spacing: 6) {
+        if isAuthenticating { ProgressView().controlSize(.small) }
+        Text(title).font(.system(size: 13, weight: .semibold))
+      }
+      .foregroundStyle(.white)
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 10)
+      .background(AppTheme.accentBlue)
+      .clipShape(RoundedRectangle(cornerRadius: 9))
+    }
+    .buttonStyle(.plain)
+    .disabled(isAuthenticating || !canAuthenticate)
   }
 }
 
@@ -2941,22 +3008,8 @@ private struct PrivacyLockSettingsSection: View {
         if settings.historyPinEnabled {
           SettingsSectionDivider()
           VStack(alignment: .leading, spacing: 8) {
-            SecureField(security.hasHistoryPIN ? "New PIN" : "PIN", text: $pin)
-              .platformKeyboardType(.numberPad)
-              .font(.system(size: 15))
-              .foregroundStyle(AppTheme.textPrimary)
-              .padding(10)
-              .background(AppTheme.backgroundElevated)
-              .clipShape(RoundedRectangle(cornerRadius: 9))
-              .privacySensitive()
-            SecureField("Confirm PIN", text: $confirmPIN)
-              .platformKeyboardType(.numberPad)
-              .font(.system(size: 15))
-              .foregroundStyle(AppTheme.textPrimary)
-              .padding(10)
-              .background(AppTheme.backgroundElevated)
-              .clipShape(RoundedRectangle(cornerRadius: 9))
-              .privacySensitive()
+            PINPad(title: security.hasHistoryPIN ? "Enter new PIN" : "Choose a PIN", pin: $pin)
+            PINPad(title: "Confirm PIN", pin: $confirmPIN)
             HStack(spacing: 8) {
               Button(security.hasHistoryPIN ? "Change PIN" : "Set PIN", action: savePIN)
                 .font(.system(size: 13, weight: .semibold))
@@ -2999,22 +3052,8 @@ private struct PrivacyLockSettingsSection: View {
                 .clipShape(RoundedRectangle(cornerRadius: 9))
                 .privacySensitive()
               HStack(spacing: 8) {
-                SecureField("New PIN", text: $resetPIN)
-                  .platformKeyboardType(.numberPad)
-                  .font(.system(size: 15))
-                  .foregroundStyle(AppTheme.textPrimary)
-                  .padding(10)
-                  .background(AppTheme.backgroundElevated)
-                  .clipShape(RoundedRectangle(cornerRadius: 9))
-                  .privacySensitive()
-                SecureField("Confirm", text: $resetConfirmPIN)
-                  .platformKeyboardType(.numberPad)
-                  .font(.system(size: 15))
-                  .foregroundStyle(AppTheme.textPrimary)
-                  .padding(10)
-                  .background(AppTheme.backgroundElevated)
-                  .clipShape(RoundedRectangle(cornerRadius: 9))
-                  .privacySensitive()
+                PINPad(title: "New PIN", pin: $resetPIN)
+                PINPad(title: "Confirm PIN", pin: $resetConfirmPIN)
               }
               Button("Reset PIN with password", action: resetPINAction)
                 .font(.system(size: 13, weight: .semibold))

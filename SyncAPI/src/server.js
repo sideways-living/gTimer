@@ -64,6 +64,13 @@ async function route(request, response, activeStore, activeTokens, activeAuthSto
     return;
   }
 
+  if (request.method === "POST" && url.pathname === "/v1/auth/password") {
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    const body = await readJSONBody(request);
+    sendJSON(response, 200, await activeAuthStore.changePassword(auth.userId, body));
+    return;
+  }
+
   const revokeMatch = url.pathname.match(/^\/v1\/auth\/devices\/([^/]+)$/);
   if (request.method === "DELETE" && revokeMatch) {
     const auth = await authenticate(request, activeTokens, activeAuthStore);

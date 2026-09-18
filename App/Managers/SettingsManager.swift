@@ -534,6 +534,9 @@ final class SettingsManager {
   var proBetaAccepted: Bool {
     didSet {
       UserDefaults.standard.set(proBetaAccepted, forKey: "proBetaAccepted")
+      if !proBetaAccepted, voiceDoseLoggingEnabled {
+        voiceDoseLoggingEnabled = false
+      }
       WidgetCenter.shared.reloadAllTimelines()
     }
   }
