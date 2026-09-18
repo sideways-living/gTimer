@@ -275,12 +275,38 @@ struct SettingsView: View {
 
   private var settingsRoot: some View {
     NavigationStack {
-      ScrollViewReader { proxy in
-        settingsScrollView(proxy: proxy)
+      GeometryReader { geometry in
+        if geometry.size.width >= 760 {
+          settingsTwoColumnLayout
+        } else {
+          ScrollViewReader { proxy in
+            settingsScrollView(proxy: proxy)
+          }
+        }
       }
       .navigationTitle("Settings")
       .platformNavigationBarStyle()
     }
+  }
+
+  private var settingsTwoColumnLayout: some View {
+    HStack(spacing: 0) {
+      ScrollView {
+        settingsCategorySidebar
+          .padding(16)
+      }
+      .frame(width: 270)
+      .background(AppTheme.backgroundCard)
+
+      Rectangle()
+        .fill(AppTheme.border)
+        .frame(width: 1)
+
+      ScrollViewReader { proxy in
+        settingsContentScrollView(proxy: proxy)
+      }
+    }
+    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
   }
 
   private func settingsScrollView(proxy: ScrollViewProxy) -> some View {
@@ -295,12 +321,66 @@ struct SettingsView: View {
     .onChange(of: nav.settingsScrollTarget) { scrollToRequestedSection(proxy) }
   }
 
+  private func settingsContentScrollView(proxy: ScrollViewProxy) -> some View {
+    ScrollView {
+      settingsContent
+        .frame(maxWidth: 920)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .padding(.bottom, 24)
+    }
+    .tabBarScrollClearance()
+    .background(AppTheme.backgroundPrimary.ignoresSafeArea())
+    .onAppear { scrollToRequestedSection(proxy) }
+    .onChange(of: nav.settingsScrollTarget) { scrollToRequestedSection(proxy) }
+  }
+
   private var settingsSections: some View {
     VStack(spacing: 16) {
       settingsCategoryTabs
+      settingsContent
+    }
+  }
+
+  private var settingsContent: some View {
+    VStack(spacing: 16) {
       selectedSettingsHeader
       selectedSettingsSections
       settingsSavePanel
+    }
+  }
+
+  private var settingsCategorySidebar: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Settings")
+          .font(.system(size: 22, weight: .bold))
+          .foregroundStyle(AppTheme.textPrimary)
+        Text("Choose an area to view and edit its settings.")
+          .font(.system(size: 12))
+          .foregroundStyle(AppTheme.textMuted)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .padding(.horizontal, 4)
+
+      VStack(spacing: 8) {
+        ForEach(SettingsCategory.allCases) { category in
+          settingsCategoryButton(category)
+        }
+      }
+
+      HStack(spacing: 7) {
+        saveStateBadge
+        if saveState == .unsaved {
+          Text("Save or discard before changing sections")
+            .font(.system(size: 11))
+            .foregroundStyle(AppTheme.textMuted)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+      .padding(.horizontal, 4)
+      .padding(.top, 2)
     }
   }
 
