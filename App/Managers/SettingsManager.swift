@@ -524,7 +524,9 @@ final class SettingsManager {
       }
     }
   }
-  var syncStatusMessage: String
+  var syncStatusMessage: String {
+    didSet { UserDefaults.standard.set(syncStatusMessage, forKey: "syncStatusMessage") }
+  }
   var deviceName: String {
     didSet { UserDefaults.standard.set(deviceName, forKey: "deviceName") }
   }

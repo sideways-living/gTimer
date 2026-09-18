@@ -136,7 +136,9 @@ struct ContentView: View {
     }
     DoseStore.scheduleReminderForMostRecentDose(context: context, settings: settings)
     guard settings.syncEnabled else { return }
-    DoseSyncManager.shared.syncAfterLocalChange(context: context, settings: settings)
+    Task { @MainActor in
+      await DoseSyncManager.shared.syncNow(context: context, settings: settings)
+    }
   }
 
   @ViewBuilder

@@ -190,6 +190,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.36",
+      build: 126,
+      category: .bugFixes,
+      message: "Device sync now pulls account history directly when gTimer launches, including after a local database reset or app update."
+    ),
+    AppUpdateEntry(
       version: "0.9.35",
       build: 125,
       category: .newFeatures,
