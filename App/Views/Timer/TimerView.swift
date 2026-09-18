@@ -18,7 +18,7 @@ struct TimerView: View {
   @State private var pendingDoseResult: DoseFormResult?
   @State private var pendingEarlyBySeconds: TimeInterval?
   @State private var pendingQuickConfirmation = false
-  @State private var quickDoseConfirmation: DoseRecord?
+  @State private var quickDoseConfirmation: QuickDoseConfirmationSession?
   @State private var ticker: Timer?
   @State private var editingDose: DoseRecord?
   @State private var handledNewDoseRequestID = 0
@@ -138,8 +138,8 @@ struct TimerView: View {
     .sheet(isPresented: $showPaywall) {
       PaywallSheet(feature: paywallFeature)
     }
-    .sheet(item: $quickDoseConfirmation) { dose in
-      QuickDoseConfirmationSheet(dose: dose)
+    .sheet(item: $quickDoseConfirmation) { session in
+      QuickDoseConfirmationSheet(session: session)
     }
     .sheet(item: $editingDose) { EditDoseSheet(dose: $0) }
     .alert("Log Early?", isPresented: $showWarning) {
@@ -839,14 +839,26 @@ struct TimerView: View {
       context: context,
       settings: settings
     )
-    if showsQuickConfirmation {
-      quickDoseConfirmation = record
-    }
+    let confirmationSession = showsQuickConfirmation
+      ? QuickDoseConfirmationSession(
+          dose: record,
+          locationState: captureLocation && result.location.isEmpty ? .locating : .notRequested
+        )
+      : nil
+    if let confirmationSession { quickDoseConfirmation = confirmationSession }
 
     if result.location.isEmpty && captureLocation {
       Task { @MainActor in
-        _ = await loc.requestWhenInUsePermissionIfNeeded()
+        let hasPermission = await loc.requestWhenInUsePermissionIfNeeded()
+        #if os(macOS)
+        let captured = hasPermission ? await loc.captureForDose() : nil
+        #else
+        guard hasPermission else {
+          confirmationSession?.locationState = .permissionRequired
+          return
+        }
         let captured = await loc.captureForDose()
+        #endif
         #if os(macOS)
         let fallback = captured == nil ? await homeFallbackLocation() : nil
         let doseLocation = captured ?? fallback?.location
@@ -857,7 +869,22 @@ struct TimerView: View {
         let doseLocationName = loc.locationName
         let doseLocationSource = "automatic"
         #endif
-        guard let doseLocation else { return }
+        guard let doseLocation else {
+          confirmationSession?.locationState = .unavailable
+          return
+        }
+
+        let immediateName = doseLocationName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        DoseStore.attachLocation(
+          doseLocation,
+          name: immediateName?.isEmpty == false ? immediateName : coordinateLabel(doseLocation.coordinate),
+          source: doseLocationSource,
+          captureMetadataFrom: doseLocation,
+          to: record,
+          context: context,
+          settings: settings
+        )
+        confirmationSession?.locationState = .refining
 
         let locatedDoseDescriptor = FetchDescriptor<DoseRecord>(
           predicate: #Predicate {
@@ -893,6 +920,7 @@ struct TimerView: View {
           context: context,
           settings: settings
         )
+        confirmationSession?.locationState = .resolved
       }
     }
     pendingDoseResult = nil
@@ -908,6 +936,10 @@ struct TimerView: View {
     if hours > 0 && minutes > 0 { return "\(hours)h \(minutes)m" }
     if hours > 0 { return "\(hours)h" }
     return "\(minutes)m"
+  }
+
+  private func coordinateLabel(_ coordinate: CLLocationCoordinate2D) -> String {
+    String(format: "%.5f, %.5f", coordinate.latitude, coordinate.longitude)
   }
 
   #if os(macOS)
@@ -958,11 +990,33 @@ struct TimerView: View {
   }
 }
 
+private enum QuickDoseLocationResolutionState {
+  case notRequested
+  case locating
+  case refining
+  case resolved
+  case permissionRequired
+  case unavailable
+}
+
+@Observable
+private final class QuickDoseConfirmationSession: Identifiable {
+  let dose: DoseRecord
+  var locationState: QuickDoseLocationResolutionState
+  var id: UUID { dose.id }
+
+  init(dose: DoseRecord, locationState: QuickDoseLocationResolutionState) {
+    self.dose = dose
+    self.locationState = locationState
+  }
+}
+
 private struct QuickDoseConfirmationSheet: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(\.modelContext) private var context
   @Environment(\.dismiss) private var dismiss
 
+  @Bindable var session: QuickDoseConfirmationSession
   @Bindable var dose: DoseRecord
   @State private var locationText: String
   @State private var tagsText: String
@@ -972,8 +1026,10 @@ private struct QuickDoseConfirmationSheet: View {
   @State private var hasCommitted = false
   @State private var secondsRemaining = 30
 
-  init(dose: DoseRecord) {
-    self.dose = dose
+  init(session: QuickDoseConfirmationSession) {
+    self.session = session
+    self.dose = session.dose
+    let dose = session.dose
     _locationText = State(initialValue: dose.locationName ?? "")
     _tagsText = State(initialValue: dose.tags.joined(separator: " "))
     _peopleText = State(initialValue: dose.people.joined(separator: ", "))
@@ -1006,6 +1062,10 @@ private struct QuickDoseConfirmationSheet: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 16) {
           loggedHeader
+          Text("Your dose is already saved in History. This optional 30-second window is only for adding or correcting location, tags, and people.")
+            .font(.system(size: 12))
+            .foregroundStyle(AppTheme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
           locationEditor
           metadataEditors
 
@@ -1022,14 +1082,6 @@ private struct QuickDoseConfirmationSheet: View {
           }
           .buttonStyle(.plain)
 
-          HStack(spacing: 8) {
-            ProgressView(value: Double(30 - secondsRemaining), total: 30)
-              .tint(AppTheme.accentBlue)
-            Text("Saving in \(secondsRemaining)s")
-              .font(.system(size: 11, weight: .medium))
-              .foregroundStyle(AppTheme.textMuted)
-              .monospacedDigit()
-          }
         }
         .padding(20)
       }
@@ -1077,15 +1129,68 @@ private struct QuickDoseConfirmationSheet: View {
         Text("\(dose.amount.formatted(.number.precision(.fractionLength(0...3))))\(dose.unit) logged")
           .font(.system(size: 18, weight: .bold))
           .foregroundStyle(AppTheme.textPrimary)
-        Text(dose.hasLocation ? "Location added to this dose." : "Its location will be added shortly.")
+        Text(locationStatusText)
           .font(.system(size: 13))
-          .foregroundStyle(dose.hasLocation ? AppTheme.statusGreen : AppTheme.textSecondary)
+          .foregroundStyle(locationStatusColor)
       }
+      Spacer(minLength: 8)
+      countdownCircle
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(14)
     .background(AppTheme.backgroundCard)
     .clipShape(RoundedRectangle(cornerRadius: 12))
+  }
+
+  private var countdownCircle: some View {
+    ZStack {
+      Circle()
+        .stroke(AppTheme.border, lineWidth: 5)
+      Circle()
+        .trim(from: 0, to: max(0, min(Double(secondsRemaining) / 30, 1)))
+        .stroke(AppTheme.accentBlue, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+        .rotationEffect(.degrees(-90))
+      VStack(spacing: 0) {
+        Text("\(secondsRemaining)")
+          .font(.system(size: 17, weight: .bold, design: .rounded))
+          .foregroundStyle(AppTheme.textPrimary)
+          .monospacedDigit()
+        Text("AUTO")
+          .font(.system(size: 8, weight: .bold))
+          .foregroundStyle(AppTheme.textMuted)
+      }
+    }
+    .frame(width: 58, height: 58)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Auto-save in \(secondsRemaining) seconds")
+  }
+
+  private var locationStatusText: String {
+    switch session.locationState {
+    case .notRequested:
+      return dose.hasLocation ? "Location added to this dose." : "Automatic location is off. You can add one below."
+    case .locating:
+      return "Its location will be added shortly."
+    case .refining:
+      return "Location found. Confirming the place name..."
+    case .resolved:
+      return "Location added to this dose."
+    case .permissionRequired:
+      return "Location permission is needed to add it automatically."
+    case .unavailable:
+      return "Location was not available. You can add one below."
+    }
+  }
+
+  private var locationStatusColor: Color {
+    switch session.locationState {
+    case .resolved:
+      AppTheme.statusGreen
+    case .permissionRequired, .unavailable:
+      AppTheme.statusAmber
+    default:
+      AppTheme.textSecondary
+    }
   }
 
   private var locationEditor: some View {

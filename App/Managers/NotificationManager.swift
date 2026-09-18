@@ -40,7 +40,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     guard fireDate > Date() else { return }
 
     let content = UNMutableNotificationContent()
-    content.title = "Your minimum time between doses has passed"
+    content.title = "gTimer"
+    content.subtitle = "Your minimum time between doses has passed"
     content.body = nextHarmReductionMessage()
     content.sound = .default
     _ = lockScreenDelivery

@@ -42,9 +42,11 @@ public final class RedoseReminderReceiver extends BroadcastReceiver {
         String message = nextMessage(context);
         Notification notification = new Notification.Builder(context, ReminderScheduler.CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_notification_drop)
-                .setContentTitle("Your minimum time between doses has passed")
-                .setContentText(message)
-                .setStyle(new Notification.BigTextStyle().bigText(message))
+                .setContentTitle("gTimer")
+                .setContentText("Your minimum time between doses has passed")
+                .setStyle(new Notification.BigTextStyle().bigText(
+                        "Your minimum time between doses has passed\n\n" + message
+                ))
                 .setContentIntent(contentIntent)
                 .setAutoCancel(true)
                 .build();

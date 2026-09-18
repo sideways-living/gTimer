@@ -190,6 +190,24 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.34",
+      build: 124,
+      category: .minorImprovements,
+      message: "Quick dose confirmation now uses a clear 30-second circular countdown and explains that the dose is already saved."
+    ),
+    AppUpdateEntry(
+      version: "0.9.34",
+      build: 124,
+      category: .bugFixes,
+      message: "Automatic location details now appear promptly while the app continues refining the place name."
+    ),
+    AppUpdateEntry(
+      version: "0.9.34",
+      build: 124,
+      category: .minorImprovements,
+      message: "Dose interval notifications now show gTimer as their top title."
+    ),
+    AppUpdateEntry(
       version: "0.9.33",
       build: 123,
       category: .minorImprovements,
