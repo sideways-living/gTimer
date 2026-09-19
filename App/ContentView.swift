@@ -320,9 +320,6 @@ private struct HistoryPrivacyGate<Content: View>: View {
   @Environment(AppNavigation.self) private var nav
   @State private var security = AppSecurityManager.shared
   @State private var pin = ""
-  @State private var accountPassword = ""
-  @State private var newPIN = ""
-  @State private var confirmPIN = ""
   let content: () -> Content
 
   var body: some View {
@@ -362,36 +359,6 @@ private struct HistoryPrivacyGate<Content: View>: View {
       .background(AppTheme.accentBlue)
       .clipShape(RoundedRectangle(cornerRadius: 12))
       .buttonStyle(.plain)
-
-      if settings.hasLocalAccountPassword {
-        VStack(spacing: 8) {
-          SecureField("Account password", text: $accountPassword)
-            .padding(10)
-            .background(AppTheme.backgroundElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .frame(maxWidth: 260)
-            .privacySensitive()
-          HStack(alignment: .top, spacing: 12) {
-            PINPad(title: "New PIN", pin: $newPIN)
-            PINPad(title: "Confirm PIN", pin: $confirmPIN)
-          }
-          .frame(maxWidth: 560)
-          Button("Reset PIN") {
-            guard newPIN == confirmPIN else {
-              security.authMessage = "New PIN entries do not match."
-              return
-            }
-            if security.resetHistoryPIN(accountPassword: accountPassword, newPIN: newPIN, settings: settings) {
-              accountPassword = ""
-              newPIN = ""
-              confirmPIN = ""
-            }
-          }
-          .font(.system(size: 13, weight: .semibold))
-          .foregroundStyle(AppTheme.accentBlue)
-          .buttonStyle(.plain)
-        }
-      }
 
       if let message = security.authMessage {
         Text(message)

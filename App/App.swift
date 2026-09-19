@@ -190,6 +190,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.38",
+      build: 128,
+      category: .bugFixes,
+      message: "Locked history and maps now show only the PIN keypad needed to unlock them."
+    ),
+    AppUpdateEntry(
       version: "0.9.37",
       build: 127,
       category: .bugFixes,
