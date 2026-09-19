@@ -105,12 +105,22 @@ struct DoseFormSheet: View {
   }
 
   private var peopleSuggestions: [String] {
-    tokenSuggestions(
-      allValues: knownPeople,
-      typedText: peopleText,
-      separators: peopleSeparators,
-      normalize: DoseRecord.normalizedPerson
+    let selectedPeople = Set(DoseRecord.normalizedPeople(from: peopleText).map { $0.lowercased() })
+    let fragment = DoseRecord.normalizedPerson(
+      currentTokenFragment(in: peopleText, separators: peopleSeparators)
     )
+    let fragmentIsCompleted = selectedPeople.contains(fragment.lowercased()) && knownPeople.contains {
+      DoseRecord.normalizedPerson($0).localizedCaseInsensitiveCompare(fragment) == .orderedSame
+    }
+    let searchText = fragmentIsCompleted ? "" : fragment.lowercased()
+
+    return knownPeople
+      .map(DoseRecord.normalizedPerson)
+      .filter { !$0.isEmpty && !selectedPeople.contains($0.lowercased()) }
+      .removingDuplicateStrings()
+      .filter { searchText.isEmpty || $0.lowercased().contains(searchText) }
+      .prefix(5)
+      .map { $0 }
   }
 
   private var tagSeparators: CharacterSet {
@@ -708,13 +718,28 @@ struct DoseFormSheet: View {
   }
 
   private func appendPerson(_ suggestion: String) {
-    peopleText = replacingCurrentToken(
-      with: suggestion,
-      in: peopleText,
-      separators: peopleSeparators,
-      joinSeparator: ", ",
-      normalize: DoseRecord.normalizedPerson
-    )
+    let cleanSuggestion = DoseRecord.normalizedPerson(suggestion)
+    guard !cleanSuggestion.isEmpty else { return }
+
+    let fragment = currentTokenFragment(in: peopleText, separators: peopleSeparators)
+    let cleanFragment = DoseRecord.normalizedPerson(fragment)
+    let fragmentIsKnownPerson = knownPeople.contains {
+      DoseRecord.normalizedPerson($0).localizedCaseInsensitiveCompare(cleanFragment) == .orderedSame
+    }
+    let fragmentMatchesSuggestion = !cleanFragment.isEmpty && cleanSuggestion.localizedCaseInsensitiveContains(cleanFragment)
+
+    if fragmentMatchesSuggestion && !fragmentIsKnownPerson {
+      peopleText = replacingCurrentToken(
+        with: cleanSuggestion,
+        in: peopleText,
+        separators: peopleSeparators,
+        joinSeparator: ", ",
+        normalize: DoseRecord.normalizedPerson
+      )
+    } else {
+      peopleText = DoseRecord.normalizedPeople(from: peopleText + ", " + cleanSuggestion)
+        .joined(separator: ", ")
+    }
   }
 
   private func replacingCurrentToken(

@@ -190,6 +190,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.37",
+      build: 127,
+      category: .bugFixes,
+      message: "People suggestions now add multiple people without removing names already selected or typed."
+    ),
+    AppUpdateEntry(
       version: "0.9.36",
       build: 126,
       category: .bugFixes,
