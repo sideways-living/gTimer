@@ -1,6 +1,6 @@
 # Future Platform Parity Plan
 
-Last updated: 2026-09-15
+Last updated: 2026-09-20
 
 ## Scope
 
@@ -84,7 +84,7 @@ Future Android and Windows versions should match these features:
 | Dose logging | Standard-dose button, 0-4 quick-dose buttons, custom amount, early-log warning before interval has elapsed. A quick dose is committed and shown in history immediately, then opens a 30-second confirmation editor while location resolves in the background. The editor displays the resolved location when available, permits location, hashtag, and people amendments, saves and closes on Submit, and automatically saves and closes at 30 seconds. Custom/add-dose entry uses the shared dose form pattern below, including notes, hashtag-style tags, and remembered people. |
 | Assisted logging | Pro-gated Siri, Shortcuts, deep-link, and trusted automation logging. Spoken commands should create the same canonical dose records as the app UI, including amount, unit, optional time, missed-dose detection for backdated times, spoken/saved/current location, hashtag-style tags, people, notes, early-dose metadata, notification rescheduling, widget refresh, and sync queuing. |
 | Quick doses | Settings use four individual optional values. Main timer shows 4, 3, 2, 1, or setup-link states depending on saved values. |
-| History | Reverse chronological dose records; search by tags, people, notes, locations, deletion reasons, amounts, and device; delete; delete all; free mode limits visible history; Pro unlocks full history. Deleted dose records are retained with `deletedAt` and a user-entered deletion reason, and History has a toggle for including or hiding deleted records. |
+| History | Reverse chronological dose records; search by tags, people, notes, locations, deletion reasons, amounts, and device; filter by date range, record type, and amount; sort by time or amount; delete; delete all; free mode limits visible history; Pro unlocks full history. Deleted dose records are retained with `deletedAt` and a user-entered deletion reason, and History has a toggle for including or hiding deleted records. |
 | Missed doses | Pro-gated backdated dose entry using the shared dose form pattern below. |
 | Edit dose | Pro-gated correction of amount, time, notes, tags, people, and location fields using the shared dose form pattern below. |
 | Export | Pro-gated CSV export; warn clearly before exporting location data. |
@@ -94,7 +94,7 @@ Future Android and Windows versions should match these features:
 | Account security | Keep account UI email-first and hide infrastructure URLs and tokens. Signed-in views show the user name and email, allow an authenticated password change, and identify active devices with macOS, iOS/iPadOS, Android, Windows, or web icons. Privacy PIN creation and unlocking use an on-screen numeric keypad. Passkeys and authenticator-app 2FA must only be exposed after complete server challenge, credential, recovery, and revocation flows are available. |
 | Notifications | Optional local reminder when the configured timing interval elapses. Notification copy must not imply medical safety. Show `gTimer` as the top notification title, followed by `Your minimum time between doses has passed`, then one rotating harm-reduction message. The pending reminder should always be derived from the most recent active dose, should reschedule after edits/deletes/sync changes, and should still present while the app is foregrounded where the platform allows it. |
 | Location | Pro-gated optional location recording; request native location permission when location logging is first used, show current permission status in Settings, and provide a system-settings recovery action when permission is blocked. Quick logging saves immediately, then enriches the record in the background. If the captured point is within 150 metres of Home or a saved/previously used location, prefer the recognised place (frequent history names before one-off names) over a newly reverse-geocoded street address. Preserve the original GPS accuracy and capture time when snapping to the recognised place. The current setting named "Show approximate location" rounds display only, not saved coordinates. |
-| Map/insights | Pro-gated dose map and location summary behavior. When visible in navigation, Map sits between History and Health. Marker details open as anchored overlays so the dose marker remains fixed as the focal point, with the callout pointer adapting near map edges. |
+| Map/insights | Pro-gated dose map and location summary behavior. Map supports the same text, date-range, record-type, amount, and sort filters as History, and recalculates its summary from visible markers. When visible in navigation, Map sits between History and Health. Marker details open as anchored overlays so the dose marker remains fixed as the focal point, with the callout pointer adapting near map edges. |
 | Widgets | Companion widgets show current timer status, last dose amount/time, safe interval progress, and an open-app action. Widgets must match countdown/count-up visual semantics. Widgets should not directly write dose history unless the platform implementation writes through the canonical dose store and triggers the same notification/update flow. |
 | Export/print | Pro-gated export window supports date range, field selection, location/map inclusion, PDF export, and print output. When map output is selected, include a full-page rendered visual map with dose markers. Desktop platforms should expose keyboard commands for these flows. |
 
@@ -197,8 +197,9 @@ Current Android milestone:
 - Package/application id: `app.gtimer.android`.
 - Current build artifact: debug APK from `./gradlew :app:assembleDebug`.
 - Storage: temporary `SharedPreferences` JSON store, to be replaced with Room or SQLDelight before broad testing.
-- Implemented screens: gTimer, History, Map placeholder, Health, Settings, and gTimer Pro.
+- Implemented screens: gTimer, filterable History, Map placeholder, Health, Settings, and gTimer Pro.
 - Implemented timer behavior: standard dose, configured quick doses, early-dose warning/history note, countdown/count-up display, and Pro-gated time-since-safe status counter.
+- Implemented history behavior: text search, date/type/sort controls, regular/missed/early filtering, and functional backdated missed-dose entry with notes.
 - Implemented notifications: Android 13+ runtime permission request, notification channel, rotating harm-reduction messages, cancellation/rescheduling from the latest dose, and reboot restoration.
 
 Recommended stack:

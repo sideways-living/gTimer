@@ -28,6 +28,7 @@ struct HistoryView: View {
   @State private var handledExportRequestID = 0
   @State private var handledDoseMapRequestID = 0
   @State private var searchText = ""
+  @State private var historyFilter = DoseHistoryFilter()
 
   private var allDoses: [DoseRecord] {
     (activeDoses + deletedDoses).sorted { $0.time > $1.time }
@@ -41,7 +42,9 @@ struct HistoryView: View {
     return historySourceDoses.filter { $0.time >= cutoff }
   }
   private var visibleDoses: [DoseRecord] {
-    baseVisibleDoses.filter { $0.matchesHistorySearch(searchText) }
+    historyFilter
+      .apply(to: baseVisibleDoses)
+      .filter { $0.matchesHistorySearch(searchText) }
   }
 
   private var locatedDoses: [DoseRecord] { activeDoses.filter { $0.hasLocation } }
@@ -137,7 +140,12 @@ struct HistoryView: View {
         if !settings.proBetaAccepted {
           proNudge
         }
-        historySearchField
+        DoseFilterControls(
+          searchText: $searchText,
+          filter: $historyFilter,
+          doses: baseVisibleDoses,
+          searchPlaceholder: "Search tags, people, notes or locations"
+        )
         if !deletedDoses.isEmpty {
           deletedHistoryToggle
         }
@@ -176,8 +184,8 @@ struct HistoryView: View {
   }
 
   private var emptyHistoryMessage: String {
-    if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-      return "No matching dose records."
+    if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || historyFilter.isActive {
+      return "No dose records match these filters."
     }
     if !settings.includeDeletedDosesInHistory && activeDoses.isEmpty && !deletedDoses.isEmpty {
       return "Deleted dose records are hidden. Turn on Include deleted doses to view them."
@@ -186,34 +194,6 @@ struct HistoryView: View {
   }
 
   // MARK: - Map button
-
-  private var historySearchField: some View {
-    HStack(spacing: 8) {
-      Image(systemName: "magnifyingglass")
-        .font(.system(size: 13, weight: .semibold))
-        .foregroundStyle(AppTheme.textMuted)
-      TextField("Search tags, people, notes or locations", text: $searchText)
-        .textFieldStyle(.plain)
-        .font(.system(size: 14))
-        .foregroundStyle(AppTheme.textPrimary)
-        .autocorrectionDisabled()
-      if !searchText.isEmpty {
-        Button {
-          searchText = ""
-        } label: {
-          Image(systemName: "xmark.circle.fill")
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(AppTheme.textMuted)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Clear history search")
-      }
-    }
-    .padding(11)
-    .background(AppTheme.backgroundCard)
-    .clipShape(RoundedRectangle(cornerRadius: 10))
-    .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
-  }
 
   private var mapButton: some View {
     let isPro = settings.proBetaAccepted
@@ -420,6 +400,193 @@ struct HistoryView: View {
     } else {
       paywallFeature = .doseMap
       showPaywall = true
+    }
+  }
+}
+
+enum DoseFilterDateRange: String, CaseIterable, Identifiable {
+  case all = "Any date"
+  case today = "Today"
+  case sevenDays = "Last 7 days"
+  case thirtyDays = "Last 30 days"
+
+  var id: String { rawValue }
+
+  func includes(_ date: Date, now: Date = Date(), calendar: Calendar = .current) -> Bool {
+    switch self {
+    case .all:
+      return true
+    case .today:
+      return calendar.isDate(date, inSameDayAs: now)
+    case .sevenDays:
+      return date >= calendar.date(byAdding: .day, value: -7, to: now) ?? .distantPast
+    case .thirtyDays:
+      return date >= calendar.date(byAdding: .day, value: -30, to: now) ?? .distantPast
+    }
+  }
+}
+
+enum DoseFilterRecordType: String, CaseIterable, Identifiable {
+  case all = "All records"
+  case regular = "Regular"
+  case missed = "Missed"
+  case early = "Taken early"
+
+  var id: String { rawValue }
+
+  func includes(_ dose: DoseRecord) -> Bool {
+    switch self {
+    case .all: return true
+    case .regular: return !dose.missed && !dose.wasTakenEarly
+    case .missed: return dose.missed
+    case .early: return dose.wasTakenEarly
+    }
+  }
+}
+
+enum DoseFilterSort: String, CaseIterable, Identifiable {
+  case newest = "Newest first"
+  case oldest = "Oldest first"
+  case amountHigh = "Amount: high to low"
+  case amountLow = "Amount: low to high"
+
+  var id: String { rawValue }
+}
+
+struct DoseHistoryFilter: Equatable {
+  var dateRange: DoseFilterDateRange = .all
+  var recordType: DoseFilterRecordType = .all
+  var amount: Double?
+  var sort: DoseFilterSort = .newest
+
+  var activeCount: Int {
+    (dateRange == .all ? 0 : 1) +
+      (recordType == .all ? 0 : 1) +
+      (amount == nil ? 0 : 1) +
+      (sort == .newest ? 0 : 1)
+  }
+
+  var isActive: Bool { activeCount > 0 }
+
+  mutating func reset() {
+    self = DoseHistoryFilter()
+  }
+
+  func apply(to doses: [DoseRecord]) -> [DoseRecord] {
+    let filtered = doses.filter { dose in
+      dateRange.includes(dose.time) &&
+        recordType.includes(dose) &&
+        (amount == nil || abs(dose.amount - (amount ?? dose.amount)) < 0.0001)
+    }
+    switch sort {
+    case .newest:
+      return filtered.sorted { $0.time > $1.time }
+    case .oldest:
+      return filtered.sorted { $0.time < $1.time }
+    case .amountHigh:
+      return filtered.sorted { lhs, rhs in
+        lhs.amount == rhs.amount ? lhs.time > rhs.time : lhs.amount > rhs.amount
+      }
+    case .amountLow:
+      return filtered.sorted { lhs, rhs in
+        lhs.amount == rhs.amount ? lhs.time > rhs.time : lhs.amount < rhs.amount
+      }
+    }
+  }
+}
+
+struct DoseFilterControls: View {
+  @Binding var searchText: String
+  @Binding var filter: DoseHistoryFilter
+  let doses: [DoseRecord]
+  let searchPlaceholder: String
+
+  private var amounts: [Double] {
+    Array(Set(doses.map(\.amount))).sorted()
+  }
+
+  var body: some View {
+    HStack(spacing: 8) {
+      HStack(spacing: 8) {
+        Image(systemName: "magnifyingglass")
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(AppTheme.textMuted)
+        TextField(searchPlaceholder, text: $searchText)
+          .textFieldStyle(.plain)
+          .font(.system(size: 14))
+          .foregroundStyle(AppTheme.textPrimary)
+          .autocorrectionDisabled()
+        if !searchText.isEmpty {
+          Button {
+            searchText = ""
+          } label: {
+            Image(systemName: "xmark.circle.fill")
+              .font(.system(size: 13, weight: .semibold))
+              .foregroundStyle(AppTheme.textMuted)
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Clear search")
+        }
+      }
+      .padding(11)
+      .background(AppTheme.backgroundCard)
+      .clipShape(RoundedRectangle(cornerRadius: 10))
+      .overlay(RoundedRectangle(cornerRadius: 10).stroke(AppTheme.border, lineWidth: 0.5))
+
+      Menu {
+        Picker("Date range", selection: $filter.dateRange) {
+          ForEach(DoseFilterDateRange.allCases) { range in
+            Text(range.rawValue).tag(range)
+          }
+        }
+        Picker("Record type", selection: $filter.recordType) {
+          ForEach(DoseFilterRecordType.allCases) { type in
+            Text(type.rawValue).tag(type)
+          }
+        }
+        if !amounts.isEmpty {
+          Menu("Amount") {
+            Button("Any amount") { filter.amount = nil }
+            ForEach(amounts, id: \.self) { amount in
+              Button(amount.formatted(.number.precision(.fractionLength(0...3)))) {
+                filter.amount = amount
+              }
+            }
+          }
+        }
+        Picker("Sort", selection: $filter.sort) {
+          ForEach(DoseFilterSort.allCases) { sort in
+            Text(sort.rawValue).tag(sort)
+          }
+        }
+        if filter.isActive || !searchText.isEmpty {
+          Divider()
+          Button("Clear filters") {
+            filter.reset()
+            searchText = ""
+          }
+        }
+      } label: {
+        HStack(spacing: 6) {
+          Image(systemName: "line.3.horizontal.decrease")
+          if filter.activeCount > 0 {
+            Text("\(filter.activeCount)")
+              .font(.system(size: 11, weight: .bold))
+          }
+        }
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundStyle(filter.isActive ? .white : AppTheme.textSecondary)
+        .frame(minWidth: 42, minHeight: 42)
+        .padding(.horizontal, 4)
+        .background(filter.isActive ? AppTheme.accentBlue : AppTheme.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(
+          filter.isActive ? AppTheme.accentBlue : AppTheme.border,
+          lineWidth: 0.5
+        ))
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(filter.activeCount > 0 ? "Filters, \(filter.activeCount) active" : "Filters")
     }
   }
 }

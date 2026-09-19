@@ -62,6 +62,10 @@ public final class MainActivity extends Activity {
     private LinearLayout navBar;
     private Settings settings;
     private int selectedTab = 0;
+    private String historySearch = "";
+    private int historyRange = 0;
+    private int historyType = 0;
+    private int historySort = 0;
 
     private final Runnable ticker = new Runnable() {
         @Override
@@ -172,7 +176,7 @@ public final class MainActivity extends Activity {
         custom.setOnClickListener(v -> showCustomDoseDialog());
         doseGrid.addView(custom, cell(false));
         Button missed = flatButton("Missed dose", Color.rgb(42, 38, 34), GOLD);
-        missed.setOnClickListener(v -> showInfo("Missed dose", "The full missed-dose form with location entry is planned for the next Android parity slice."));
+        missed.setOnClickListener(v -> showMissedDoseDialog());
         doseGrid.addView(missed, cell(false));
         page.addView(doseGrid, new LinearLayout.LayoutParams(-1, -2));
 
@@ -201,22 +205,63 @@ public final class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         LinearLayout page = page();
         page.addView(title("History"));
-        int max = settings.proBeta ? doses.size() : Math.min(doses.size(), 10);
+
+        EditText search = textField(historySearch, "Search amount, notes or date");
+        LinearLayout searchRow = new LinearLayout(this);
+        searchRow.setOrientation(LinearLayout.HORIZONTAL);
+        searchRow.addView(search, new LinearLayout.LayoutParams(0, dp(52), 1));
+        Button searchButton = flatButton("Search", BLUE, TEXT);
+        searchButton.setOnClickListener(v -> {
+            historySearch = search.getText().toString().trim();
+            renderHistory();
+        });
+        LinearLayout.LayoutParams searchButtonLp = new LinearLayout.LayoutParams(dp(92), dp(52));
+        searchButtonLp.setMargins(dp(6), 0, 0, 0);
+        searchRow.addView(searchButton, searchButtonLp);
+        page.addView(searchRow);
+
+        LinearLayout filters = new LinearLayout(this);
+        filters.setOrientation(LinearLayout.HORIZONTAL);
+        Button range = flatButton(historyRangeLabel(), historyRange == 0 ? SURFACE : BLUE, TEXT);
+        range.setOnClickListener(v -> {
+            historyRange = (historyRange + 1) % 4;
+            renderHistory();
+        });
+        Button type = flatButton(historyTypeLabel(), historyType == 0 ? SURFACE : BLUE, TEXT);
+        type.setOnClickListener(v -> {
+            historyType = (historyType + 1) % 4;
+            renderHistory();
+        });
+        Button sort = flatButton(historySortLabel(), historySort == 0 ? SURFACE : BLUE, TEXT);
+        sort.setOnClickListener(v -> {
+            historySort = (historySort + 1) % 4;
+            renderHistory();
+        });
+        filters.addView(range, filterCell());
+        filters.addView(type, filterCell());
+        filters.addView(sort, filterCell());
+        page.addView(filters);
+
+        List<DoseRecord> visible = filteredHistoryDoses();
+        int max = settings.proBeta ? visible.size() : Math.min(visible.size(), 10);
         if (max == 0) {
-            page.addView(body("No doses recorded yet."));
+            page.addView(body(doses.isEmpty() ? "No doses recorded yet." : "No dose records match these filters."));
         }
         for (int i = 0; i < max; i++) {
-            DoseRecord dose = doses.get(i);
+            DoseRecord dose = visible.get(i);
             LinearLayout row = card();
             row.addView(label(formatAmount(dose.amount), 22, true, TEXT));
             row.addView(body(formatDate(dose.timeMillis)));
+            if (dose.missed) {
+                row.addView(label("Missed dose", 13, true, GOLD));
+            }
             if (dose.earlySeconds > 0) {
                 row.addView(label("Taken early by " + formatDuration(dose.earlySeconds), 13, true, GOLD));
             }
             if (!dose.notes.isEmpty()) row.addView(body(dose.notes));
             page.addView(row);
         }
-        if (!settings.proBeta && doses.size() > max) {
+        if (!settings.proBeta && visible.size() > max) {
             page.addView(body("gTimer Pro unlocks full history."));
         }
         scroll.addView(page);
@@ -334,7 +379,8 @@ public final class MainActivity extends Activity {
     }
 
     private void logDose(double amount, long earlySeconds) {
-        doses.add(0, new DoseRecord(UUID.randomUUID().toString(), amount, System.currentTimeMillis(), earlySeconds, ""));
+        doses.add(new DoseRecord(UUID.randomUUID().toString(), amount, System.currentTimeMillis(), earlySeconds, "", false));
+        doses.sort((left, right) -> Long.compare(right.timeMillis, left.timeMillis));
         saveDoses();
         if (settings.notificationsEnabled) {
             requestNotificationPermissionIfNeeded();
@@ -351,6 +397,44 @@ public final class MainActivity extends Activity {
                 .setView(input)
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Log dose", (dialog, which) -> attemptLogDose(readDouble(input, settings.standardDose)))
+                .show();
+    }
+
+    private void showMissedDoseDialog() {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(22), dp(4), dp(22), 0);
+        EditText amount = numberField(settings.standardDose);
+        amount.setHint("Amount");
+        EditText minutesAgo = integerField(60);
+        minutesAgo.setHint("Minutes ago");
+        EditText notes = textField("", "Optional notes");
+        form.addView(fieldBlock("Amount (" + settings.unit + ")", amount));
+        form.addView(fieldBlock("Time", minutesAgo));
+        form.addView(body("Enter how many minutes ago the dose was taken."));
+        form.addView(fieldBlock("Notes", notes));
+
+        new AlertDialog.Builder(this)
+                .setTitle("Log missed dose")
+                .setView(form)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Log missed dose", (dialog, which) -> {
+                    double doseAmount = Math.max(0.1, readDouble(amount, settings.standardDose));
+                    int offsetMinutes = Math.max(1, readInt(minutesAgo, 60));
+                    long doseTime = System.currentTimeMillis() - offsetMinutes * 60_000L;
+                    doses.add(new DoseRecord(
+                            UUID.randomUUID().toString(),
+                            doseAmount,
+                            doseTime,
+                            0,
+                            notes.getText().toString().trim(),
+                            true
+                    ));
+                    doses.sort((left, right) -> Long.compare(right.timeMillis, left.timeMillis));
+                    saveDoses();
+                    updateScheduledReminder();
+                    renderTimer();
+                })
                 .show();
     }
 
@@ -437,6 +521,67 @@ public final class MainActivity extends Activity {
         return card;
     }
 
+    private LinearLayout.LayoutParams filterCell() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(46), 1);
+        lp.setMargins(dp(3), dp(8), dp(3), dp(8));
+        return lp;
+    }
+
+    private List<DoseRecord> filteredHistoryDoses() {
+        List<DoseRecord> result = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        long cutoff = Long.MIN_VALUE;
+        if (historyRange == 1) {
+            java.util.Calendar start = java.util.Calendar.getInstance();
+            start.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            start.set(java.util.Calendar.MINUTE, 0);
+            start.set(java.util.Calendar.SECOND, 0);
+            start.set(java.util.Calendar.MILLISECOND, 0);
+            cutoff = start.getTimeInMillis();
+        } else if (historyRange == 2) {
+            cutoff = now - 7L * 24L * 60L * 60L * 1000L;
+        } else if (historyRange == 3) {
+            cutoff = now - 30L * 24L * 60L * 60L * 1000L;
+        }
+
+        String query = historySearch.toLowerCase(Locale.getDefault());
+        for (DoseRecord dose : doses) {
+            if (dose.timeMillis < cutoff) continue;
+            if (historyType == 1 && (dose.missed || dose.earlySeconds > 0)) continue;
+            if (historyType == 2 && !dose.missed) continue;
+            if (historyType == 3 && dose.earlySeconds <= 0) continue;
+            String searchable = (formatAmount(dose.amount) + " " + formatDate(dose.timeMillis) + " " + dose.notes).toLowerCase(Locale.getDefault());
+            if (!query.isEmpty() && !searchable.contains(query)) continue;
+            result.add(dose);
+        }
+
+        result.sort((left, right) -> {
+            if (historySort == 1) return Long.compare(left.timeMillis, right.timeMillis);
+            if (historySort == 2) {
+                int amountOrder = Double.compare(right.amount, left.amount);
+                return amountOrder == 0 ? Long.compare(right.timeMillis, left.timeMillis) : amountOrder;
+            }
+            if (historySort == 3) {
+                int amountOrder = Double.compare(left.amount, right.amount);
+                return amountOrder == 0 ? Long.compare(right.timeMillis, left.timeMillis) : amountOrder;
+            }
+            return Long.compare(right.timeMillis, left.timeMillis);
+        });
+        return result;
+    }
+
+    private String historyRangeLabel() {
+        return new String[]{"Any date", "Today", "7 days", "30 days"}[historyRange];
+    }
+
+    private String historyTypeLabel() {
+        return new String[]{"All types", "Regular", "Missed", "Early"}[historyType];
+    }
+
+    private String historySortLabel() {
+        return new String[]{"Newest", "Oldest", "Amount ↓", "Amount ↑"}[historySort];
+    }
+
     private LinearLayout pill(int color, int pad) {
         LinearLayout pill = new LinearLayout(this);
         pill.setOrientation(LinearLayout.VERTICAL);
@@ -518,6 +663,21 @@ public final class MainActivity extends Activity {
         field.setHintTextColor(MUTED);
         field.setTextSize(18);
         field.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        field.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        field.setBackgroundColor(PANEL);
+        field.setPadding(dp(12), 0, dp(12), 0);
+        return field;
+    }
+
+    private EditText textField(String value, String hint) {
+        EditText field = new EditText(this);
+        field.setText(value);
+        field.setHint(hint);
+        field.setSingleLine(true);
+        field.setTextColor(TEXT);
+        field.setHintTextColor(MUTED);
+        field.setTextSize(15);
+        field.setInputType(InputType.TYPE_CLASS_TEXT);
         field.setImeOptions(EditorInfo.IME_ACTION_DONE);
         field.setBackgroundColor(PANEL);
         field.setPadding(dp(12), 0, dp(12), 0);
@@ -624,13 +784,15 @@ public final class MainActivity extends Activity {
         final long timeMillis;
         final long earlySeconds;
         final String notes;
+        final boolean missed;
 
-        DoseRecord(String id, double amount, long timeMillis, long earlySeconds, String notes) {
+        DoseRecord(String id, double amount, long timeMillis, long earlySeconds, String notes, boolean missed) {
             this.id = id;
             this.amount = amount;
             this.timeMillis = timeMillis;
             this.earlySeconds = earlySeconds;
             this.notes = notes;
+            this.missed = missed;
         }
 
         JSONObject toJson() {
@@ -641,6 +803,7 @@ public final class MainActivity extends Activity {
                 json.put("timeMillis", timeMillis);
                 json.put("earlySeconds", earlySeconds);
                 json.put("notes", notes);
+                json.put("missed", missed);
             } catch (JSONException ignored) {
             }
             return json;
@@ -652,7 +815,8 @@ public final class MainActivity extends Activity {
                     json.optDouble("amount", 0),
                     json.optLong("timeMillis", System.currentTimeMillis()),
                     json.optLong("earlySeconds", 0),
-                    json.optString("notes", "")
+                    json.optString("notes", ""),
+                    json.optBoolean("missed", false)
             );
         }
     }

@@ -6,6 +6,8 @@ Initial native Android port of gTimer.
 
 - Native Android project under the same repository as the Apple app.
 - Local-first timer and dose history.
+- Focused History search plus date, record-type, and sort filters.
+- Functional missed-dose entry with amount, backdated time, notes, and a visible history marker.
 - Countdown/count-up timer semantics matching the parity document.
 - Standard dose and up to four quick doses.
 - Settings for dose amount, unit, interval, timer mode, notifications, Pro beta, and the Pro-only time-since-safe counter.
@@ -24,7 +26,7 @@ The first run downloads the Gradle distribution and Android Gradle Plugin if the
 ## Next parity slices
 
 - Replace the current SharedPreferences JSON store with Room or SQLDelight.
-- Add the shared add/edit/missed-dose form with location autocomplete and map pinning.
+- Expand the current missed-dose entry into the shared add/edit/missed-dose form with location autocomplete and map pinning.
 - Add the runtime location permission flow and automatic/manual dose location capture.
 - Add the `https://sync.gtimer.app` auth/device-sync client.
 - Add an Android home-screen widget with the same timer semantics as the Apple WidgetKit extension.

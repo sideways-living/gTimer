@@ -16,8 +16,15 @@ struct DoseMapView: View {
   @State private var hoveredDoseID: UUID? = nil
   @State private var pinnedDoseID: UUID? = nil
   @State private var markerFrames: [UUID: CGRect] = [:]
+  @State private var searchText = ""
+  @State private var mapFilter = DoseHistoryFilter()
 
-  private var locatedDoses: [DoseRecord] { activeDoses.filter { $0.hasLocation } }
+  private var allLocatedDoses: [DoseRecord] { activeDoses.filter { $0.hasLocation } }
+  private var locatedDoses: [DoseRecord] {
+    mapFilter
+      .apply(to: allLocatedDoses)
+      .filter { $0.matchesHistorySearch(searchText) }
+  }
   private var activeCalloutDoseID: UUID? { pinnedDoseID ?? hoveredDoseID }
 
   // Determines pin color: red = logged before safe interval elapsed, blue = normal
@@ -41,8 +48,20 @@ struct DoseMapView: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 0) {
-        if locatedDoses.isEmpty {
-          emptyState
+        DoseFilterControls(
+          searchText: $searchText,
+          filter: $mapFilter,
+          doses: allLocatedDoses,
+          searchPlaceholder: "Search mapped doses"
+        )
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(AppTheme.backgroundSecondary)
+
+        if allLocatedDoses.isEmpty {
+          noLocationsState
+        } else if locatedDoses.isEmpty {
+          noFilterResultsState
         } else {
           mapContent
         }
@@ -62,6 +81,12 @@ struct DoseMapView: View {
     .preferredColorScheme(.dark)
     .sheet(item: $selectedDose) { dose in
       DoseDetailMapSheet(dose: dose)
+    }
+    .onChange(of: mapFilter) { _, _ in
+      clearMapSelectionAndRefocus()
+    }
+    .onChange(of: searchText) { _, _ in
+      clearMapSelectionAndRefocus()
     }
   }
 
@@ -334,7 +359,7 @@ struct DoseMapView: View {
 
   // MARK: - Empty state
 
-  private var emptyState: some View {
+  private var noLocationsState: some View {
     VStack(spacing: 14) {
       Spacer()
       Image(systemName: "map")
@@ -351,6 +376,44 @@ struct DoseMapView: View {
       Spacer()
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  private var noFilterResultsState: some View {
+    VStack(spacing: 14) {
+      Spacer()
+      Image(systemName: "line.3.horizontal.decrease.circle")
+        .font(.system(size: 48))
+        .foregroundStyle(AppTheme.textMuted)
+      Text("No Matching Locations")
+        .font(.system(size: 18, weight: .semibold))
+        .foregroundStyle(AppTheme.textSecondary)
+      Text("Change or clear the map filters to show more dose locations.")
+        .font(.system(size: 14))
+        .foregroundStyle(AppTheme.textMuted)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 48)
+      Button("Clear filters") {
+        mapFilter.reset()
+        searchText = ""
+      }
+      .font(.system(size: 14, weight: .semibold))
+      .foregroundStyle(.white)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 10)
+      .background(AppTheme.accentBlue)
+      .clipShape(RoundedRectangle(cornerRadius: 9))
+      .buttonStyle(.plain)
+      Spacer()
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  private func clearMapSelectionAndRefocus() {
+    selectedDose = nil
+    hoveredDoseID = nil
+    pinnedDoseID = nil
+    markerFrames = [:]
+    position = .automatic
   }
 }
 

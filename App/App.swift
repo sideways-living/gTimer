@@ -190,6 +190,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.39",
+      build: 129,
+      category: .newFeatures,
+      message: "History and Dose Map now support focused date, record type, amount, search, and sort filters."
+    ),
+    AppUpdateEntry(
       version: "0.9.38",
       build: 128,
       category: .bugFixes,
