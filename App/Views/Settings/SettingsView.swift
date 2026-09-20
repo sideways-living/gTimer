@@ -1241,7 +1241,6 @@ struct SettingsView: View {
 
   private var accountSection: some View {
     AccountSettingsSection(
-      name: $accountNameText,
       email: $accountEmailText,
       password: $accountPasswordText,
       currentPassword: $currentAccountPasswordText,
@@ -2813,7 +2812,6 @@ private struct ShortcutSetupHelpSheet: View {
 
 private struct AccountSettingsSection: View {
   @Environment(SettingsManager.self) private var settings
-  @Binding var name: String
   @Binding var email: String
   @Binding var password: String
   @Binding var currentPassword: String
@@ -2842,13 +2840,7 @@ private struct AccountSettingsSection: View {
 
         if isSignedIn {
           SettingsSectionDivider()
-          SettingsRow(label: "User name") {
-            Text(name.isEmpty ? "Not set" : name)
-              .font(.system(size: 15, weight: .medium))
-              .foregroundStyle(AppTheme.textPrimary)
-          }
-          SettingsSectionDivider()
-          SettingsRow(label: "Email") {
+          SettingsRow(label: "Username (email)") {
             Text(settings.syncAccountEmail.isEmpty ? email : settings.syncAccountEmail)
               .font(.system(size: 15, weight: .medium))
               .foregroundStyle(AppTheme.textPrimary)

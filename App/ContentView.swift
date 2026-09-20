@@ -220,7 +220,6 @@ private enum AppTab: Int, CaseIterable, Identifiable {
 private struct AccountSetupSheet: View {
   @Environment(SettingsManager.self) private var settings
   @Environment(\.dismiss) private var dismiss
-  @State private var name = ""
   @State private var email = ""
   @State private var password = ""
   @State private var message: String?
@@ -232,19 +231,14 @@ private struct AccountSetupSheet: View {
           Text("Set up gTimer")
             .font(.system(size: 26, weight: .bold))
             .foregroundStyle(AppTheme.textPrimary)
-          Text("gTimer can run local only. Your name, email address, and password are saved on this device to help protect your data and allow PIN recovery if you choose to lock previous-dose views. Device sync is only created later if you start a trial or activate gTimer Pro.")
+          Text("gTimer can run local only. Your email address is your account username. Your email and password are saved on this device to help protect your data and allow PIN recovery if you choose to lock previous-dose views. Device sync is only created later if you start a trial or activate gTimer Pro.")
             .font(.system(size: 14))
             .foregroundStyle(AppTheme.textMuted)
             .fixedSize(horizontal: false, vertical: true)
         }
 
         VStack(alignment: .leading, spacing: 10) {
-          TextField("Name", text: $name)
-            .platformPlainTextEntry()
-            .padding(12)
-            .background(AppTheme.backgroundElevated)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-          TextField("Email", text: $email)
+          TextField("Email address", text: $email)
             .platformKeyboardType(.emailAddress)
             .platformPlainTextEntry()
             .padding(12)
@@ -285,18 +279,12 @@ private struct AccountSetupSheet: View {
     .frame(width: 520, height: 520)
     #endif
     .onAppear {
-      name = settings.accountName
       email = settings.accountEmail
     }
   }
 
   private func saveAccount() {
-    let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    guard !cleanName.isEmpty else {
-      message = "Enter your name."
-      return
-    }
     guard cleanEmail.contains("@") else {
       message = "Enter a valid email address."
       return
@@ -306,7 +294,6 @@ private struct AccountSetupSheet: View {
       return
     }
 
-    settings.accountName = cleanName
     settings.accountEmail = cleanEmail
     settings.syncAccountEmail = cleanEmail
     settings.setAccountPassword(password)

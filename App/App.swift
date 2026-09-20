@@ -190,6 +190,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.41",
+      build: 131,
+      category: .minorImprovements,
+      message: "Account setup now uses the email address as the single username and removes the duplicate account name field."
+    ),
+    AppUpdateEntry(
       version: "0.9.40",
       build: 130,
       category: .newFeatures,
