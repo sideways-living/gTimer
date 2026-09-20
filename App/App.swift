@@ -190,6 +190,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.44",
+      build: 134,
+      category: .newFeatures,
+      message: "Private history, maps, and saved location data can now be unlocked with Face ID, Touch ID, or the device passcode while retaining the gTimer PIN fallback."
+    ),
+    AppUpdateEntry(
       version: "0.9.43",
       build: 133,
       category: .bugFixes,

@@ -307,6 +307,7 @@ private struct HistoryPrivacyGate<Content: View>: View {
   @Environment(AppNavigation.self) private var nav
   @State private var security = AppSecurityManager.shared
   @State private var pin = ""
+  @State private var isAuthenticatingDevice = false
   let content: () -> Content
 
   var body: some View {
@@ -325,7 +326,7 @@ private struct HistoryPrivacyGate<Content: View>: View {
       Text("Previous doses are locked")
         .font(.system(size: 22, weight: .bold))
         .foregroundStyle(AppTheme.textPrimary)
-      Text("Enter your PIN to view history and maps. You can still record a dose from the gTimer tab without unlocking.")
+      Text("Use your gTimer PIN or Apple device authentication to view history and maps. You can still record a dose without unlocking.")
         .font(.system(size: 14))
         .foregroundStyle(AppTheme.textMuted)
         .multilineTextAlignment(.center)
@@ -336,7 +337,7 @@ private struct HistoryPrivacyGate<Content: View>: View {
       }
       .frame(maxWidth: 280)
 
-      Button("Unlock") {
+      Button("Unlock with PIN") {
         unlockHistory()
       }
       .font(.system(size: 15, weight: .semibold))
@@ -346,6 +347,26 @@ private struct HistoryPrivacyGate<Content: View>: View {
       .background(AppTheme.accentBlue)
       .clipShape(RoundedRectangle(cornerRadius: 12))
       .buttonStyle(.plain)
+
+      if security.canUseDeviceAuthentication {
+        Button {
+          Task { await unlockWithDeviceAuthentication() }
+        } label: {
+          HStack(spacing: 8) {
+            if isAuthenticatingDevice {
+              ProgressView()
+                .controlSize(.small)
+            } else {
+              Image(systemName: "person.badge.key.fill")
+            }
+            Text(security.deviceAuthenticationTitle)
+          }
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundStyle(AppTheme.accentBlue)
+        }
+        .buttonStyle(.plain)
+        .disabled(isAuthenticatingDevice)
+      }
 
       if let message = security.authMessage {
         Text(message)
@@ -375,6 +396,14 @@ private struct HistoryPrivacyGate<Content: View>: View {
   private func unlockHistory() {
     _ = security.unlockHistory(pin: pin)
     pin = ""
+  }
+
+  @MainActor
+  private func unlockWithDeviceAuthentication() async {
+    guard !isAuthenticatingDevice else { return }
+    isAuthenticatingDevice = true
+    defer { isAuthenticatingDevice = false }
+    _ = await security.unlockHistoryWithDeviceAuthentication()
   }
 }
 

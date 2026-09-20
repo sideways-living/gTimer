@@ -3229,7 +3229,7 @@ private struct PrivacyLockSettingsSection: View {
             }
         }
 
-        Text("Recording a dose never requires the PIN. The lock only protects previous-dose views such as History, Map, and desktop Recent History.")
+        Text("Recording a dose never requires the PIN. The lock only protects previous-dose views such as History, Map, and desktop Recent History. You can unlock with your gTimer PIN or Apple device authentication.")
           .font(.system(size: 12))
           .foregroundStyle(AppTheme.textMuted)
           .fixedSize(horizontal: false, vertical: true)

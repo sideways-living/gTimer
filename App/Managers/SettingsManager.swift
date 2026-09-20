@@ -4,6 +4,7 @@ import WidgetKit
 import Security
 import CryptoKit
 import CoreLocation
+import LocalAuthentication
 #if os(iOS)
 import UIKit
 #endif
@@ -392,6 +393,64 @@ final class AppSecurityManager {
     }
     authMessage = "PIN is incorrect."
     return false
+  }
+
+  var deviceAuthenticationTitle: String {
+    let context = LAContext()
+    var error: NSError?
+    guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
+      return "Unlock with device authentication"
+    }
+    switch context.biometryType {
+    case .faceID:
+      return "Unlock with Face ID"
+    case .touchID:
+      return "Unlock with Touch ID"
+    case .opticID:
+      return "Unlock with Optic ID"
+    case .none:
+      #if os(macOS)
+      return "Unlock with Mac password"
+      #else
+      return "Unlock with device passcode"
+      #endif
+    @unknown default:
+      return "Unlock with device authentication"
+    }
+  }
+
+  var canUseDeviceAuthentication: Bool {
+    let context = LAContext()
+    var error: NSError?
+    return context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+  }
+
+  @MainActor
+  func unlockHistoryWithDeviceAuthentication() async -> Bool {
+    let context = LAContext()
+    context.localizedCancelTitle = "Use PIN"
+    var policyError: NSError?
+    guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &policyError) else {
+      authMessage = "Device authentication is not available. Use your gTimer PIN."
+      return false
+    }
+
+    do {
+      let authenticated = try await context.evaluatePolicy(
+        .deviceOwnerAuthentication,
+        localizedReason: "Unlock your private gTimer history, maps, and saved location data."
+      )
+      guard authenticated else { return false }
+      historyUnlocked = true
+      authMessage = nil
+      return true
+    } catch let error as LAError where error.code == .userCancel || error.code == .appCancel || error.code == .systemCancel {
+      authMessage = nil
+      return false
+    } catch {
+      authMessage = "Device authentication failed. Use your gTimer PIN."
+      return false
+    }
   }
 
   func resetHistoryPIN(accountPassword: String, newPIN: String, settings: SettingsManager) -> Bool {
