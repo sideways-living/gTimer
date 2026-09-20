@@ -64,6 +64,72 @@ async function route(request, response, activeStore, activeTokens, activeAuthSto
     return;
   }
 
+  if (request.method === "GET" && url.pathname === "/v1/auth/security") {
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    sendJSON(response, 200, await activeAuthStore.securityStatus(auth.userId));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/auth/totp/enrollment") {
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    const body = await readJSONBody(request);
+    sendJSON(response, 200, await activeAuthStore.beginTotpEnrollment(auth.userId, body));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/auth/totp/confirmation") {
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    const body = await readJSONBody(request);
+    sendJSON(response, 200, await activeAuthStore.confirmTotpEnrollment(auth.userId, body));
+    return;
+  }
+
+  if (request.method === "DELETE" && url.pathname === "/v1/auth/totp") {
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    const body = await readJSONBody(request);
+    sendJSON(response, 200, await activeAuthStore.disableTotp(auth.userId, body));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/auth/passkeys/registration/options") {
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    const body = await readJSONBody(request);
+    sendJSON(response, 200, await activeAuthStore.beginPasskeyRegistration(auth.userId, body));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/auth/passkeys/registration/verification") {
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    const body = await readJSONBody(request);
+    sendJSON(response, 200, await activeAuthStore.finishPasskeyRegistration(auth.userId, body));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/auth/passkeys/authentication/options") {
+    const body = await readJSONBody(request);
+    sendJSON(response, 200, await activeAuthStore.beginPasskeyAuthentication(body));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/v1/auth/passkeys/authentication/verification") {
+    const body = await readJSONBody(request);
+    sendJSON(response, 200, await activeAuthStore.finishPasskeyAuthentication(body));
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/v1/auth/passkeys") {
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    sendJSON(response, 200, await activeAuthStore.listPasskeys(auth.userId));
+    return;
+  }
+
+  const passkeyRevokeMatch = url.pathname.match(/^\/v1\/auth\/passkeys\/([^/]+)$/);
+  if (request.method === "DELETE" && passkeyRevokeMatch) {
+    const auth = await authenticate(request, activeTokens, activeAuthStore);
+    sendJSON(response, 200, await activeAuthStore.revokePasskey(auth.userId, decodeURIComponent(passkeyRevokeMatch[1])));
+    return;
+  }
+
   if (request.method === "POST" && url.pathname === "/v1/auth/password") {
     const auth = await authenticate(request, activeTokens, activeAuthStore);
     const body = await readJSONBody(request);

@@ -3,6 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import * as OTPAuth from "otpauth";
 import { AuthStore } from "../src/auth-store.js";
 import { createServer } from "../src/server.js";
 import { FileSyncStore } from "../src/store.js";
@@ -309,6 +310,155 @@ test("changes an authenticated account password", async () => {
   });
 });
 
+test("enrolls authenticator 2FA and requires it for new device tokens", async () => {
+  await withTestAPI(async ({ baseURL, dataDir }) => {
+    await requestJSON(`${baseURL}/v1/auth/register`, {
+      method: "POST",
+      body: { email: "secure@example.com", password: "correct horse battery staple" }
+    });
+    const firstDevice = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "secure@example.com",
+        password: "correct horse battery staple",
+        deviceName: "Mac",
+        deviceKey: "secure-mac",
+        platform: "macos"
+      }
+    });
+
+    const enrollment = await requestJSON(`${baseURL}/v1/auth/totp/enrollment`, {
+      method: "POST",
+      token: firstDevice.json.token,
+      body: { currentPassword: "correct horse battery staple" }
+    });
+    assert.equal(enrollment.status, 200);
+    assert.match(enrollment.json.uri, /^otpauth:\/\/totp\//);
+
+    const storedDuringEnrollment = await readFile(join(dataDir, "_auth.json"), "utf8");
+    assert.equal(storedDuringEnrollment.includes(enrollment.json.secret), false);
+
+    const totp = new OTPAuth.TOTP({
+      issuer: "gTimer",
+      label: "secure@example.com",
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(enrollment.json.secret)
+    });
+    const confirmation = await requestJSON(`${baseURL}/v1/auth/totp/confirmation`, {
+      method: "POST",
+      token: firstDevice.json.token,
+      body: { enrollmentId: enrollment.json.enrollmentId, code: totp.generate() }
+    });
+    assert.equal(confirmation.status, 200);
+    assert.equal(confirmation.json.recoveryCodes.length, 10);
+
+    const missingCode = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "secure@example.com",
+        password: "correct horse battery staple",
+        deviceName: "iPhone",
+        deviceKey: "secure-iphone",
+        platform: "ios"
+      }
+    });
+    assert.equal(missingCode.status, 401);
+    assert.match(missingCode.json.error, /authenticator or recovery code/i);
+
+    const secondDevice = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "secure@example.com",
+        password: "correct horse battery staple",
+        totpCode: totp.generate(),
+        deviceName: "iPhone",
+        deviceKey: "secure-iphone",
+        platform: "ios"
+      }
+    });
+    assert.equal(secondDevice.status, 200);
+
+    const recoveryDevice = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "secure@example.com",
+        password: "correct horse battery staple",
+        recoveryCode: confirmation.json.recoveryCodes[0],
+        deviceName: "Android",
+        deviceKey: "secure-android",
+        platform: "android"
+      }
+    });
+    assert.equal(recoveryDevice.status, 200);
+
+    const status = await requestJSON(`${baseURL}/v1/auth/security`, {
+      method: "GET",
+      token: recoveryDevice.json.token
+    });
+    assert.equal(status.json.totpEnabled, true);
+    assert.equal(status.json.recoveryCodesRemaining, 9);
+  });
+});
+
+test("creates one-time passkey registration and authentication options", async () => {
+  await withTestAPI(async ({ baseURL }) => {
+    await requestJSON(`${baseURL}/v1/auth/register`, {
+      method: "POST",
+      body: { email: "passkey@example.com", password: "correct horse battery staple" }
+    });
+    const device = await requestJSON(`${baseURL}/v1/auth/device`, {
+      method: "POST",
+      body: {
+        email: "passkey@example.com",
+        password: "correct horse battery staple",
+        deviceName: "Mac",
+        deviceKey: "passkey-mac",
+        platform: "macos"
+      }
+    });
+
+    const registration = await requestJSON(`${baseURL}/v1/auth/passkeys/registration/options`, {
+      method: "POST",
+      token: device.json.token,
+      body: { currentPassword: "correct horse battery staple", name: "Mac passkey" }
+    });
+    assert.equal(registration.status, 200);
+    assert.equal(registration.json.options.rp.id, "sync.gtimer.app");
+    assert.equal(registration.json.options.authenticatorSelection.userVerification, "required");
+    assert.ok(registration.json.options.challenge.length > 20);
+
+    const invalidVerification = await requestJSON(`${baseURL}/v1/auth/passkeys/registration/verification`, {
+      method: "POST",
+      token: device.json.token,
+      body: {
+        ceremonyId: registration.json.ceremonyId,
+        response: { id: "invalid", type: "public-key", response: {} }
+      }
+    });
+    assert.equal(invalidVerification.status, 401);
+
+    const replayedVerification = await requestJSON(`${baseURL}/v1/auth/passkeys/registration/verification`, {
+      method: "POST",
+      token: device.json.token,
+      body: {
+        ceremonyId: registration.json.ceremonyId,
+        response: { id: "invalid", type: "public-key", response: {} }
+      }
+    });
+    assert.equal(replayedVerification.status, 400);
+
+    const authentication = await requestJSON(`${baseURL}/v1/auth/passkeys/authentication/options`, {
+      method: "POST",
+      body: { email: "passkey@example.com" }
+    });
+    assert.equal(authentication.status, 200);
+    assert.equal(authentication.json.options.rpId, "sync.gtimer.app");
+    assert.equal(authentication.json.options.userVerification, "required");
+  });
+});
+
 test("logs in on another device and can revoke that device", async () => {
   await withTestAPI(async ({ baseURL }) => {
     await requestJSON(`${baseURL}/v1/auth/register`, {
@@ -422,7 +572,12 @@ async function withTestAPI(callback) {
   const dataDir = await mkdtemp(join(tmpdir(), "gtimer-sync-api-"));
   const server = createServer({
     store: new FileSyncStore({ dataDir }),
-    authStore: new AuthStore({ dataDir }),
+    authStore: new AuthStore({
+      dataDir,
+      encryptionKey: "test-only-account-security-encryption-key",
+      rpID: "sync.gtimer.app",
+      origins: ["https://sync.gtimer.app"]
+    }),
     tokens: {
       "token-a": "user-a",
       "token-b": "user-b"

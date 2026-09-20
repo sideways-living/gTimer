@@ -2,7 +2,7 @@
 
 Small cross-platform sync API for gTimer dose history, settings, profile data, saved locations, account login, and device tokens.
 
-This is a first backend slice for local development and protocol testing. It uses only built-in Node modules and stores data as JSON files under `SyncAPI/data`. For production, keep the HTTP contract and replace the file store with Postgres or another audited database.
+This is a first backend slice for local development and protocol testing. It stores data as JSON files under `SyncAPI/data`. For production, keep the HTTP contract and replace the file store with Postgres or another audited database.
 
 ## Run Locally
 
@@ -119,7 +119,12 @@ The server also reads `SyncAPI/.env` before startup. This is useful on hosts whe
 ```sh
 PORT=8787
 GTIMER_SYNC_TOKENS={"replace-with-a-long-random-token":"dan"}
+GTIMER_AUTH_ENCRYPTION_KEY=replace-with-at-least-32-random-bytes
+GTIMER_WEBAUTHN_RP_ID=sync.gtimer.app
+GTIMER_WEBAUTHN_ORIGINS=https://sync.gtimer.app
 ```
+
+`GTIMER_AUTH_ENCRYPTION_KEY` encrypts authenticator-app secrets with AES-256-GCM before they are written to disk. Generate it once, back it up securely, and do not rotate or lose it until a supported re-encryption procedure exists. Passkeys are scoped to the configured relying-party ID and exact allowed HTTPS origins.
 
 Do not commit `.env`. It is ignored by Git.
 
@@ -178,6 +183,25 @@ Logs in and registers this device as a separate synced device.
   "deviceName": "Dan iPhone"
 }
 ```
+
+If authenticator-app protection is enabled, registering a new synced device through `POST /v1/auth/device` also requires either `totpCode` or a one-time `recoveryCode`.
+
+### Account security endpoints
+
+All setup, listing, and revocation endpoints require `Authorization: Bearer <device-token>` unless marked as a sign-in endpoint.
+
+- `GET /v1/auth/security` returns whether TOTP is enabled, remaining recovery-code count, active passkey count, and active device count.
+- `POST /v1/auth/totp/enrollment` requires `currentPassword` and returns a five-minute enrollment id, Base32 secret, and `otpauth://` URI.
+- `POST /v1/auth/totp/confirmation` accepts the enrollment id and current six-digit code. It returns recovery codes exactly once.
+- `DELETE /v1/auth/totp` requires the current password plus a valid authenticator or recovery code.
+- `POST /v1/auth/passkeys/registration/options` requires `currentPassword` and returns WebAuthn creation options.
+- `POST /v1/auth/passkeys/registration/verification` verifies the signed registration response and stores only the public credential.
+- `POST /v1/auth/passkeys/authentication/options` is the email-first passkey sign-in start endpoint.
+- `POST /v1/auth/passkeys/authentication/verification` verifies the assertion and issues the normal per-device sync token.
+- `GET /v1/auth/passkeys` lists passkeys without exposing credential material.
+- `DELETE /v1/auth/passkeys/:passkeyId` revokes a passkey.
+
+WebAuthn challenges are random, expire after five minutes, and are consumed after one verification attempt. Registration and authentication require user verification. Native Apple clients additionally need `webcredentials:sync.gtimer.app` in Associated Domains and a matching `apple-app-site-association` response. Android needs matching Digital Asset Links before passkeys can be enabled in the UI.
 
 ### `GET /v1/auth/devices`
 
