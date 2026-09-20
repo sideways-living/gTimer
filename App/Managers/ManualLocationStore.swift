@@ -30,7 +30,7 @@ final class ManualLocationStore {
   private let maxSavedLocations = 25
   private let defaults: UserDefaults
 
-  private init(defaults: UserDefaults = .standard) {
+  private init(defaults: UserDefaults = AppPreferences.defaults) {
     self.defaults = defaults
   }
 

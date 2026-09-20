@@ -107,7 +107,7 @@ enum AppTheme {
   }
 
   private static func proCustomColor(forKey key: String) -> Color? {
-    let defaults = UserDefaults.standard
+    let defaults = AppPreferences.defaults
     guard defaults.bool(forKey: "proBetaAccepted"),
           let hex = defaults.string(forKey: key),
           !hex.isEmpty
@@ -123,7 +123,7 @@ enum AppTheme {
   }
 
   private static func paletteColor(dark: String, light: String) -> Color {
-    switch UserDefaults.standard.string(forKey: "appearanceMode") {
+    switch AppPreferences.defaults.string(forKey: "appearanceMode") {
     case AppAppearanceMode.day.rawValue:
       return color(hex: light)
     case AppAppearanceMode.night.rawValue:

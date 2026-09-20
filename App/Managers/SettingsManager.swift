@@ -417,125 +417,125 @@ final class SettingsManager {
   static let syncTrialDurationDays = 14
 
   var standardDose: Double {
-    didSet { UserDefaults.standard.set(standardDose, forKey: "standardDose") }
+    didSet { AppPreferences.set(standardDose, forKey: "standardDose") }
   }
   var unit: String {
-    didSet { UserDefaults.standard.set(unit, forKey: "unit") }
+    didSet { AppPreferences.set(unit, forKey: "unit") }
   }
   var safeIntervalMinutes: Int {
     didSet {
-      UserDefaults.standard.set(safeIntervalMinutes, forKey: "safeIntervalMinutes")
+      AppPreferences.set(safeIntervalMinutes, forKey: "safeIntervalMinutes")
       updateSharedInterval()
       WidgetCenter.shared.reloadAllTimelines()
     }
   }
   var substance: String {
-    didSet { UserDefaults.standard.set(substance, forKey: "substance") }
+    didSet { AppPreferences.set(substance, forKey: "substance") }
   }
   var quickAmounts: [Double] {
     didSet {
       if let data = try? JSONEncoder().encode(quickAmounts) {
-        UserDefaults.standard.set(data, forKey: "quickAmounts")
+        AppPreferences.set(data, forKey: "quickAmounts")
       }
     }
   }
   var notificationsEnabled: Bool {
-    didSet { UserDefaults.standard.set(notificationsEnabled, forKey: "notificationsEnabled") }
+    didSet { AppPreferences.set(notificationsEnabled, forKey: "notificationsEnabled") }
   }
   var lockScreenNotificationsEnabled: Bool {
-    didSet { UserDefaults.standard.set(lockScreenNotificationsEnabled, forKey: "lockScreenNotificationsEnabled") }
+    didSet { AppPreferences.set(lockScreenNotificationsEnabled, forKey: "lockScreenNotificationsEnabled") }
   }
   var countdownMode: Bool {
     didSet {
-      UserDefaults.standard.set(countdownMode, forKey: "countdownMode")
+      AppPreferences.set(countdownMode, forKey: "countdownMode")
       updateSharedInterval()
       WidgetCenter.shared.reloadAllTimelines()
     }
   }
   var timeFormat: String {
-    didSet { UserDefaults.standard.set(timeFormat, forKey: "timeFormat") }
+    didSet { AppPreferences.set(timeFormat, forKey: "timeFormat") }
   }
   var showSafeElapsedTimer: Bool {
-    didSet { UserDefaults.standard.set(showSafeElapsedTimer, forKey: "showSafeElapsedTimer") }
+    didSet { AppPreferences.set(showSafeElapsedTimer, forKey: "showSafeElapsedTimer") }
   }
   var includeDeletedDosesInHistory: Bool {
-    didSet { UserDefaults.standard.set(includeDeletedDosesInHistory, forKey: "includeDeletedDosesInHistory") }
+    didSet { AppPreferences.set(includeDeletedDosesInHistory, forKey: "includeDeletedDosesInHistory") }
   }
   var voiceDoseLoggingEnabled: Bool {
-    didSet { UserDefaults.standard.set(voiceDoseLoggingEnabled, forKey: "voiceDoseLoggingEnabled") }
+    didSet { AppPreferences.set(voiceDoseLoggingEnabled, forKey: "voiceDoseLoggingEnabled") }
   }
   var voiceDoseAttachCurrentLocation: Bool {
-    didSet { UserDefaults.standard.set(voiceDoseAttachCurrentLocation, forKey: "voiceDoseAttachCurrentLocation") }
+    didSet { AppPreferences.set(voiceDoseAttachCurrentLocation, forKey: "voiceDoseAttachCurrentLocation") }
   }
   var voiceDoseMatchSavedLocations: Bool {
-    didSet { UserDefaults.standard.set(voiceDoseMatchSavedLocations, forKey: "voiceDoseMatchSavedLocations") }
+    didSet { AppPreferences.set(voiceDoseMatchSavedLocations, forKey: "voiceDoseMatchSavedLocations") }
   }
   var voiceDoseStoreSpokenPhraseInNotes: Bool {
-    didSet { UserDefaults.standard.set(voiceDoseStoreSpokenPhraseInNotes, forKey: "voiceDoseStoreSpokenPhraseInNotes") }
+    didSet { AppPreferences.set(voiceDoseStoreSpokenPhraseInNotes, forKey: "voiceDoseStoreSpokenPhraseInNotes") }
   }
   var syncEnabled: Bool {
-    didSet { UserDefaults.standard.set(syncEnabled, forKey: "syncEnabled") }
+    didSet { AppPreferences.set(syncEnabled, forKey: "syncEnabled") }
   }
   var syncServerURL: String {
-    didSet { UserDefaults.standard.set(syncServerURL, forKey: "syncServerURL") }
+    didSet { AppPreferences.set(syncServerURL, forKey: "syncServerURL") }
   }
   var syncToken: String {
     didSet { KeychainStore.set(syncToken, for: "gtimer.syncToken") }
   }
   var syncAccountEmail: String {
-    didSet { UserDefaults.standard.set(syncAccountEmail, forKey: "syncAccountEmail") }
+    didSet { AppPreferences.set(syncAccountEmail, forKey: "syncAccountEmail") }
   }
   var syncDeviceID: String {
-    didSet { UserDefaults.standard.set(syncDeviceID, forKey: "syncDeviceID") }
+    didSet { AppPreferences.set(syncDeviceID, forKey: "syncDeviceID") }
   }
   var deviceInstallID: String {
-    didSet { UserDefaults.standard.set(deviceInstallID, forKey: "deviceInstallID") }
+    didSet { AppPreferences.set(deviceInstallID, forKey: "deviceInstallID") }
   }
   var accountSetupCompleted: Bool {
-    didSet { UserDefaults.standard.set(accountSetupCompleted, forKey: "accountSetupCompleted") }
+    didSet { AppPreferences.set(accountSetupCompleted, forKey: "accountSetupCompleted") }
   }
   var accountName: String {
-    didSet { UserDefaults.standard.set(accountName, forKey: "accountName") }
+    didSet { AppPreferences.set(accountName, forKey: "accountName") }
   }
   var accountEmail: String {
-    didSet { UserDefaults.standard.set(accountEmail, forKey: "accountEmail") }
+    didSet { AppPreferences.set(accountEmail, forKey: "accountEmail") }
   }
   var historyPinEnabled: Bool {
-    didSet { UserDefaults.standard.set(historyPinEnabled, forKey: "historyPinEnabled") }
+    didSet { AppPreferences.set(historyPinEnabled, forKey: "historyPinEnabled") }
   }
   var syncTrialStartedAt: Date? {
     didSet {
       if let syncTrialStartedAt {
-        UserDefaults.standard.set(syncTrialStartedAt, forKey: "syncTrialStartedAt")
+        AppPreferences.set(syncTrialStartedAt, forKey: "syncTrialStartedAt")
       } else {
-        UserDefaults.standard.removeObject(forKey: "syncTrialStartedAt")
+        AppPreferences.removeObject(forKey: "syncTrialStartedAt")
       }
     }
   }
   var syncCursor: Int {
-    didSet { UserDefaults.standard.set(syncCursor, forKey: "syncCursor") }
+    didSet { AppPreferences.set(syncCursor, forKey: "syncCursor") }
   }
   var lastSyncAt: Date? {
     didSet {
       if let lastSyncAt {
-        UserDefaults.standard.set(lastSyncAt, forKey: "lastSyncAt")
+        AppPreferences.set(lastSyncAt, forKey: "lastSyncAt")
       } else {
-        UserDefaults.standard.removeObject(forKey: "lastSyncAt")
+        AppPreferences.removeObject(forKey: "lastSyncAt")
       }
     }
   }
   var syncStatusMessage: String {
-    didSet { UserDefaults.standard.set(syncStatusMessage, forKey: "syncStatusMessage") }
+    didSet { AppPreferences.set(syncStatusMessage, forKey: "syncStatusMessage") }
   }
   var deviceName: String {
-    didSet { UserDefaults.standard.set(deviceName, forKey: "deviceName") }
+    didSet { AppPreferences.set(deviceName, forKey: "deviceName") }
   }
   var vanityName: String {
-    didSet { UserDefaults.standard.set(vanityName, forKey: "vanityName") }
+    didSet { AppPreferences.set(vanityName, forKey: "vanityName") }
   }
   var proBetaAccepted: Bool {
     didSet {
-      UserDefaults.standard.set(proBetaAccepted, forKey: "proBetaAccepted")
+      AppPreferences.set(proBetaAccepted, forKey: "proBetaAccepted")
       if !proBetaAccepted, voiceDoseLoggingEnabled {
         voiceDoseLoggingEnabled = false
       }
@@ -543,43 +543,43 @@ final class SettingsManager {
     }
   }
   var profilePictureData: Data? {
-    didSet { UserDefaults.standard.set(profilePictureData, forKey: "profilePictureData") }
+    didSet { AppPreferences.set(profilePictureData, forKey: "profilePictureData") }
   }
   var attachLocationToDoses: Bool {
-    didSet { UserDefaults.standard.set(attachLocationToDoses, forKey: "attachLocationToDoses") }
+    didSet { AppPreferences.set(attachLocationToDoses, forKey: "attachLocationToDoses") }
   }
   var locationApproximate: Bool {
-    didSet { UserDefaults.standard.set(locationApproximate, forKey: "locationApproximate") }
+    didSet { AppPreferences.set(locationApproximate, forKey: "locationApproximate") }
   }
   var homeCity: String {
-    didSet { UserDefaults.standard.set(homeCity, forKey: "homeCity") }
+    didSet { AppPreferences.set(homeCity, forKey: "homeCity") }
   }
   var homeCountryCode: String {
-    didSet { UserDefaults.standard.set(homeCountryCode, forKey: "homeCountryCode") }
+    didSet { AppPreferences.set(homeCountryCode, forKey: "homeCountryCode") }
   }
   var homeAddress: String {
-    didSet { UserDefaults.standard.set(homeAddress, forKey: "homeAddress") }
+    didSet { AppPreferences.set(homeAddress, forKey: "homeAddress") }
   }
   var homeLatitude: Double? {
-    didSet { UserDefaults.standard.set(homeLatitude, forKey: "homeLatitude") }
+    didSet { AppPreferences.set(homeLatitude, forKey: "homeLatitude") }
   }
   var homeLongitude: Double? {
-    didSet { UserDefaults.standard.set(homeLongitude, forKey: "homeLongitude") }
+    didSet { AppPreferences.set(homeLongitude, forKey: "homeLongitude") }
   }
   var appearanceMode: AppAppearanceMode {
-    didSet { UserDefaults.standard.set(appearanceMode.rawValue, forKey: "appearanceMode") }
+    didSet { AppPreferences.set(appearanceMode.rawValue, forKey: "appearanceMode") }
   }
   var customAccentHex: String {
-    didSet { UserDefaults.standard.set(customAccentHex, forKey: "customAccentHex") }
+    didSet { AppPreferences.set(customAccentHex, forKey: "customAccentHex") }
   }
   var customPrimaryButtonHex: String {
-    didSet { UserDefaults.standard.set(customPrimaryButtonHex, forKey: "customPrimaryButtonHex") }
+    didSet { AppPreferences.set(customPrimaryButtonHex, forKey: "customPrimaryButtonHex") }
   }
   var customQuickButtonHex: String {
-    didSet { UserDefaults.standard.set(customQuickButtonHex, forKey: "customQuickButtonHex") }
+    didSet { AppPreferences.set(customQuickButtonHex, forKey: "customQuickButtonHex") }
   }
   var customBackgroundHex: String {
-    didSet { UserDefaults.standard.set(customBackgroundHex, forKey: "customBackgroundHex") }
+    didSet { AppPreferences.set(customBackgroundHex, forKey: "customBackgroundHex") }
   }
 
   var syncTrialEndsAt: Date? {
@@ -628,7 +628,8 @@ final class SettingsManager {
   }
 
   init() {
-    let ud = UserDefaults.standard
+    AppPreferences.prepare()
+    let ud = AppPreferences.defaults
     standardDose      = ud.object(forKey: "standardDose") as? Double ?? 1.5
     unit              = ud.string(forKey: "unit") ?? "ml"
     safeIntervalMinutes = ud.object(forKey: "safeIntervalMinutes") as? Int ?? 90

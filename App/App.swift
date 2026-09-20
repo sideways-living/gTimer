@@ -190,6 +190,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.42",
+      build: 132,
+      category: .bugFixes,
+      message: "Settings now persist through a shared canonical store so packaged and development builds cannot silently load different dose, profile, and appearance preferences."
+    ),
+    AppUpdateEntry(
       version: "0.9.41",
       build: 131,
       category: .minorImprovements,
