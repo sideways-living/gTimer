@@ -190,6 +190,18 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.43",
+      build: 133,
+      category: .bugFixes,
+      message: "History export now uses a reliable native save window on macOS and reports file-generation errors instead of failing silently."
+    ),
+    AppUpdateEntry(
+      version: "0.9.43",
+      build: 133,
+      category: .minorImprovements,
+      message: "The export and print setup screen now groups date range, fields, location privacy, and map options into a clearer layout."
+    ),
+    AppUpdateEntry(
       version: "0.9.42",
       build: 132,
       category: .bugFixes,

@@ -3,6 +3,7 @@ import SwiftData
 import CoreText
 import MapKit
 import PDFKit
+import UniformTypeIdentifiers
 #if os(iOS)
 import UIKit
 #elseif os(macOS)
@@ -624,8 +625,10 @@ private struct HistoryExportSheet: View {
   @State private var includeMap = false
   @State private var startDate: Date
   @State private var endDate: Date
-  @State private var shareItem: HistoryExportShareItem?
+  @State private var exportDocument: HistoryPDFFile?
+  @State private var showFileExporter = false
   @State private var isWorking = false
+  @State private var exportError: String?
 
   init(doses: [DoseRecord], locationApproximate: Bool, initialOutcome: HistoryExportOutcome) {
     self.doses = doses
@@ -654,58 +657,190 @@ private struct HistoryExportSheet: View {
     initialOutcome == .print ? "Print" : "Export PDF"
   }
 
+  private let primaryFields: [HistoryExportField] = [.date, .time, .amount, .unit]
+  private let recordFields: [HistoryExportField] = [.missed, .edited, .earlyBy, .deleted, .deletionReason]
+  private let detailFields: [HistoryExportField] = [.notes, .tags, .people, .device]
+  private let locationFields: [HistoryExportField] = [.locationName, .coordinates, .accuracy, .locationSource]
+
   var body: some View {
     NavigationStack {
-      Form {
-        Section("Date range") {
-          DatePicker("From", selection: $startDate, displayedComponents: [.date, .hourAndMinute])
-          DatePicker("To", selection: $endDate, displayedComponents: [.date, .hourAndMinute])
-          Text("\(filteredDoses.count) dose record\(filteredDoses.count == 1 ? "" : "s") selected")
-            .foregroundStyle(AppTheme.textMuted)
-        }
+      VStack(spacing: 0) {
+        ScrollView {
+          VStack(alignment: .leading, spacing: 14) {
+            exportSection(title: "Date range", icon: "calendar") {
+              ViewThatFits(in: .horizontal) {
+                HStack(spacing: 16) {
+                  datePicker("From", selection: $startDate)
+                  datePicker("To", selection: $endDate)
+                }
+                VStack(spacing: 12) {
+                  datePicker("From", selection: $startDate)
+                  datePicker("To", selection: $endDate)
+                }
+              }
 
-        Section("Fields") {
-          ForEach(HistoryExportField.allCases) { field in
-            Toggle(field.rawValue, isOn: fieldBinding(field))
-          }
-        }
+              HStack(spacing: 6) {
+                Image(systemName: "doc.text")
+                Text("\(filteredDoses.count) dose record\(filteredDoses.count == 1 ? "" : "s") selected")
+              }
+              .font(.system(size: 12, weight: .medium))
+              .foregroundStyle(filteredDoses.isEmpty ? AppTheme.statusAmber : AppTheme.textMuted)
+            }
 
-        Section("Map") {
-          Toggle("Include full-page map", isOn: $includeMap)
-          Text("The PDF includes a rendered map page with dose markers for mapped doses in the selected range.")
-            .font(.footnote)
-            .foregroundStyle(AppTheme.textMuted)
-        }
+            exportSection(title: "Included fields", icon: "checklist") {
+              HStack {
+                Button("Select all") { selectedFields = Set(HistoryExportField.allCases) }
+                Button("Clear") { selectedFields.removeAll() }
+                Spacer()
+                Text("\(selectedFields.count) of \(HistoryExportField.allCases.count)")
+                  .font(.system(size: 11))
+                  .foregroundStyle(AppTheme.textMuted)
+              }
+              .buttonStyle(.borderless)
 
-        if hasLocationFieldsSelected && filteredDoses.contains(where: \.hasLocation) {
-          Section {
-            Text("This export includes saved location data. Only export or print it somewhere you trust.")
-              .font(.footnote)
+              LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 12) {
+                fieldGroup("Dose", fields: primaryFields)
+                fieldGroup("Record status", fields: recordFields)
+                fieldGroup("Details", fields: detailFields)
+                fieldGroup("Location", fields: locationFields)
+              }
+            }
+
+            exportSection(title: "Map", icon: "map") {
+              Toggle("Include a full-page dose map", isOn: $includeMap)
+                .platformExportToggleStyle()
+              Text("Adds a rendered map page with markers for doses that have saved coordinates in this date range.")
+                .font(.system(size: 12))
+                .foregroundStyle(AppTheme.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if hasLocationFieldsSelected && filteredDoses.contains(where: \.hasLocation) {
+              Label(
+                "This PDF includes saved location information. Export or print it only somewhere you trust.",
+                systemImage: "location.fill"
+              )
+              .font(.system(size: 12, weight: .medium))
               .foregroundStyle(AppTheme.statusAmber)
+              .padding(12)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .background(AppTheme.statusAmber.opacity(0.09))
+              .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            if startDate > endDate {
+              Text("The From date must be earlier than the To date.")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppTheme.statusRed)
+            } else if let exportError {
+              Text(exportError)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(AppTheme.statusRed)
+                .fixedSize(horizontal: false, vertical: true)
+            }
           }
+          .padding(18)
         }
+
+        Divider().overlay(AppTheme.border)
+
+        HStack(spacing: 10) {
+          Button("Cancel") { dismiss() }
+            .keyboardShortcut(.cancelAction)
+          Spacer()
+          if isWorking {
+            ProgressView()
+              .controlSize(.small)
+          }
+          Button(actionTitle) {
+            performAction()
+          }
+          .keyboardShortcut(.defaultAction)
+          .buttonStyle(.borderedProminent)
+          .tint(AppTheme.accentBlue)
+          .disabled(isWorking || filteredDoses.isEmpty || (selectedFields.isEmpty && !includeMap) || startDate > endDate)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
+        .background(AppTheme.backgroundElevated)
       }
-      .scrollContentBackground(.hidden)
       .background(AppTheme.backgroundPrimary)
       .navigationTitle(initialOutcome == .print ? "Print History" : "Export History")
       .platformInlineNavigationTitle()
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") { dismiss() }
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button(isWorking ? "Working..." : actionTitle) {
-            performAction()
+          Button { dismiss() } label: {
+            Image(systemName: "xmark")
           }
-          .disabled(isWorking || filteredDoses.isEmpty || (selectedFields.isEmpty && !includeMap) || startDate > endDate)
+          .help("Close")
         }
       }
-      .sheet(item: $shareItem) { item in
-        ShareSheet(items: [item.url])
+      .fileExporter(
+        isPresented: $showFileExporter,
+        document: exportDocument,
+        contentType: .pdf,
+        defaultFilename: HistoryExportDocument.suggestedFileName
+      ) { result in
+        switch result {
+        case .success:
+          exportDocument = nil
+          dismiss()
+        case .failure(let error):
+          exportDocument = nil
+          exportError = "The PDF could not be saved: \(error.localizedDescription)"
+        }
       }
     }
-    .frame(minWidth: 460, minHeight: 560)
+    #if os(macOS)
+    .frame(minWidth: 700, idealWidth: 760, minHeight: 620, idealHeight: 700)
+    #else
+    .frame(minWidth: 360, minHeight: 560)
+    #endif
     .presentationBackground(AppTheme.backgroundPrimary)
+  }
+
+  @ViewBuilder
+  private func exportSection<Content: View>(
+    title: String,
+    icon: String,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Label(title, systemImage: icon)
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundStyle(AppTheme.textPrimary)
+      content()
+    }
+    .padding(14)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(AppTheme.backgroundCard)
+    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .overlay(RoundedRectangle(cornerRadius: 8).stroke(AppTheme.border, lineWidth: 0.5))
+  }
+
+  private func datePicker(_ title: String, selection: Binding<Date>) -> some View {
+    VStack(alignment: .leading, spacing: 5) {
+      Text(title)
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(AppTheme.textMuted)
+      DatePicker("", selection: selection, displayedComponents: [.date, .hourAndMinute])
+        .labelsHidden()
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+
+  private func fieldGroup(_ title: String, fields: [HistoryExportField]) -> some View {
+    VStack(alignment: .leading, spacing: 7) {
+      Text(title)
+        .font(.system(size: 11, weight: .bold))
+        .foregroundStyle(AppTheme.textMuted)
+      ForEach(fields) { field in
+        Toggle(field.rawValue, isOn: fieldBinding(field))
+          .platformExportToggleStyle()
+          .font(.system(size: 12))
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .topLeading)
   }
 
   private func fieldBinding(_ field: HistoryExportField) -> Binding<Bool> {
@@ -722,6 +857,7 @@ private struct HistoryExportSheet: View {
 
   private func performAction() {
     isWorking = true
+    exportError = nil
     let document = HistoryExportDocument(
       doses: filteredDoses,
       fields: HistoryExportField.allCases.filter { selectedFields.contains($0) },
@@ -735,12 +871,13 @@ private struct HistoryExportSheet: View {
       defer { isWorking = false }
       switch initialOutcome {
       case .export:
-        do {
-          let url = try await document.writePDF()
-          shareItem = HistoryExportShareItem(url: url)
-        } catch {
+        let data = await document.pdfData()
+        guard !data.isEmpty else {
+          exportError = "The PDF could not be generated. Please try again."
           return
         }
+        exportDocument = HistoryPDFFile(data: data)
+        showFileExporter = true
       case .print:
         await document.print()
         dismiss()
@@ -749,9 +886,21 @@ private struct HistoryExportSheet: View {
   }
 }
 
-private struct HistoryExportShareItem: Identifiable {
-  let id = UUID()
-  let url: URL
+private struct HistoryPDFFile: FileDocument {
+  static var readableContentTypes: [UTType] { [.pdf] }
+  var data: Data
+
+  init(data: Data) {
+    self.data = data
+  }
+
+  init(configuration: ReadConfiguration) throws {
+    data = configuration.file.regularFileContents ?? Data()
+  }
+
+  func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+    FileWrapper(regularFileWithContents: data)
+  }
 }
 
 private struct HistoryExportDocument {
@@ -793,12 +942,27 @@ private struct HistoryExportDocument {
     return lines.joined(separator: "\n")
   }
 
+  static var suggestedFileName: String {
+    "gTimer History \(fileStamp()).pdf"
+  }
+
+  func pdfData() async -> Data {
+    await makePDFData()
+  }
+
   func writePDF() async throws -> URL {
     let url = FileManager.default.temporaryDirectory
-      .appendingPathComponent("gTimer History \(Self.fileStamp()).pdf")
-    let data = await makePDFData()
-    try data.write(to: url, options: .atomic)
+      .appendingPathComponent(Self.suggestedFileName)
+    try await writePDF(to: url)
     return url
+  }
+
+  func writePDF(to url: URL) async throws {
+    let data = await makePDFData()
+    guard !data.isEmpty else {
+      throw CocoaError(.fileWriteUnknown)
+    }
+    try data.write(to: url, options: .atomic)
   }
 
   @MainActor
@@ -835,8 +999,6 @@ private struct HistoryExportDocument {
     repeat {
       context.beginPDFPage(nil)
       context.textMatrix = .identity
-      context.translateBy(x: 0, y: mediaBox.height)
-      context.scaleBy(x: 1.0, y: -1.0)
 
       let path = CGMutablePath()
       path.addRect(pageRect)
@@ -862,6 +1024,12 @@ private struct HistoryExportDocument {
   private func drawMapPage(in context: CGContext, mediaBox: CGRect) async {
     let titleRect = CGRect(x: 42, y: 42, width: mediaBox.width - 84, height: 50)
     let mapRect = CGRect(x: 42, y: 104, width: mediaBox.width - 84, height: mediaBox.height - 146)
+    let quartzMapRect = CGRect(
+      x: mapRect.minX,
+      y: mediaBox.height - mapRect.maxY,
+      width: mapRect.width,
+      height: mapRect.height
+    )
     let snapshotSize = CGSize(width: mapRect.width, height: mapRect.height)
 
     guard let snapshot = await makeMapSnapshot(size: snapshotSize) else { return }
@@ -880,7 +1048,7 @@ private struct HistoryExportDocument {
     )
 
     if let image = snapshot.cgImage {
-      context.draw(image, in: mapRect)
+      context.draw(image, in: quartzMapRect)
     }
 
     context.setStrokeColor(PlatformExportColor.white.cgColor)
@@ -890,8 +1058,8 @@ private struct HistoryExportDocument {
       let point = snapshot.point(for: coordinate)
       guard point.x.isFinite, point.y.isFinite else { continue }
       let markerCenter = CGPoint(
-        x: mapRect.minX + point.x,
-        y: mapRect.maxY - point.y
+        x: quartzMapRect.minX + point.x,
+        y: quartzMapRect.maxY - point.y
       )
       let markerRect = CGRect(
         x: markerCenter.x - 8,
@@ -1070,8 +1238,14 @@ private struct HistoryExportDocument {
         .paragraphStyle: paragraph
       ]
     )
+    let quartzRect = CGRect(
+      x: rect.minX,
+      y: mediaBox.height - rect.maxY,
+      width: rect.width,
+      height: rect.height
+    )
     let path = CGMutablePath()
-    path.addRect(rect)
+    path.addRect(quartzRect)
     let frame = CTFramesetterCreateFrame(
       CTFramesetterCreateWithAttributedString(attributed),
       CFRange(location: 0, length: attributed.length),
@@ -1079,12 +1253,8 @@ private struct HistoryExportDocument {
       nil
     )
 
-    context.saveGState()
     context.textMatrix = .identity
-    context.translateBy(x: 0, y: mediaBox.height)
-    context.scaleBy(x: 1.0, y: -1.0)
     CTFrameDraw(frame, context)
-    context.restoreGState()
   }
 }
 
@@ -1105,6 +1275,15 @@ private extension MKMapSnapshotter.Snapshot {
 }
 
 private extension View {
+  @ViewBuilder
+  func platformExportToggleStyle() -> some View {
+    #if os(macOS)
+    self.toggleStyle(.checkbox)
+    #else
+    self.toggleStyle(.switch)
+    #endif
+  }
+
   @ViewBuilder
   func platformDoseMapPresentation(isPresented: Binding<Bool>) -> some View {
     #if os(macOS)
