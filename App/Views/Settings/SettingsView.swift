@@ -4,6 +4,8 @@ import WidgetKit
 import CoreLocation
 import SwiftData
 import UniformTypeIdentifiers
+import CoreImage
+import CoreImage.CIFilterBuiltins
 #if os(iOS)
 import UIKit
 #endif
@@ -2826,6 +2828,9 @@ private struct AccountSettingsSection: View {
   let login: () -> Void
   let createAccount: () -> Void
   @State private var showsPasswordChange = false
+  @State private var showsAuthenticatorEnrollment = false
+  @State private var accountSecurity: SyncAccountSecurity?
+  @State private var securityStatusMessage: String?
 
   var body: some View {
     SettingsSectionCard(title: "Account") {
@@ -2883,11 +2888,29 @@ private struct AccountSettingsSection: View {
 
           SettingsSectionDivider()
           VStack(alignment: .leading, spacing: 8) {
-            securityOption("Passkey", detail: "Secure password-free sign-in", icon: "person.badge.key.fill")
-            securityOption("Authenticator app", detail: "Two-factor authentication", icon: "checkmark.shield.fill")
-            Text("These options require the matching server security rollout before setup can be enabled.")
-              .font(.system(size: 11))
-              .foregroundStyle(AppTheme.textMuted)
+            securityOption(
+              "Passkey",
+              detail: "Secure password-free sign-in",
+              status: accountSecurity.map { $0.passkeyCount == 0 ? "Not set up" : "\($0.passkeyCount) active" } ?? "Not set up",
+              icon: "person.badge.key.fill"
+            )
+            Button {
+              showsAuthenticatorEnrollment = true
+            } label: {
+              securityOption(
+                "Authenticator app",
+                detail: "Two-factor protection for new devices",
+                status: accountSecurity?.totpEnabled == true ? "On" : "Set up",
+                icon: "checkmark.shield.fill"
+              )
+            }
+            .buttonStyle(.plain)
+            .disabled(isAuthenticating)
+            if let securityStatusMessage {
+              Text(securityStatusMessage)
+                .font(.system(size: 11))
+                .foregroundStyle(AppTheme.textMuted)
+            }
           }
         } else {
           SettingsSectionDivider()
@@ -2934,9 +2957,21 @@ private struct AccountSettingsSection: View {
         }
       }
     }
+    .task(id: isSignedIn) {
+      guard isSignedIn else {
+        accountSecurity = nil
+        return
+      }
+      await refreshSecurityStatus()
+    }
+    .sheet(isPresented: $showsAuthenticatorEnrollment, onDismiss: {
+      Task { await refreshSecurityStatus() }
+    }) {
+      AuthenticatorEnrollmentSheet(isAlreadyEnabled: accountSecurity?.totpEnabled == true)
+    }
   }
 
-  private func securityOption(_ title: String, detail: String, icon: String) -> some View {
+  private func securityOption(_ title: String, detail: String, status: String, icon: String) -> some View {
     HStack(spacing: 10) {
       Image(systemName: icon)
         .foregroundStyle(AppTheme.textMuted)
@@ -2946,9 +2981,20 @@ private struct AccountSettingsSection: View {
         Text(detail).font(.system(size: 11)).foregroundStyle(AppTheme.textMuted)
       }
       Spacer()
-      Text("Not set up")
+      Text(status)
         .font(.system(size: 11, weight: .medium))
-        .foregroundStyle(AppTheme.textMuted)
+        .foregroundStyle(status == "On" ? AppTheme.statusGreen : AppTheme.textMuted)
+    }
+  }
+
+  @MainActor
+  private func refreshSecurityStatus() async {
+    do {
+      accountSecurity = try await DoseSyncManager.shared.accountSecurity(settings: settings)
+      securityStatusMessage = nil
+    } catch {
+      accountSecurity = nil
+      securityStatusMessage = error.localizedDescription
     }
   }
 
@@ -2966,6 +3012,197 @@ private struct AccountSettingsSection: View {
     }
     .buttonStyle(.plain)
     .disabled(isAuthenticating || !canAuthenticate)
+  }
+}
+
+private struct AuthenticatorEnrollmentSheet: View {
+  @Environment(SettingsManager.self) private var settings
+  @Environment(\.dismiss) private var dismiss
+  let isAlreadyEnabled: Bool
+
+  @State private var currentPassword = ""
+  @State private var verificationCode = ""
+  @State private var enrollment: SyncAuthenticatorEnrollment?
+  @State private var recoveryCodes: [String] = []
+  @State private var message: String?
+  @State private var isWorking = false
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 16) {
+          if isAlreadyEnabled && recoveryCodes.isEmpty {
+            Label("Authenticator protection is already enabled.", systemImage: "checkmark.shield.fill")
+              .foregroundStyle(AppTheme.statusGreen)
+            Text("New devices must provide a current code from your authenticator app or an unused recovery code.")
+              .font(.system(size: 13))
+              .foregroundStyle(AppTheme.textMuted)
+          } else if !recoveryCodes.isEmpty {
+            recoveryCodeStep
+          } else if let enrollment {
+            qrStep(enrollment)
+          } else {
+            passwordStep
+          }
+
+          if let message {
+            Text(message)
+              .font(.system(size: 12))
+              .foregroundStyle(AppTheme.textMuted)
+          }
+        }
+        .padding(20)
+        .frame(maxWidth: 520, alignment: .leading)
+        .frame(maxWidth: .infinity)
+      }
+      .background(AppTheme.backgroundPrimary)
+      .navigationTitle("Authenticator app")
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Close") { dismiss() }
+        }
+      }
+    }
+    .frame(minWidth: 460, minHeight: 480)
+  }
+
+  private var passwordStep: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Protect new device sign-ins")
+        .font(.system(size: 18, weight: .semibold))
+        .foregroundStyle(AppTheme.textPrimary)
+      Text("Confirm your current password, then scan the QR code with an authenticator app such as Apple Passwords, Google Authenticator, Microsoft Authenticator, or 1Password.")
+        .font(.system(size: 13))
+        .foregroundStyle(AppTheme.textMuted)
+        .fixedSize(horizontal: false, vertical: true)
+      SecureField("Current password", text: $currentPassword)
+        .platformPlainTextEntry()
+        .padding(10)
+        .background(AppTheme.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .privacySensitive()
+      primaryButton("Continue") { beginEnrollment() }
+        .disabled(currentPassword.count < 8 || isWorking)
+    }
+  }
+
+  private func qrStep(_ enrollment: SyncAuthenticatorEnrollment) -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Scan this QR code")
+        .font(.system(size: 18, weight: .semibold))
+        .foregroundStyle(AppTheme.textPrimary)
+      if let image = qrImage(for: enrollment.uri) {
+        image
+          .interpolation(.none)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 220, height: 220)
+          .padding(10)
+          .background(Color.white)
+          .clipShape(RoundedRectangle(cornerRadius: 8))
+          .accessibilityLabel("Authenticator setup QR code")
+      }
+      Text("Manual setup key")
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundStyle(AppTheme.textMuted)
+      Text(enrollment.secret)
+        .font(.system(.body, design: .monospaced))
+        .foregroundStyle(AppTheme.textPrimary)
+        .textSelection(.enabled)
+        .privacySensitive()
+      TextField("6-digit code", text: $verificationCode)
+        .platformPlainTextEntry()
+        .padding(10)
+        .background(AppTheme.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .onChange(of: verificationCode) { _, value in
+          verificationCode = String(value.filter(\.isNumber).prefix(6))
+        }
+      primaryButton("Verify and enable") { confirmEnrollment(enrollment) }
+        .disabled(verificationCode.count != 6 || isWorking)
+    }
+  }
+
+  private var recoveryCodeStep: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Label("Authenticator app enabled", systemImage: "checkmark.shield.fill")
+        .font(.system(size: 18, weight: .semibold))
+        .foregroundStyle(AppTheme.statusGreen)
+      Text("Save these one-time recovery codes now. They will not be shown again. Each code can be used once if your authenticator app is unavailable.")
+        .font(.system(size: 13))
+        .foregroundStyle(AppTheme.textMuted)
+        .fixedSize(horizontal: false, vertical: true)
+      Text(recoveryCodes.joined(separator: "\n"))
+        .font(.system(.body, design: .monospaced))
+        .foregroundStyle(AppTheme.textPrimary)
+        .textSelection(.enabled)
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppTheme.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 9))
+        .privacySensitive()
+      primaryButton("I have saved these codes") { dismiss() }
+    }
+  }
+
+  private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      HStack(spacing: 8) {
+        if isWorking { ProgressView().controlSize(.small) }
+        Text(title).font(.system(size: 13, weight: .semibold))
+      }
+      .foregroundStyle(.white)
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 10)
+      .background(AppTheme.accentBlue)
+      .clipShape(RoundedRectangle(cornerRadius: 9))
+    }
+    .buttonStyle(.plain)
+  }
+
+  private func beginEnrollment() {
+    isWorking = true
+    message = nil
+    Task { @MainActor in
+      defer { isWorking = false }
+      do {
+        enrollment = try await DoseSyncManager.shared.beginAuthenticatorEnrollment(
+          currentPassword: currentPassword,
+          settings: settings
+        )
+        currentPassword = ""
+      } catch {
+        message = error.localizedDescription
+      }
+    }
+  }
+
+  private func confirmEnrollment(_ enrollment: SyncAuthenticatorEnrollment) {
+    isWorking = true
+    message = nil
+    Task { @MainActor in
+      defer { isWorking = false }
+      do {
+        let result = try await DoseSyncManager.shared.confirmAuthenticatorEnrollment(
+          enrollmentID: enrollment.enrollmentId,
+          code: verificationCode,
+          settings: settings
+        )
+        recoveryCodes = result.recoveryCodes
+        verificationCode = ""
+      } catch {
+        message = error.localizedDescription
+      }
+    }
+  }
+
+  private func qrImage(for value: String) -> Image? {
+    let filter = CIFilter.qrCodeGenerator()
+    filter.message = Data(value.utf8)
+    filter.correctionLevel = "M"
+    guard let output = filter.outputImage,
+          let cgImage = CIContext().createCGImage(output, from: output.extent) else { return nil }
+    return Image(decorative: cgImage, scale: 1)
   }
 }
 

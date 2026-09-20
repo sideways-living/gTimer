@@ -190,6 +190,12 @@ final class AppUpdateManager {
 
   let entries: [AppUpdateEntry] = [
     AppUpdateEntry(
+      version: "0.9.40",
+      build: 130,
+      category: .newFeatures,
+      message: "Signed-in accounts can now set up authenticator-app protection with a QR code and one-time recovery codes."
+    ),
+    AppUpdateEntry(
       version: "0.9.39",
       build: 129,
       category: .newFeatures,

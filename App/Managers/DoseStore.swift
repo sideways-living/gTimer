@@ -413,6 +413,49 @@ final class DoseSyncManager {
     try validateHTTPResponse(response, data: data)
   }
 
+  func accountSecurity(settings: SettingsManager) async throws -> SyncAccountSecurity {
+    let baseURL = try syncBaseURL(settings)
+    var request = URLRequest(url: baseURL.appending(path: "v1/auth/security"))
+    request.addValue("Bearer \(settings.syncToken)", forHTTPHeaderField: "Authorization")
+    let (data, response) = try await URLSession.shared.data(for: request)
+    try validateHTTPResponse(response, data: data)
+    return try JSONDecoder().decode(SyncAccountSecurity.self, from: data)
+  }
+
+  func beginAuthenticatorEnrollment(
+    currentPassword: String,
+    settings: SettingsManager
+  ) async throws -> SyncAuthenticatorEnrollment {
+    let baseURL = try syncBaseURL(settings)
+    var request = URLRequest(url: baseURL.appending(path: "v1/auth/totp/enrollment"))
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.addValue("Bearer \(settings.syncToken)", forHTTPHeaderField: "Authorization")
+    request.httpBody = try JSONEncoder().encode(["currentPassword": currentPassword])
+    let (data, response) = try await URLSession.shared.data(for: request)
+    try validateHTTPResponse(response, data: data)
+    return try JSONDecoder().decode(SyncAuthenticatorEnrollment.self, from: data)
+  }
+
+  func confirmAuthenticatorEnrollment(
+    enrollmentID: String,
+    code: String,
+    settings: SettingsManager
+  ) async throws -> SyncAuthenticatorConfirmation {
+    let baseURL = try syncBaseURL(settings)
+    var request = URLRequest(url: baseURL.appending(path: "v1/auth/totp/confirmation"))
+    request.httpMethod = "POST"
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.addValue("Bearer \(settings.syncToken)", forHTTPHeaderField: "Authorization")
+    request.httpBody = try JSONEncoder().encode([
+      "enrollmentId": enrollmentID,
+      "code": code
+    ])
+    let (data, response) = try await URLSession.shared.data(for: request)
+    try validateHTTPResponse(response, data: data)
+    return try JSONDecoder().decode(SyncAuthenticatorConfirmation.self, from: data)
+  }
+
   private func push(records: [DoseRecord], to baseURL: URL, settings: SettingsManager) async throws {
     var request = URLRequest(url: baseURL.appending(path: "v1/sync/push"))
     request.httpMethod = "POST"
@@ -667,6 +710,25 @@ struct SyncAuthResponse: Codable {
 struct SyncUser: Codable {
   var id: String
   var email: String
+}
+
+struct SyncAccountSecurity: Codable {
+  var totpEnabled: Bool
+  var recoveryCodesRemaining: Int
+  var passkeyCount: Int
+  var activeDeviceCount: Int
+}
+
+struct SyncAuthenticatorEnrollment: Codable {
+  var enrollmentId: String
+  var secret: String
+  var uri: String
+  var expiresAt: String
+}
+
+struct SyncAuthenticatorConfirmation: Codable {
+  var enabled: Bool
+  var recoveryCodes: [String]
 }
 
 private struct SyncAuthRequest: Codable {
