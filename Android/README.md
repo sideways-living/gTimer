@@ -7,7 +7,12 @@ Initial native Android port of gTimer.
 - Native Android project under the same repository as the Apple app.
 - Local-first timer and dose history.
 - Focused History search plus date, record-type, and sort filters.
+- History search includes notes, tags, people, and deletion reasons.
+- Existing doses can be edited, including amount, relative time, notes, tags, people, and missed-dose status.
+- Dose deletion requires a reason and retains a soft-deleted audit record, with an option to include deleted doses in History.
+- Tags are displayed with `#` formatting and people use a person icon, matching the cross-platform presentation contract.
 - Functional missed-dose entry with amount, backdated time, notes, and a visible history marker.
+- Missed-dose entry accepts tags and multiple people.
 - Countdown/count-up timer semantics matching the parity document.
 - Standard dose and up to four quick doses.
 - Settings for dose amount, unit, interval, timer mode, notifications, Pro beta, and the Pro-only time-since-safe counter.

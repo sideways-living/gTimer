@@ -27,6 +27,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.GridLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -66,6 +67,7 @@ public final class MainActivity extends Activity {
     private int historyRange = 0;
     private int historyType = 0;
     private int historySort = 0;
+    private boolean historyIncludeDeleted = false;
 
     private final Runnable ticker = new Runnable() {
         @Override
@@ -242,6 +244,13 @@ public final class MainActivity extends Activity {
         filters.addView(sort, filterCell());
         page.addView(filters);
 
+        CheckBox includeDeleted = checkbox("Include deleted doses", historyIncludeDeleted);
+        includeDeleted.setOnCheckedChangeListener((button, checked) -> {
+            historyIncludeDeleted = checked;
+            renderHistory();
+        });
+        page.addView(includeDeleted);
+
         List<DoseRecord> visible = filteredHistoryDoses();
         int max = settings.proBeta ? visible.size() : Math.min(visible.size(), 10);
         if (max == 0) {
@@ -258,7 +267,27 @@ public final class MainActivity extends Activity {
             if (dose.earlySeconds > 0) {
                 row.addView(label("Taken early by " + formatDuration(dose.earlySeconds), 13, true, GOLD));
             }
+            if (dose.deletedAtMillis > 0) {
+                row.addView(label("Deleted · " + dose.deletionReason, 13, true, RED));
+            }
             if (!dose.notes.isEmpty()) row.addView(body(dose.notes));
+            if (!dose.tags.isEmpty()) {
+                row.addView(label(formatTags(dose.tags), 13, true, BLUE));
+            }
+            if (!dose.people.isEmpty()) {
+                row.addView(peopleRow(dose.people));
+            }
+            LinearLayout actions = new LinearLayout(this);
+            actions.setOrientation(LinearLayout.HORIZONTAL);
+            Button edit = flatButton("Edit", SURFACE, TEXT);
+            edit.setEnabled(dose.deletedAtMillis == 0);
+            edit.setOnClickListener(v -> showEditDoseDialog(dose));
+            actions.addView(edit, actionCell());
+            Button delete = flatButton(dose.deletedAtMillis > 0 ? "Deleted" : "Delete", SURFACE, dose.deletedAtMillis > 0 ? MUTED : RED);
+            delete.setEnabled(dose.deletedAtMillis == 0);
+            delete.setOnClickListener(v -> showDeleteDoseDialog(dose));
+            actions.addView(delete, actionCell());
+            row.addView(actions);
             page.addView(row);
         }
         if (!settings.proBeta && visible.size() > max) {
@@ -379,7 +408,7 @@ public final class MainActivity extends Activity {
     }
 
     private void logDose(double amount, long earlySeconds) {
-        doses.add(new DoseRecord(UUID.randomUUID().toString(), amount, System.currentTimeMillis(), earlySeconds, "", false));
+        doses.add(new DoseRecord(UUID.randomUUID().toString(), amount, System.currentTimeMillis(), earlySeconds, "", false, new ArrayList<>(), new ArrayList<>(), 0, ""));
         doses.sort((left, right) -> Long.compare(right.timeMillis, left.timeMillis));
         saveDoses();
         if (settings.notificationsEnabled) {
@@ -409,10 +438,14 @@ public final class MainActivity extends Activity {
         EditText minutesAgo = integerField(60);
         minutesAgo.setHint("Minutes ago");
         EditText notes = textField("", "Optional notes");
+        EditText tags = textField("", "Tags, separated by spaces");
+        EditText people = textField("", "People, separated by commas");
         form.addView(fieldBlock("Amount (" + settings.unit + ")", amount));
         form.addView(fieldBlock("Time", minutesAgo));
         form.addView(body("Enter how many minutes ago the dose was taken."));
         form.addView(fieldBlock("Notes", notes));
+        form.addView(fieldBlock("Tags", tags));
+        form.addView(fieldBlock("People", people));
 
         new AlertDialog.Builder(this)
                 .setTitle("Log missed dose")
@@ -428,7 +461,11 @@ public final class MainActivity extends Activity {
                             doseTime,
                             0,
                             notes.getText().toString().trim(),
-                            true
+                            true,
+                            parseTags(tags.getText().toString()),
+                            parsePeople(people.getText().toString()),
+                            0,
+                            ""
                     ));
                     doses.sort((left, right) -> Long.compare(right.timeMillis, left.timeMillis));
                     saveDoses();
@@ -436,6 +473,118 @@ public final class MainActivity extends Activity {
                     renderTimer();
                 })
                 .show();
+    }
+
+    private void showEditDoseDialog(DoseRecord dose) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(22), dp(4), dp(22), 0);
+        EditText amount = numberField(dose.amount);
+        long minutes = Math.max(0, (System.currentTimeMillis() - dose.timeMillis) / 60_000L);
+        EditText minutesAgo = integerField((int) Math.min(minutes, Integer.MAX_VALUE));
+        EditText notes = textField(dose.notes, "Optional notes");
+        EditText tags = textField(String.join(" ", dose.tags), "Tags, separated by spaces");
+        EditText people = textField(String.join(", ", dose.people), "People, separated by commas");
+        CheckBox missed = checkbox("Missed dose", dose.missed);
+        form.addView(fieldBlock("Amount (" + settings.unit + ")", amount));
+        form.addView(fieldBlock("Minutes ago", minutesAgo));
+        form.addView(fieldBlock("Notes", notes));
+        form.addView(fieldBlock("Tags", tags));
+        form.addView(fieldBlock("People", people));
+        form.addView(missed);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Edit dose")
+                .setView(form)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Save dose", (dialog, which) -> {
+                    dose.amount = Math.max(0.1, readDouble(amount, dose.amount));
+                    dose.timeMillis = System.currentTimeMillis() - Math.max(0, readInt(minutesAgo, 0)) * 60_000L;
+                    dose.notes = notes.getText().toString().trim();
+                    dose.tags = parseTags(tags.getText().toString());
+                    dose.people = parsePeople(people.getText().toString());
+                    dose.missed = missed.isChecked();
+                    doses.sort((left, right) -> Long.compare(right.timeMillis, left.timeMillis));
+                    saveDoses();
+                    updateScheduledReminder();
+                    renderHistory();
+                })
+                .show();
+    }
+
+    private void showDeleteDoseDialog(DoseRecord dose) {
+        EditText reason = textField("", "Reason, for example duplicate entry");
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(22), dp(8), dp(22), 0);
+        form.addView(body("The dose remains retained as a deleted record for audit and sync purposes."));
+        form.addView(fieldBlock("Reason for deletion", reason));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Delete dose?")
+                .setView(form)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Delete dose", null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String deletionReason = reason.getText().toString().trim();
+            if (deletionReason.isEmpty()) {
+                reason.setError("Enter a reason for deletion");
+                return;
+            }
+            dose.deletedAtMillis = System.currentTimeMillis();
+            dose.deletionReason = deletionReason;
+            saveDoses();
+            updateScheduledReminder();
+            dialog.dismiss();
+            renderHistory();
+        }));
+        dialog.show();
+    }
+
+    private List<String> parseTags(String raw) {
+        List<String> result = new ArrayList<>();
+        for (String value : raw.trim().split("[\\s,]+")) {
+            String clean = value.trim();
+            if (clean.startsWith("#")) clean = clean.substring(1);
+            if (!clean.isEmpty() && !containsIgnoringCase(result, clean)) result.add(clean);
+        }
+        return result;
+    }
+
+    private List<String> parsePeople(String raw) {
+        List<String> result = new ArrayList<>();
+        for (String value : raw.split(",")) {
+            String clean = value.trim();
+            if (!clean.isEmpty() && !containsIgnoringCase(result, clean)) result.add(clean);
+        }
+        return result;
+    }
+
+    private boolean containsIgnoringCase(List<String> values, String candidate) {
+        for (String value : values) {
+            if (value.equalsIgnoreCase(candidate)) return true;
+        }
+        return false;
+    }
+
+    private String formatTags(List<String> tags) {
+        List<String> formatted = new ArrayList<>();
+        for (String tag : tags) formatted.add("#" + tag);
+        return String.join("  ", formatted);
+    }
+
+    private View peopleRow(List<String> people) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(android.R.drawable.ic_menu_myplaces);
+        icon.setColorFilter(MUTED);
+        row.addView(icon, new LinearLayout.LayoutParams(dp(18), dp(18)));
+        TextView names = label(" " + String.join(", ", people), 13, false, MUTED);
+        row.addView(names, new LinearLayout.LayoutParams(0, dp(30), 1));
+        return row;
     }
 
     private TimerState timerState(DoseRecord latest) {
@@ -453,7 +602,10 @@ public final class MainActivity extends Activity {
     }
 
     private DoseRecord latestDose() {
-        return doses.isEmpty() ? null : doses.get(0);
+        for (DoseRecord dose : doses) {
+            if (dose.deletedAtMillis == 0) return dose;
+        }
+        return null;
     }
 
     private void loadDoses() {
@@ -527,6 +679,12 @@ public final class MainActivity extends Activity {
         return lp;
     }
 
+    private LinearLayout.LayoutParams actionCell() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(44), 1);
+        lp.setMargins(dp(3), dp(8), dp(3), 0);
+        return lp;
+    }
+
     private List<DoseRecord> filteredHistoryDoses() {
         List<DoseRecord> result = new ArrayList<>();
         long now = System.currentTimeMillis();
@@ -546,11 +704,14 @@ public final class MainActivity extends Activity {
 
         String query = historySearch.toLowerCase(Locale.getDefault());
         for (DoseRecord dose : doses) {
+            if (!historyIncludeDeleted && dose.deletedAtMillis > 0) continue;
             if (dose.timeMillis < cutoff) continue;
             if (historyType == 1 && (dose.missed || dose.earlySeconds > 0)) continue;
             if (historyType == 2 && !dose.missed) continue;
             if (historyType == 3 && dose.earlySeconds <= 0) continue;
-            String searchable = (formatAmount(dose.amount) + " " + formatDate(dose.timeMillis) + " " + dose.notes).toLowerCase(Locale.getDefault());
+            String searchable = (formatAmount(dose.amount) + " " + formatDate(dose.timeMillis) + " " + dose.notes + " "
+                    + String.join(" ", dose.tags) + " " + String.join(" ", dose.people) + " " + dose.deletionReason)
+                    .toLowerCase(Locale.getDefault());
             if (!query.isEmpty() && !searchable.contains(query)) continue;
             result.add(dose);
         }
@@ -780,19 +941,38 @@ public final class MainActivity extends Activity {
 
     private static final class DoseRecord {
         final String id;
-        final double amount;
-        final long timeMillis;
-        final long earlySeconds;
-        final String notes;
-        final boolean missed;
+        double amount;
+        long timeMillis;
+        long earlySeconds;
+        String notes;
+        boolean missed;
+        List<String> tags;
+        List<String> people;
+        long deletedAtMillis;
+        String deletionReason;
 
-        DoseRecord(String id, double amount, long timeMillis, long earlySeconds, String notes, boolean missed) {
+        DoseRecord(
+                String id,
+                double amount,
+                long timeMillis,
+                long earlySeconds,
+                String notes,
+                boolean missed,
+                List<String> tags,
+                List<String> people,
+                long deletedAtMillis,
+                String deletionReason
+        ) {
             this.id = id;
             this.amount = amount;
             this.timeMillis = timeMillis;
             this.earlySeconds = earlySeconds;
             this.notes = notes;
             this.missed = missed;
+            this.tags = tags;
+            this.people = people;
+            this.deletedAtMillis = deletedAtMillis;
+            this.deletionReason = deletionReason;
         }
 
         JSONObject toJson() {
@@ -804,6 +984,10 @@ public final class MainActivity extends Activity {
                 json.put("earlySeconds", earlySeconds);
                 json.put("notes", notes);
                 json.put("missed", missed);
+                json.put("tags", stringsToJson(tags));
+                json.put("people", stringsToJson(people));
+                json.put("deletedAtMillis", deletedAtMillis);
+                json.put("deletionReason", deletionReason);
             } catch (JSONException ignored) {
             }
             return json;
@@ -816,8 +1000,28 @@ public final class MainActivity extends Activity {
                     json.optLong("timeMillis", System.currentTimeMillis()),
                     json.optLong("earlySeconds", 0),
                     json.optString("notes", ""),
-                    json.optBoolean("missed", false)
+                    json.optBoolean("missed", false),
+                    stringsFromJson(json.optJSONArray("tags")),
+                    stringsFromJson(json.optJSONArray("people")),
+                    json.optLong("deletedAtMillis", 0),
+                    json.optString("deletionReason", "")
             );
+        }
+
+        private static JSONArray stringsToJson(List<String> values) {
+            JSONArray array = new JSONArray();
+            for (String value : values) array.put(value);
+            return array;
+        }
+
+        private static List<String> stringsFromJson(JSONArray array) {
+            List<String> values = new ArrayList<>();
+            if (array == null) return values;
+            for (int i = 0; i < array.length(); i++) {
+                String value = array.optString(i, "").trim();
+                if (!value.isEmpty()) values.add(value);
+            }
+            return values;
         }
     }
 
