@@ -884,6 +884,11 @@ struct TimerView: View {
           context: context,
           settings: settings
         )
+        confirmationSession?.updateLocation(
+          name: record.locationName,
+          latitude: record.latitude,
+          longitude: record.longitude
+        )
         confirmationSession?.locationState = .refining
 
         let locatedDoseDescriptor = FetchDescriptor<DoseRecord>(
@@ -919,6 +924,11 @@ struct TimerView: View {
           to: record,
           context: context,
           settings: settings
+        )
+        confirmationSession?.updateLocation(
+          name: record.locationName,
+          latitude: record.latitude,
+          longitude: record.longitude
         )
         confirmationSession?.locationState = .resolved
       }
@@ -1003,11 +1013,23 @@ private enum QuickDoseLocationResolutionState {
 private final class QuickDoseConfirmationSession: Identifiable {
   let dose: DoseRecord
   var locationState: QuickDoseLocationResolutionState
+  var locationName: String?
+  var latitude: Double?
+  var longitude: Double?
   var id: UUID { dose.id }
 
   init(dose: DoseRecord, locationState: QuickDoseLocationResolutionState) {
     self.dose = dose
     self.locationState = locationState
+    self.locationName = dose.locationName
+    self.latitude = dose.latitude
+    self.longitude = dose.longitude
+  }
+
+  func updateLocation(name: String?, latitude: Double?, longitude: Double?) {
+    locationName = name
+    self.latitude = latitude
+    self.longitude = longitude
   }
 }
 
@@ -1099,14 +1121,14 @@ private struct QuickDoseConfirmationSheet: View {
       }
     }
     .interactiveDismissDisabled()
-    .onChange(of: dose.locationName) { _, newName in
+    .onChange(of: session.locationName) { _, newName in
       guard !locationWasEdited else { return }
       locationText = newName ?? ""
-      refreshSelectedLocationFromDose()
+      refreshSelectedLocationFromSession()
     }
-    .onChange(of: dose.latitude) { _, _ in
+    .onChange(of: session.latitude) { _, _ in
       guard !locationWasEdited else { return }
-      refreshSelectedLocationFromDose()
+      refreshSelectedLocationFromSession()
     }
     .task {
       while secondsRemaining > 0 && !Task.isCancelled {
@@ -1291,13 +1313,13 @@ private struct QuickDoseConfirmationSheet: View {
     return ManualLocationStore.shared.suggestions(matching: locationText, limit: 3)
   }
 
-  private func refreshSelectedLocationFromDose() {
-    guard let latitude = dose.latitude, let longitude = dose.longitude else {
+  private func refreshSelectedLocationFromSession() {
+    guard let latitude = session.latitude, let longitude = session.longitude else {
       selectedLocation = nil
       return
     }
     selectedLocation = ManualDoseLocation(
-      name: dose.locationName ?? "",
+      name: session.locationName ?? "",
       latitude: latitude,
       longitude: longitude
     )
