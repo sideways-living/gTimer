@@ -135,6 +135,15 @@ Set `APPLE_MAPS_AUTH_TOKEN` to a Maps token whose scope is `server_api`. The API
 
 Temporary tokens created in the Apple Developer portal expire and are suitable only for initial testing. Production should use a Maps ID and private key to generate the `server_api` JWT automatically, or rotate the configured token before it expires.
 
+To install or replace a temporary token safely on the VPS, run:
+
+```sh
+cd /home/gtimer-sync/htdocs/sync.gtimer.app/app/SyncAPI
+scripts/install-apple-maps-token.sh
+```
+
+The installer keeps input hidden, verifies the JWT scope and expiry, tests a real Apple access-token exchange, updates `.env` with mode `600`, restarts PM2, and checks the local and public health endpoints.
+
 Authenticated device tokens can call:
 
 - `GET /v1/maps/search?q=...`
