@@ -122,11 +122,27 @@ GTIMER_SYNC_TOKENS={"replace-with-a-long-random-token":"dan"}
 GTIMER_AUTH_ENCRYPTION_KEY=replace-with-at-least-32-random-bytes
 GTIMER_WEBAUTHN_RP_ID=sync.gtimer.app
 GTIMER_WEBAUTHN_ORIGINS=https://sync.gtimer.app
+APPLE_MAPS_AUTH_TOKEN=replace-with-a-server-api-maps-token
 ```
 
 `GTIMER_AUTH_ENCRYPTION_KEY` encrypts authenticator-app secrets with AES-256-GCM before they are written to disk. Generate it once, back it up securely, and do not rotate or lose it until a supported re-encryption procedure exists. Passkeys are scoped to the configured relying-party ID and exact allowed HTTPS origins.
 
 Do not commit `.env`. It is ignored by Git.
+
+## Apple Maps Server API
+
+Set `APPLE_MAPS_AUTH_TOKEN` to a Maps token whose scope is `server_api`. The API exchanges it for Apple's short-lived access token and caches that access token until one minute before expiry. Apple credentials remain on the server and are never returned to an app.
+
+Temporary tokens created in the Apple Developer portal expire and are suitable only for initial testing. Production should use a Maps ID and private key to generate the `server_api` JWT automatically, or rotate the configured token before it expires.
+
+Authenticated device tokens can call:
+
+- `GET /v1/maps/search?q=...`
+- `GET /v1/maps/autocomplete?q=...`
+- `GET /v1/maps/geocode?q=...`
+- `GET /v1/maps/reverse-geocode?loc=-37.8136,144.9631`
+
+The routes accept Apple's common localisation and location-hint parameters, including `lang`, `limitToCountries`, `searchLocation`, `searchRegion`, and `userLocation`. The server validates and allowlists parameters before forwarding requests.
 
 ## Endpoints
 

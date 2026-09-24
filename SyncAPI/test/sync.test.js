@@ -459,6 +459,18 @@ test("creates one-time passkey registration and authentication options", async (
   });
 });
 
+test("serves the Apple passkey associated-domain document", async () => {
+  await withTestAPI(async ({ baseURL }) => {
+    const response = await requestJSON(`${baseURL}/.well-known/apple-app-site-association`, {
+      method: "GET"
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(response.json.webcredentials.apps, [
+      "6T537TDK7A.app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01"
+    ]);
+  });
+});
+
 test("logs in on another device and can revoke that device", async () => {
   await withTestAPI(async ({ baseURL }) => {
     await requestJSON(`${baseURL}/v1/auth/register`, {
@@ -568,7 +580,49 @@ test("blocks device-token sync after the free sync trial ends", async () => {
   });
 });
 
-async function withTestAPI(callback) {
+test("proxies authenticated Apple Maps searches without exposing server credentials", async () => {
+  const calls = [];
+  const mapsClient = {
+    async search(params) {
+      calls.push(params);
+      return { results: [{ name: "Adina Apartment Hotel Melbourne Southbank" }] };
+    }
+  };
+
+  await withTestAPI(async ({ baseURL }) => {
+    const response = await requestJSON(
+      `${baseURL}/v1/maps/search?q=Adina&searchLocation=-37.822,144.965&limitToCountries=AU`,
+      { method: "GET", token: "token-a" }
+    );
+
+    assert.equal(response.status, 200);
+    assert.equal(response.json.results[0].name, "Adina Apartment Hotel Melbourne Southbank");
+    assert.deepEqual(calls, [{
+      q: "Adina",
+      searchLocation: "-37.822,144.965",
+      limitToCountries: "AU"
+    }]);
+  }, { mapsClient });
+});
+
+test("rejects unauthenticated and invalid Apple Maps requests", async () => {
+  const mapsClient = { async geocode() { return { results: [] }; } };
+  await withTestAPI(async ({ baseURL }) => {
+    const unauthenticated = await requestJSON(`${baseURL}/v1/maps/geocode?q=Melbourne`, {
+      method: "GET"
+    });
+    assert.equal(unauthenticated.status, 401);
+
+    const invalid = await requestJSON(`${baseURL}/v1/maps/geocode`, {
+      method: "GET",
+      token: "token-a"
+    });
+    assert.equal(invalid.status, 400);
+    assert.match(invalid.json.error, /q is required/);
+  }, { mapsClient });
+});
+
+async function withTestAPI(callback, options = {}) {
   const dataDir = await mkdtemp(join(tmpdir(), "gtimer-sync-api-"));
   const server = createServer({
     store: new FileSyncStore({ dataDir }),
@@ -581,7 +635,8 @@ async function withTestAPI(callback) {
     tokens: {
       "token-a": "user-a",
       "token-b": "user-b"
-    }
+    },
+    mapsClient: options.mapsClient
   });
 
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AuthStore, cleanAuthRequest, cleanDeviceAuthRequest } from "./auth-store.js";
+import { AppleMapsClient, normalizeMapsQuery } from "./apple-maps-client.js";
 import { FileSyncStore } from "./store.js";
 import { httpError, normalizePullQuery, normalizePushBody } from "./validation.js";
 
@@ -12,15 +13,17 @@ const port = readPort();
 const tokens = loadTokenMap();
 const authStore = new AuthStore({ dataDir: process.env.GTIMER_SYNC_DATA_DIR });
 const store = new FileSyncStore({ dataDir: process.env.GTIMER_SYNC_DATA_DIR });
+const mapsClient = new AppleMapsClient();
 
 export function createServer(options = {}) {
   const activeStore = options.store ?? store;
   const activeTokens = options.tokens ?? tokens;
   const activeAuthStore = options.authStore ?? authStore;
+  const activeMapsClient = options.mapsClient ?? mapsClient;
 
   return http.createServer(async (request, response) => {
     try {
-      await route(request, response, activeStore, activeTokens, activeAuthStore);
+      await route(request, response, activeStore, activeTokens, activeAuthStore, activeMapsClient);
     } catch (error) {
       sendJSON(response, error.status ?? 500, {
         error: error.status ? error.message : "Internal server error."
@@ -29,11 +32,20 @@ export function createServer(options = {}) {
   });
 }
 
-async function route(request, response, activeStore, activeTokens, activeAuthStore) {
+async function route(request, response, activeStore, activeTokens, activeAuthStore, activeMapsClient) {
   const url = new URL(request.url ?? "/", "http://localhost");
 
   if (request.method === "GET" && url.pathname === "/health") {
     sendJSON(response, 200, { status: "ok", service: "gtimer-sync-api" });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/.well-known/apple-app-site-association") {
+    sendJSON(response, 200, {
+      webcredentials: {
+        apps: ["6T537TDK7A.app.bitrig.new.cc0b1024-f41a-488c-b5dd-b6845c513c01"]
+      }
+    }, { cacheControl: "public, max-age=3600" });
     return;
   }
 
@@ -144,6 +156,20 @@ async function route(request, response, activeStore, activeTokens, activeAuthSto
     return;
   }
 
+  const mapsRoutes = {
+    "/v1/maps/search": "search",
+    "/v1/maps/autocomplete": "autocomplete",
+    "/v1/maps/geocode": "geocode",
+    "/v1/maps/reverse-geocode": "reverseGeocode"
+  };
+  const mapsOperation = mapsRoutes[url.pathname];
+  if (request.method === "GET" && mapsOperation) {
+    await authenticate(request, activeTokens, activeAuthStore);
+    const params = normalizeMapsQuery(url, mapsOperation);
+    sendJSON(response, 200, await activeMapsClient[mapsOperation](params));
+    return;
+  }
+
   if (url.pathname.startsWith("/v1/sync/")) {
     const auth = await authenticate(request, activeTokens, activeAuthStore);
     if (!auth.hasSyncAccess) {
@@ -213,10 +239,10 @@ async function readJSONBody(request) {
   }
 }
 
-function sendJSON(response, statusCode, payload) {
+function sendJSON(response, statusCode, payload, options = {}) {
   response.writeHead(statusCode, {
     "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store"
+    "cache-control": options.cacheControl ?? "no-store"
   });
   response.end(`${JSON.stringify(payload)}\n`);
 }
